@@ -1,0 +1,2557 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eko · animaciones</title><style>html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+}
+
+#stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 420px;
+  height: 380px;
+}
+/* Zona de Eko: abajo en el centro de la ventana; el resto es para el menú */
+#pod {
+  position: absolute;
+  left: 100px;
+  top: 130px;
+  width: 220px;
+  height: 250px;
+}
+
+#mochi {
+  position: absolute;
+  left: 55px;
+  bottom: 0;
+  width: 110px;
+  height: 142px;
+  overflow: visible;
+}
+
+#hit {
+  position: absolute;
+  left: 62px;
+  bottom: 8px;
+  width: 96px;
+  height: 128px;
+  border-radius: 48px 48px 32px 32px;
+  cursor: grab;
+}
+#hit.dragging { cursor: grabbing; }
+
+/* ---------- Ojos ---------- */
+.eye .line {
+  fill: none;
+  stroke: #1d1614;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  display: none;
+}
+.eye .spiral { stroke-width: 2.2; }
+.eye .brow { stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.eye .rim { fill: rgba(255, 255, 255, .12); stroke: #3b2f2a; stroke-width: 2.6; display: none; }
+#bridge { stroke: #3b2f2a; stroke-width: 2.6; stroke-linecap: round; display: none; }
+.has-glasses .eye .rim, .has-glasses #bridge { display: inline; }
+.eye .blush { opacity: 0; transition: opacity .4s ease; }
+.blushing .eye .blush { opacity: .55; }
+
+[data-eyes="happy"] .eye .open,
+[data-eyes="closed"] .eye .open,
+[data-eyes="spiral"] .eye .open,
+[data-eyes="hidden"] .eye .open { display: none; }
+[data-eyes="happy"] .eye .happy { display: inline; }
+[data-eyes="closed"] .eye .closed { display: inline; }
+[data-eyes="spiral"] .eye .spiral { display: inline; }
+[data-eyes="hidden"] #eyes { opacity: 0; }
+/* Guiño pícaro: un ojo feliz y otro abierto */
+[data-eyes="wink"] .eye-l .open { display: none; }
+[data-eyes="wink"] .eye-l .happy { display: inline; }
+
+[data-brows="sad"] .brow, [data-brows="angry"] .brow, [data-brows="up"] .brow { display: inline; }
+[data-brows="sad"] .eye-l .brow { transform: translate(0, 2px) rotate(-16deg); }
+[data-brows="sad"] .eye-r .brow { transform: translate(0, 2px) rotate(16deg); }
+[data-brows="angry"] .eye-l .brow { transform: translate(0, 3px) rotate(18deg); }
+[data-brows="angry"] .eye-r .brow { transform: translate(0, 3px) rotate(-18deg); }
+[data-brows="up"] .brow { transform: translate(0, -3px); }
+
+/* ---------- Complementos ---------- */
+#hat > g { display: none; }
+[data-hat="santa"] #hat .hat-santa,
+[data-hat="witch"] #hat .hat-witch,
+[data-hat="party"] #hat .hat-party { display: inline; }
+
+/* ---------- Bocadillo ---------- */
+#bubble {
+  position: absolute;
+  left: 50%;
+  bottom: 152px;
+  transform: translate(-50%, 6px) scale(.9);
+  transform-origin: 50% 100%;
+  padding: 7px 12px;
+  border-radius: 14px;
+  background: #fffaf6;
+  color: #3b2f2a;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(60, 40, 30, .18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .25s cubic-bezier(.3, 1.6, .5, 1);
+  white-space: normal;
+  width: max-content;
+  max-width: 230px;
+  z-index: 3;
+}
+#bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: #fffaf6;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+}
+#bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.has-hat #bubble { bottom: 176px; }
+.has-hat #thought { bottom: 172px; }
+
+/* ---------- Zzz ---------- */
+#zz {
+  position: absolute;
+  left: 140px;
+  bottom: 120px;
+  pointer-events: none;
+  display: none;
+  color: #9d8a7f;
+  font-weight: 700;
+}
+[data-mood="sleep"] #zz { display: block; }
+#zz span { position: absolute; opacity: 0; animation: zz 3s infinite ease-out; }
+#zz span:nth-child(2) { animation-delay: 1s; font-size: 15px; }
+#zz span:nth-child(3) { animation-delay: 2s; font-size: 18px; }
+@keyframes zz {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: .9; }
+  100% { transform: translate(16px, -34px); opacity: 0; }
+}
+
+/* ---------- Sudor ---------- */
+#sweat {
+  position: absolute;
+  left: 142px;
+  bottom: 112px;
+  width: 9px;
+  height: 13px;
+  background: radial-gradient(circle at 35% 35%, #fff, #9fd3f0 60%, #6bb6e0);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  opacity: 0;
+  pointer-events: none;
+}
+.mood-hot #sweat { animation: sweat 1.6s infinite ease-in; }
+@keyframes sweat {
+  0% { opacity: 0; transform: translateY(0) rotate(-20deg); }
+  20% { opacity: .95; }
+  100% { opacity: 0; transform: translateY(16px) rotate(-20deg); }
+}
+
+/* ---------- Símbolos flotantes ---------- */
+#fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.fx {
+  position: absolute;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(60, 40, 30, .25);
+  animation: fx 1.4s ease-out forwards;
+}
+@keyframes fx {
+  0% { opacity: 0; transform: translate(0, 6px) scale(.5); }
+  18% { opacity: 1; transform: translate(0, 0) scale(1.15); }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), -38px) scale(.9); }
+}
+
+/* ---------- Paquetitos de descargas ---------- */
+#boxes { position: absolute; left: 18px; bottom: 4px; width: 50px; height: 60px; pointer-events: none; }
+.box {
+  position: absolute;
+  width: 18px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(#d9b083, #c0905f);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .12), 0 1px 2px rgba(60, 40, 30, .3);
+  animation: boxin .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+.box::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #ecd3a8;
+}
+.box.out { animation: boxout .4s ease-in forwards; }
+@keyframes boxin { from { transform: translateY(-30px) scale(.6); opacity: 0; } }
+@keyframes boxout { to { transform: translateY(8px) scale(.4); opacity: 0; } }
+
+/* ---------- Ojo entornado (rascarse) ---------- */
+[data-eyes="squint"] .eye-l .open { display: none; }
+[data-eyes="squint"] .eye-l .closed { display: inline; }
+
+/* ---------- Nube de pensamiento ---------- */
+#thought {
+  position: absolute;
+  left: 36px;
+  bottom: 150px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #fffaf6;
+  box-shadow: 0 2px 8px rgba(60, 40, 30, .18);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: scale(.6);
+  transform-origin: 80% 100%;
+  transition: opacity .25s ease, transform .3s cubic-bezier(.3, 1.6, .5, 1);
+  pointer-events: none;
+  z-index: 3;
+}
+#thought::before, #thought::after {
+  content: "";
+  position: absolute;
+  background: #fffaf6;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(60, 40, 30, .15);
+}
+#thought::before { width: 9px; height: 9px; right: 4px; bottom: -11px; }
+#thought::after { width: 5px; height: 5px; right: -2px; bottom: -19px; }
+#thought i { width: 6px; height: 6px; border-radius: 50%; background: #8a7468; opacity: .15; }
+.thinking #thought { opacity: 1; transform: scale(1); }
+.thinking #thought i { animation: dot 1.2s infinite; }
+.thinking #thought i:nth-child(2) { animation-delay: .3s; }
+.thinking #thought i:nth-child(3) { animation-delay: .6s; }
+@keyframes dot { 0%, 100% { opacity: .15; } 40% { opacity: 1; } }
+
+/* ---------- Disfraz de fantasma: sin brazos ---------- */
+.acc-ghost #armL, .acc-ghost #armR, .acc-ghost #legs { display: none; }
+.acc-pumpkin #eyes, .acc-pumpkin #mouth { display: none; }
+
+/* ---------- Paquetitos con el mismo dibujo que el que sostiene ---------- */
+.box { width: 22px; height: 18px; background: none; box-shadow: none; }
+.box::after { display: none; }
+.box svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1.5px rgba(60, 40, 30, .35)); }
+
+/* Equipo de vuelo: oculto salvo al volar */
+[data-fly] { display: none; }
+[data-acc] { display: none; }
+#boxes { transition: opacity .35s ease; }
+.moving #boxes { opacity: 0; }
+
+/* ---------- Menú en burbujas ---------- */
+#menu { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.blob {
+  position: absolute;
+  left: 0; top: 0;
+  width: 54px; height: 54px;
+  margin: -27px 0 0 -27px;
+  padding: 0;
+  border: none;
+  border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #fff4ec 60%, #f3e2d6);
+  box-shadow: 0 3px 10px rgba(50, 30, 20, .28), inset 0 -3px 6px rgba(180, 140, 120, .25);
+  color: #6b5348;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(210px, 282px) scale(.2);
+  opacity: 0;
+  transition: transform .42s cubic-bezier(.3, 1.5, .5, 1) var(--d), opacity .2s ease var(--d), box-shadow .2s;
+  animation: wobble 3.2s ease-in-out infinite var(--r);
+}
+.blob.in { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
+.blob:hover { box-shadow: 0 5px 16px rgba(50, 30, 20, .35), inset 0 -3px 6px rgba(180, 140, 120, .25); }
+.blob.in:hover { transform: translate(var(--x), var(--y)) scale(1.12); transition-delay: 0s; }
+.blob svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.blob b { font: 700 15px "Segoe UI", system-ui, sans-serif; color: #6b5348; }
+.blob span {
+  position: absolute;
+  left: 50%; top: 100%;
+  transform: translate(-50%, 4px);
+  white-space: nowrap;
+  font: 600 11px "Segoe UI", system-ui, sans-serif;
+  color: #4a3a32;
+  background: rgba(255, 250, 246, .92);
+  padding: 1px 7px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(50, 30, 20, .2);
+}
+.blob.small { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.blob.small svg { width: 20px; height: 20px; }
+.blob.back { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: #efe3da; }
+.blob.back svg { width: 18px; height: 18px; }
+@keyframes wobble {
+  0%, 100% { border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%; }
+  33% { border-radius: 45% 55% 48% 52% / 55% 45% 52% 48%; }
+  66% { border-radius: 55% 45% 52% 48% / 45% 52% 48% 55%; }
+}
+
+/* ---------- Tarjeta (formularios y listas) ---------- */
+.card {
+  position: absolute;
+  left: 50%; top: 70px;
+  width: 230px;
+  transform: translate(-50%, 10px) scale(.85);
+  opacity: 0;
+  pointer-events: none;
+  padding: 12px 14px;
+  border-radius: 18px 20px 16px 22px;
+  background: #fffaf6;
+  box-shadow: 0 4px 16px rgba(50, 30, 20, .3);
+  color: #3b2f2a;
+  font: 13px "Segoe UI", system-ui, sans-serif;
+  transition: opacity .2s ease, transform .3s cubic-bezier(.3, 1.5, .5, 1);
+  z-index: 7;
+}
+.card.in { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+.card p { margin: 0 0 8px; line-height: 1.35; }
+.card form { display: flex; gap: 6px; }
+.card input { flex: 1; min-width: 0; border: 1px solid #e3d2c7; border-radius: 10px; padding: 6px 8px; font: inherit; color: inherit; background: #fff; outline: none; }
+.card input:focus { border-color: #c9a48f; }
+.card button { border: none; border-radius: 10px; padding: 6px 10px; font: 600 12px inherit; background: #6b5348; color: #fff; cursor: pointer; }
+.card ul { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow: auto; }
+.card li { display: flex; gap: 8px; align-items: center; padding: 5px 2px; cursor: pointer; border-radius: 8px; }
+.card li:hover { background: #f7ece4; }
+.card li i { flex: 0 0 14px; height: 14px; border-radius: 50%; border: 2px solid #c9a48f; }
+.card li.done { opacity: .45; text-decoration: line-through; }
+.card li.done i { background: #8fc79a; border-color: #8fc79a; }
+
+/* ---------- Pelota ---------- */
+#ball { position: absolute; left: 0; top: 0; width: 26px; height: 26px; display: none; z-index: 5; cursor: grab; pointer-events: auto; }
+#ball.in { display: block; }
+#ball svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
+
+/* ---------- Temporizador del pomodoro ---------- */
+#badge {
+  position: absolute;
+  left: 50%; bottom: 150px;
+  transform: translateX(-50%) scale(.6);
+  opacity: 0;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: #e8584f;
+  color: #fff;
+  font: 700 11px "Segoe UI", system-ui, sans-serif;
+  pointer-events: none;
+  transition: opacity .2s, transform .3s cubic-bezier(.3, 1.5, .5, 1);
+}
+#badge.in { opacity: .92; transform: translateX(-50%) scale(1); }
+#badge.break { background: #5fa87a; }
+.menu-open #bubble, .menu-open #badge { opacity: 0; }
+
+#pod { transform-origin: 50% 100%; transition: transform .3s ease; }
+
+/* ---------- Bautizo ---------- */
+#seed { position: absolute; left: 50%; bottom: 2px; width: 70px; height: 80px; margin-left: -35px; cursor: pointer; z-index: 4; animation: seedwiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+#seed svg { width: 100%; height: 100%; overflow: visible; }
+#seed .crack { fill: none; stroke: #8a6f62; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .2s; }
+#seed.c1 .c1, #seed.c2 .c1, #seed.c2 .c2, #seed.c3 .crack { opacity: 1; }
+#seed.jolt { animation: seedjolt .35s ease, seedwiggle 2.2s ease-in-out .35s infinite; }
+#seed.burst { animation: seedburst .38s ease-in forwards; }
+@keyframes seedwiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-6deg); } 20% { transform: rotate(5deg); } 30% { transform: rotate(0); } }
+@keyframes seedjolt { 0% { transform: scale(1); } 40% { transform: scale(1.15, .85); } 100% { transform: scale(1); } }
+@keyframes seedburst { to { transform: scale(1.6); opacity: 0; } }
+.card.ob { top: 40px; }
+.card .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.card .chip { border: none; border-radius: 999px; padding: 5px 11px; font: 600 12px "Segoe UI", system-ui, sans-serif; background: #f3e6dc; color: #6b5348; cursor: pointer; }
+.card .chip:hover { background: #ead8cb; }
+.card .chip.main { background: #6b5348; color: #fff; }
+.card .link { border: none; background: none; padding: 6px 0 0; font: 12px "Segoe UI", system-ui, sans-serif; color: #8a7468; text-decoration: underline; cursor: pointer; }
+.card select { border: 1px solid #e3d2c7; border-radius: 10px; padding: 6px; font: inherit; background: #fff; color: inherit; }
+.card p.small { font-size: 12px; line-height: 1.45; }
+
+body{background:linear-gradient(160deg,#2d3a4f,#1b2230 60%,#141a24)}
+body.light{background:linear-gradient(160deg,#dfe7f1,#c9d4e2)}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:48px;background:rgba(20,22,28,.82);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.08)}
+body.light #taskbar{background:rgba(240,242,246,.9);border-top:1px solid rgba(0,0,0,.08)}
+#panel{position:fixed;left:12px;right:12px;top:12px;z-index:10;font:13px "Segoe UI",system-ui,sans-serif;color:#2b2420;background:rgba(255,250,246,.94);border-radius:14px;padding:10px 12px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+#panel .ttl{font-weight:700;margin-bottom:6px}#panel .ttl span{font-weight:400;color:#8a7468}
+#panel .grp{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:4px 0}
+#panel b{width:88px;font-size:12px;color:#8a7468}
+#panel button{font:inherit;font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid #e3d2c7;background:#fff;color:#3b2f2a;cursor:pointer}
+#panel button:hover{background:#f6ebe3}
+#panel .sep{flex:0 0 10px}
+#panel .tip{margin-top:4px;font-size:11.5px;color:#8a7468}
+#stage{z-index:5}
+@media (max-width:640px){#panel b{width:100%}}
+</style></head><body>
+<div id="panel">
+  <div class="ttl">Eko · prueba de animaciones <span>(versión de revisión: bautizo y ajustes)</span></div>
+  <div class="grp"><b>Gestos</b>
+    <button data-a="wave">Saludar / despedirse</button><button data-a="nod">Asentir</button>
+    <button data-a="shake">Negar</button><button data-a="shrug">Encogerse</button><button data-p="1">Señalar →</button><button data-p="-1">← Señalar</button>
+    <button data-talk>Hablar</button>
+  </div>
+  <div class="grp"><b>Reposo</b>
+    <button data-a="stretch">Estirarse</button><button data-a="yawn">Bostezar</button><button data-a="scratch">Rascarse</button>
+    <button data-a="think">Pensar</button><button data-a="lookAround">Mirar alrededor</button><button data-curious>Curiosear (va hacia tu ratón)</button>
+    <button data-sit>Sentarse</button><button data-peek>Asomarse al borde</button><button data-walk>Caminar</button>
+  </div>
+  <div class="grp"><b>Emociones</b>
+    <button data-a="surprise">Sorpresa</button><button data-a="sad">Pena</button><button data-a="angry">Enfado</button><button data-a="wink">Guiño</button>
+    <button data-happy>Contento + rubor</button><button data-a="dizzy">Mareo</button><button data-hot>Calor (CPU)</button><button data-sleep>Dormir / despertar</button>
+  </div>
+  <div class="grp"><b>Personalidad</b>
+    <button data-miss>Te echa de menos</button><button data-sulk>Enfurruñado</button><button data-box>Descarga (paquete)</button>
+    <button data-glasses>Gafitas</button><button data-dance>Bailar</button><button data-flyb="cape">Volar</button>
+  </div>
+  <div class="grp"><b>Halloween</b>
+    <button data-hat="witch">Bruja</button><button data-hat="pumpkin">Calabaza</button><button data-hat="vampire">Vampiro</button><button data-hat="ghost">Fantasma</button>
+  </div>
+  <div class="grp"><b>Navidad</b>
+    <button data-hat="santa">Papá Noel</button><button data-hat="reindeer">Reno</button><button data-hat="elf">Elfo</button><button data-hat="scarf">Bufanda</button>
+  </div>
+  <div class="grp"><b>Cumpleaños</b>
+    <button data-hat="party">Gorro de fiesta</button><button data-hat="crown">Corona</button><button data-hat="none">Sin complemento</button>
+    <span class="sep"></span><button data-sound>Sonido: sí</button><button data-bg>Fondo claro/oscuro</button>
+  </div>
+  <div class="grp"><b>Bautizo</b><button data-reborn>Repetir el bautizo</button></div>
+  <div class="tip"><b style="width:auto;color:#c0533a">Nuevo:</b> el bautizo arranca solo la primera vez. Menú:  haz <b style="width:auto;color:#3b2f2a">clic en Eko</b> para abrir su menú (doble clic = saltito). Mueve el ratón por la pantalla (también por arriba) y mira cómo te sigue. Arrástralo, lánzalo fuerte, haz clic o acarícialo pasando el ratón despacio por encima.</div>
+</div>
+<div id="taskbar"></div>
+<div id="stage" data-eyes="open" data-brows="none" data-mood="normal">
+    <div id="pod">
+    <div id="bubble" aria-live="polite"></div>
+    <div id="thought"><i></i><i></i><i></i></div>
+    <div id="zz"><span>z</span><span>z</span><span>z</span></div>
+    <div id="sweat"></div>
+    <div id="badge"></div>
+    <div id="boxes"></div>
+    <div id="fx"></div>
+
+    <svg id="mochi" viewBox="-120 -125 240 310" aria-label="Eko">
+      <defs>
+        <radialGradient id="clay" cx="35%" cy="28%" r="85%">
+          <stop offset="0" stop-color="#fffaf5" />
+          <stop offset=".55" stop-color="#efe2d8" />
+          <stop offset="1" stop-color="#c7b0a2" />
+        </radialGradient>
+        <radialGradient id="sheet" cx="38%" cy="25%" r="90%">
+          <stop offset="0" stop-color="#ffffff" />
+          <stop offset=".6" stop-color="#f1f3f8" />
+          <stop offset="1" stop-color="#c9cedb" />
+        </radialGradient>
+        <radialGradient id="pumpkin" cx="35%" cy="30%" r="80%">
+          <stop offset="0" stop-color="#ffb35c" />
+          <stop offset="1" stop-color="#e06d12" />
+        </radialGradient>
+        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffe08a" />
+          <stop offset="1" stop-color="#e2a52a" />
+        </linearGradient>
+        <filter id="blur9" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" /></filter>
+        <filter id="blur4" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /></filter>
+        <filter id="blur3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" /></filter>
+        <clipPath id="headClip"><path d="M-100,8 C-100,-80 -50,-104 0,-104 C50,-104 100,-80 100,8 C100,44 70,58 0,58 C-70,58 -100,44 -100,8Z" /></clipPath>
+        <clipPath id="bodyClip"><rect x="-52" y="40" width="104" height="106" rx="46" /></clipPath>
+        <g id="boxArt">
+          <path d="M-28,-18 L-20,-28 L36,-28 L28,-18Z" fill="#e9c08a" />
+          <path d="M28,-18 L36,-28 L36,12 L28,22Z" fill="#b8834c" />
+          <rect x="-28" y="-18" width="56" height="40" rx="3" fill="#d6a46a" />
+          <path d="M-4,-18 L4,-18 L12,-28 L4,-28Z" fill="#f4dcb0" />
+          <rect x="-4" y="-18" width="8" height="40" fill="#f4dcb0" />
+          <rect x="9" y="-6" width="15" height="10" rx="1.5" fill="#fffaf2" />
+          <path d="M12,-2 L21,-2 M12,1.5 L18,1.5" stroke="#b9a48c" stroke-width="1.4" />
+        </g>
+      </defs>
+
+      <ellipse id="shadow" cx="0" cy="176" rx="72" ry="11" fill="#2a1a12" opacity=".28" filter="url(#blur9)" />
+
+      <g id="pet">
+        <!-- Complementos detrás del cuerpo -->
+        <g id="accBack">
+          <g id="cape" data-fly="cape">
+            <path d="M-46,48 Q0,60 46,48 C66,92 74,132 84,166 Q42,154 0,174 Q-42,154 -84,166 C-74,132 -66,92 -46,48Z" fill="#c8303c" />
+            <path d="M-30,56 C-40,100 -44,140 -40,160 M0,62 L0,170 M30,56 C40,100 44,140 40,160" fill="none" stroke="#a1222e" stroke-width="4" opacity=".6" />
+          </g>
+          <g data-acc="vampire">
+            <path d="M-46,52 C-104,40 -128,-20 -118,-74 C-96,-36 -72,-6 -30,30Z" fill="#1e1a26" />
+            <path d="M-44,48 C-92,36 -112,-12 -108,-56 C-90,-26 -70,-2 -34,30Z" fill="#a3203a" />
+            <path d="M46,52 C104,40 128,-20 118,-74 C96,-36 72,-6 30,30Z" fill="#1e1a26" />
+            <path d="M44,48 C92,36 112,-12 108,-56 C90,-26 70,-2 34,30Z" fill="#a3203a" />
+          </g>
+        </g>
+        <g id="legs">
+          <g id="legL"><rect x="-36" y="118" width="30" height="58" rx="15" fill="url(#clay)" /></g>
+          <g id="legR"><rect x="6" y="118" width="30" height="58" rx="15" fill="url(#clay)" /></g>
+        </g>
+        <g id="armL"><ellipse cx="-60" cy="92" rx="14" ry="34" transform="rotate(12 -60 92)" fill="url(#clay)" /></g>
+        <g id="armR"><ellipse cx="60" cy="92" rx="14" ry="34" transform="rotate(-12 60 92)" fill="url(#clay)" /></g>
+        <g id="upper">
+          <g id="body">
+            <rect x="-52" y="40" width="104" height="106" rx="46" fill="url(#clay)" />
+            <g clip-path="url(#bodyClip)"><ellipse id="bodyHl" cx="-22" cy="88" rx="14" ry="26" fill="#fff" opacity=".35" filter="url(#blur4)" /><ellipse cx="0" cy="50" rx="62" ry="15" fill="#6b4f43" opacity=".35" filter="url(#blur4)" /></g>
+          </g>
+          <!-- Complementos sobre el cuerpo -->
+          <g id="accBody">
+            <g data-fly="cape"><path d="M-30,50 Q0,62 30,50" fill="none" stroke="#a1222e" stroke-width="7" stroke-linecap="round" /><circle cx="0" cy="58" r="7" fill="url(#gold)" /></g>
+            <g data-acc="vampire">
+              <path d="M-50,50 C-72,86 -72,130 -60,150 L-44,146 C-50,112 -46,80 -28,56Z" fill="#1e1a26" />
+              <path d="M50,50 C72,86 72,130 60,150 L44,146 C50,112 46,80 28,56Z" fill="#1e1a26" />
+              <path d="M-14,54 L0,72 L14,54Z" fill="#f4f1ee" />
+            </g>
+            <g data-acc="scarf">
+              <path d="M-58,44 Q0,70 58,44 L60,62 Q0,90 -60,62Z" fill="#d43c3c" />
+              <path d="M-40,52 L-34,72 M-14,58 L-10,80 M14,58 L10,80 M40,52 L34,72" stroke="#fbf6f0" stroke-width="7" />
+              <path d="M18,66 L38,64 L44,118 L22,120Z" fill="#c33434" />
+              <path d="M21,82 L40,80 M23,98 L42,96" stroke="#fbf6f0" stroke-width="6" />
+              <path d="M22,120 L22,128 M28,120 L28,129 M34,119 L34,128 M40,119 L41,127" stroke="#c33434" stroke-width="3" stroke-linecap="round" />
+            </g>
+          </g>
+          <g id="head">
+            <path d="M-100,8 C-100,-80 -50,-104 0,-104 C50,-104 100,-80 100,8 C100,44 70,58 0,58 C-70,58 -100,44 -100,8Z" fill="url(#clay)" />
+            <g clip-path="url(#headClip)"><ellipse id="hl" cx="-42" cy="-68" rx="34" ry="13" fill="#fff" opacity=".45" filter="url(#blur4)" /></g>
+            <ellipse id="mouth" cx="0" cy="40" rx="5" ry="0" fill="#3a2520" />
+            <g id="snack" style="display:none">
+              <circle cx="0" cy="0" r="15" fill="#d9a35f" /><circle cx="0" cy="0" r="12" fill="#e8b874" />
+              <circle cx="-5" cy="-4" r="2.4" fill="#5a3a22" /><circle cx="5" cy="-1" r="2.2" fill="#5a3a22" /><circle cx="-1" cy="6" r="2.4" fill="#5a3a22" /><circle cx="6" cy="7" r="1.6" fill="#5a3a22" />
+            </g>
+            <g id="eyes">
+              <line id="bridge" x1="-20" y1="20" x2="20" y2="20" />
+              <g class="eye eye-l" transform="translate(-32 20)">
+                <ellipse class="blush" cx="-12" cy="17" rx="13" ry="6" fill="#f2907e" filter="url(#blur3)" />
+                <g class="open"><circle r="6.5" fill="#1d1614" /><circle cx="2" cy="-2" r="1.6" fill="#fff" opacity=".8" /></g>
+                <path class="line happy" d="M-7,2 Q0,-7 7,2" />
+                <path class="line closed" d="M-7,0 Q0,5 7,0" />
+                <path class="line spiral" d="M0,0 m-2,0 a2,2 0 1,1 4,0 a4,4 0 1,1 -8,0 a6,6 0 1,1 12,0 a8,8 0 1,1 -16,0" />
+                <path class="line brow" d="M-8,-11 Q0,-16 8,-11" />
+                <circle class="rim" r="12" />
+              </g>
+              <g class="eye eye-r" transform="translate(32 20)">
+                <ellipse class="blush" cx="12" cy="17" rx="13" ry="6" fill="#f2907e" filter="url(#blur3)" />
+                <g class="open"><circle r="6.5" fill="#1d1614" /><circle cx="2" cy="-2" r="1.6" fill="#fff" opacity=".8" /></g>
+                <path class="line happy" d="M-7,2 Q0,-7 7,2" />
+                <path class="line closed" d="M-7,0 Q0,5 7,0" />
+                <path class="line spiral" d="M0,0 m-2,0 a2,2 0 1,1 4,0 a4,4 0 1,1 -8,0 a6,6 0 1,1 12,0 a8,8 0 1,1 -16,0" />
+                <path class="line brow" d="M-8,-11 Q0,-16 8,-11" />
+                <circle class="rim" r="12" />
+              </g>
+            </g>
+            <!-- Complementos de la cara (siguen el giro de los ojos) -->
+            <g id="accFace">
+              <g data-acc="vampire"><path d="M-9,36 L-5,46 L-1,36Z M1,36 L5,46 L9,36Z" fill="#fff" stroke="#e5ddd6" stroke-width=".8" /></g>
+              <g data-acc="reindeer">
+                <ellipse cx="0" cy="36" rx="10" ry="8.5" fill="#d8323a" />
+                <ellipse cx="-3" cy="33" rx="3.5" ry="2.2" fill="#fff" opacity=".7" />
+              </g>
+            </g>
+            <!-- Complementos de la cabeza -->
+            <g id="hat">
+              <g data-acc="santa">
+                <path d="M40,-108 C72,-118 104,-100 110,-70 C112,-60 106,-54 100,-57 C98,-80 82,-94 56,-96Z" fill="#c93232" />
+                <path d="M-88,-54 C-90,-104 -40,-122 8,-118 C54,-114 86,-94 90,-58 Q0,-40 -88,-54Z" fill="#d93d3d" />
+                <path d="M-60,-96 C-36,-112 2,-116 30,-110" fill="none" stroke="#f27368" stroke-width="7" stroke-linecap="round" opacity=".6" />
+                <path d="M-92,-52 Q0,-36 94,-56" fill="none" stroke="#fbf6f0" stroke-width="20" stroke-linecap="round" />
+                <circle cx="103" cy="-56" r="12" fill="#fbf6f0" />
+              </g>
+              <g data-acc="elf">
+                <path d="M30,-106 C70,-130 112,-128 128,-98 C118,-104 100,-106 82,-96 L64,-84Z" fill="#2f9a57" />
+                <path d="M-86,-56 C-88,-104 -38,-120 8,-116 C52,-112 84,-92 88,-60 Q0,-42 -86,-56Z" fill="#37ad62" />
+                <path d="M-90,-54 Q0,-38 92,-58" fill="none" stroke="#d43c3c" stroke-width="12" stroke-linecap="round" />
+                <path d="M-90,-54 Q0,-38 92,-58" fill="none" stroke="#f2c14e" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" />
+                <circle cx="129" cy="-96" r="8" fill="url(#gold)" />
+              </g>
+              <g data-acc="reindeer">
+                <path d="M-46,-92 C-54,-116 -62,-130 -78,-140 M-58,-118 C-72,-118 -82,-112 -90,-104 M-66,-132 C-62,-144 -60,-152 -52,-160" fill="none" stroke="#8a5a36" stroke-width="9" stroke-linecap="round" />
+                <path d="M46,-92 C54,-116 62,-130 78,-140 M58,-118 C72,-118 82,-112 90,-104 M66,-132 C62,-144 60,-152 52,-160" fill="none" stroke="#8a5a36" stroke-width="9" stroke-linecap="round" />
+              </g>
+              <g data-acc="witch">
+                <ellipse cx="0" cy="-66" rx="114" ry="18" fill="#2f2440" transform="rotate(-5 0 -66)" />
+                <path d="M-50,-72 C-40,-104 -22,-150 2,-176 C12,-186 26,-186 36,-178 C28,-172 20,-168 16,-160 C26,-128 40,-100 52,-74 Z" fill="#4a3863" />
+                <path d="M-48,-84 C-20,-92 22,-94 50,-86 L52,-74 C22,-82 -20,-80 -50,-72Z" fill="#f0a23b" />
+                <rect x="-8" y="-92" width="16" height="15" rx="2" fill="none" stroke="#ffd27a" stroke-width="3" />
+                <path d="M-114,-60 C-60,-44 60,-48 113,-74" fill="none" stroke="#3a2d50" stroke-width="5" stroke-linecap="round" />
+              </g>
+              <g data-acc="pumpkin">
+                <path d="M-4,-96 C-8,-112 -2,-124 10,-130 L15,-124 C6,-118 6,-108 8,-96Z" fill="#6b4a24" />
+                <path d="M10,-118 C24,-134 44,-130 50,-116 C36,-112 22,-110 10,-118Z" fill="#4c9a45" />
+                <ellipse cx="-70" cy="-14" rx="50" ry="72" fill="#d9640f" />
+                <ellipse cx="70" cy="-14" rx="50" ry="72" fill="#d9640f" />
+                <ellipse cx="-38" cy="-18" rx="54" ry="80" fill="#ec7a1a" />
+                <ellipse cx="38" cy="-18" rx="54" ry="80" fill="#ec7a1a" />
+                <ellipse cx="0" cy="-20" rx="48" ry="84" fill="url(#pumpkin)" />
+                <ellipse cx="-30" cy="-70" rx="22" ry="10" fill="#ffd49a" opacity=".35" filter="url(#blur4)" />
+                <g class="carve" id="carveL"><path d="M-11,7 L0,-11 L11,7Z" fill="#ffd34d" stroke="#7a3208" stroke-width="2.5" stroke-linejoin="round" /></g>
+                <g class="carve" id="carveR"><path d="M-11,7 L0,-11 L11,7Z" fill="#ffd34d" stroke="#7a3208" stroke-width="2.5" stroke-linejoin="round" /></g>
+                <g id="carveMouth"><path d="M-36,26 Q0,52 36,26 L28,34 L18,28 L9,38 L0,31 L-9,38 L-18,28 L-28,34Z" fill="#ffd34d" stroke="#7a3208" stroke-width="2.5" stroke-linejoin="round" /></g>
+              </g>
+              <g data-acc="party">
+                <g transform="translate(-24 -92) rotate(-14)">
+                  <path d="M-38,4 L0,-92 L38,4 Z" fill="#5fb3e8" />
+                  <path d="M-30,-16 L30,-16 L35,-4 L-35,-4Z M-20,-44 L20,-44 L24,-32 L-24,-32Z M-9,-70 L9,-70 L13,-60 L-13,-60Z" fill="#ffd25a" />
+                  <path d="M-40,4 Q0,14 40,4" fill="none" stroke="#f26a8d" stroke-width="7" stroke-linecap="round" />
+                  <circle cx="0" cy="-94" r="10" fill="#f26a8d" />
+                </g>
+              </g>
+              <g data-acc="crown">
+                <path d="M-56,-86 L-62,-140 L-34,-112 L0,-150 L34,-112 L62,-140 L56,-86 Q0,-74 -56,-86Z" fill="url(#gold)" stroke="#c98b17" stroke-width="2" />
+                <circle cx="-62" cy="-142" r="6" fill="#ffe08a" /><circle cx="0" cy="-152" r="7" fill="#ffe08a" /><circle cx="62" cy="-142" r="6" fill="#ffe08a" />
+                <circle cx="0" cy="-100" r="7" fill="#e2445f" /><circle cx="-32" cy="-96" r="5" fill="#4b8de8" /><circle cx="32" cy="-96" r="5" fill="#3bb36b" />
+              </g>
+            </g>
+          </g>
+        </g>
+        <!-- Paquete que sostiene -->
+        <g id="heldBox" style="display:none"><use href="#boxArt" /></g>
+        <!-- Disfraz de fantasma: cubre todo -->
+        <g id="accFront">
+          <g data-acc="ghost">
+            <path id="ghostSheet" d="M-108,12 C-108,-90 -54,-118 0,-118 C54,-118 108,-90 108,12 L88,170 L-88,170Z" fill="url(#sheet)" />
+            <g id="ghostEyes"><ellipse cx="-32" cy="16" rx="11" ry="15" fill="#1d1614" /><ellipse cx="32" cy="16" rx="11" ry="15" fill="#1d1614" /></g>
+          </g>
+        </g>
+      </g>
+    </svg>
+
+    <div id="hit"></div>
+    </div>
+    <div id="menu"></div>
+  </div>
+  <script>window.EKO_FLOOR_OFFSET=40;window.EKO_LANG="es";</script><script>// Eko · ajustes compartidos entre la ventana de Eko y la de Ajustes (mismo origen → mismo localStorage).
+window.EkoSettings = (() => {
+  "use strict";
+  const KEY = "eko-settings";
+  const DEFAULTS = {
+    petName: "Eko",
+    userName: "",
+    birthday: "",            // "MM-DD"
+    bedtime: "00:30",        // a partir de cuándo te avisa de que es tarde ("" = no avisar)
+    chatty: 2,               // 0 nada, 1 poco, 2 normal, 3 mucho
+    voice: true,
+    pitch: 560,
+    walk: true,
+    fly: true,
+    follow: true,
+    size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande
+    breaks: true,
+    breakMinutes: 90,
+    scrollMinutes: 20,
+    apps: {
+      creative: "lightroom, photoshop, illustrator, afterfx, premiere, captureone, figma, affinity, darktable, ansel, gimp, resolve, blender, krita, inkscape, bridge, indesign, rawtherapee",
+      code: "code, cursor, devenv, windowsterminal, powershell, cmd, idea64, pycharm64, sublime_text, webstorm64",
+      office: "winword, excel, powerpnt, outlook, olk, onenote, notion, acrobat, acrord32, thunderbird",
+      browser: "chrome, msedge, firefox, opera, brave, arc, vivaldi",
+      media: "spotify, vlc, applemusic, music",
+      ignore: "",
+    },
+  };
+  const read = () => {
+    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (_) { return { ...DEFAULTS }; }
+  };
+  let cache = read();
+  const listeners = [];
+  const T = window.__TAURI__;
+
+  function notify() { cache = read(); listeners.forEach((f) => f(cache)); }
+  // Otra ventana cambió algo
+  window.addEventListener("storage", (e) => { if (e.key === KEY) notify(); });
+  if (T) T.event.listen("settings-changed", notify);
+
+  return {
+    DEFAULTS,
+    get: () => cache,
+    set(k, v) {
+      const s = read();
+      s[k] = v;
+      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (_) {}
+      cache = s;
+      if (T) T.event.emit("settings-changed", k);
+      listeners.forEach((f) => f(cache));
+    },
+    setApp(cat, v) { const a = { ...read().apps, [cat]: v }; this.set("apps", a); },
+    list(cat) { return (cache.apps[cat] || "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean); },
+    onChange(f) { listeners.push(f); },
+    reset() { try { localStorage.clear(); } catch (_) {} notify(); },
+  };
+})();
+</script><script>// Eko · cuerpo, animación y personalidad.
+// Fase 1 (presencia) + pulido: gestos, expresiones, voz, símbolos, manías, días especiales y complementos.
+(() => {
+  "use strict";
+
+  // ---------- Puente con Tauri (con modo navegador para previsualizar) ----------
+  const T = window.__TAURI__;
+  const NATIVE = !!T;
+  const win = NATIVE ? T.window.getCurrentWindow() : null;
+  const invoke = NATIVE ? T.core.invoke : async () => {};
+  const listen = NATIVE ? T.event.listen : async () => {};
+
+  const W = 420, H = 380;
+  const $ = (s) => document.querySelector(s);
+  const stage = $("#stage"), hit = $("#hit"), bubble = $("#bubble"), fxLayer = $("#fx"), boxesEl = $("#boxes");
+  const el = {
+    pet: $("#pet"), upper: $("#upper"), head: $("#head"), body: $("#body"), eyes: $("#eyes"),
+    legs: $("#legs"), legL: $("#legL"), legR: $("#legR"), armL: $("#armL"), armR: $("#armR"),
+    shadow: $("#shadow"), hl: $("#hl"), mouth: $("#mouth"), bridge: $("#bridge"), hat: $("#hat"),
+    accFace: $("#accFace"), snack: $("#snack"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"), accFront: $("#accFront"), heldBox: $("#heldBox"), ghostEyes: [...document.querySelectorAll("#ghostEyes ellipse")],
+    accEls: [...document.querySelectorAll("[data-acc]")],
+    flyEls: [...document.querySelectorAll("[data-fly]")], cape: $("#cape"),
+    ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
+    opens: [...document.querySelectorAll(".eye .open")],
+    eyeEls: [...document.querySelectorAll(".eye")],
+  };
+
+  // ---------- Utilidades ----------
+  const LANG = window.EKO_LANG || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const env = (k, edge = 0.18) => clamp(Math.min(k / edge, (1 - k) / edge), 0, 1); // entra y sale suave
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+  };
+
+  // ---------- Textos ----------
+  const TXT = {
+    es: {
+      hello: ["¡Holi!", "¡Ya estoy de vuelta!", "¿Qué estamos haciendo hoy?"],
+      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!"],
+      pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!"],
+      pet: ["Esto es mejor que una actualización", "Qué gustitito", "No pares, porfa"],
+      drop: ["¡Mis piernitas!", "Diez de diez en el aterrizaje", "Avisa la próxima vez", "¿Eso es todo?", "Ni un rasguño", "Otra, otra"],
+      dizzy: ["Veo tres pantallas…", "¿Quién ha apagado la gravedad?", "Necesito sentarme"],
+      sleep: ["Me echo una siestecita", "Despiértame si me necesitas", "Zzz… digo, buenas noches"],
+      wake: ["¡No estaba dormido!", "¿Qué hora es?", "Soñaba con una pelota gigante"],
+      updating: ["Me voy a la peluquería, ahora vuelvo"],
+      updated: ["¿Notas algo distinto?", "Versión nueva, mismo encanto"],
+      missed: ["¡Te echaba de menos!", "¡Por fin!"],
+      sulk: ["Hmpf.", "…"],
+      forgiven: ["Vale, te perdono", "¡Así sí!"],
+      anniversary: (n) => `¡Hoy hace ${n} ${n === 1 ? "año" : "años"} que nos conocemos!`,
+      birthday: ["¡Feliz cumpleaños! ¿Y mi trozo de tarta?"],
+      xmas: ["¡Feliz Navidad!"],
+      newyear: ["¡Feliz año nuevo!"],
+      halloween: ["¡Buuu! ¿Te he asustado?"],
+      friday: ["¡Viernes! ¿Planes?", "Huele a finde"],
+      monday: ["Lunes… ánimo, que tú puedes", "¿Ya es lunes otra vez?"],
+      fly: ["¡Al rescate!", "¡Capa activada!", "¡Esto es un trabajo para Eko!"],
+      costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
+      hats: { auto: "Complemento automático", witch: "Bruja", pumpkin: "Calabaza", vampire: "Vampiro", ghost: "Fantasma", santa: "Papá Noel", reindeer: "Reno", elf: "Elfo", scarf: "Bufanda", party: "Fiesta", crown: "Corona", none: "Sin complemento" },
+    },
+    en: {
+      hello: ["Hi!", "I'm here", "What are we doing today?"],
+      poke: ["You called?", "Present!", "What's up?", "Here!"],
+      pokeAnnoyed: ["Enough!", "Again?", "You'll wear me out", "I'm not a button!"],
+      pet: ["mmm…", "That's nice", "Again"],
+      drop: ["Oof!", "Perfect landing", "Not again…"],
+      dizzy: ["Everything's spinning…", "Where am I?"],
+      sleep: ["Good night…", "Five more minutes…"],
+      wake: ["Already?", "I was just resting my eyes"],
+      updating: ["Changing clothes, be right back"],
+      updated: ["New version!", "I feel different…"],
+      missed: ["I missed you!", "Finally!"],
+      sulk: ["Hmph.", "…"],
+      forgiven: ["Fine, you're forgiven", "That's better!"],
+      anniversary: (n) => `${n} ${n === 1 ? "year" : "years"} together today!`,
+      birthday: ["Happy birthday!"],
+      xmas: ["Merry Christmas!"],
+      newyear: ["Happy new year!"],
+      halloween: ["Boo!"],
+      friday: ["It's Friday!"],
+      monday: ["Monday… again"],
+      fly: ["Here I go!", "To infinity!", "Taking off!"],
+      costume: ["How do I look?", "New look!", "Looking good, right?"],
+      hats: { auto: "Automatic accessory", witch: "Witch", pumpkin: "Pumpkin", vampire: "Vampire", ghost: "Ghost", santa: "Santa", reindeer: "Reindeer", elf: "Elf", scarf: "Scarf", party: "Party", crown: "Crown", none: "No accessory" },
+    },
+  }[LANG];
+
+  // ---------- Voz y sonidos (sintetizados, sin archivos) ----------
+  const Voice = {
+    ctx: null,
+    on: window.EkoSettings ? window.EkoSettings.get().voice : true,
+    base: window.EkoSettings ? window.EkoSettings.get().pitch : 560,
+    ensure() {
+      if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; } }
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      return this.ctx;
+    },
+    tone(type, f0, f1, dur, vol, cutoff = 2400, delay = 0) {
+      if (!this.on) return;
+      const c = this.ensure(); if (!c) return;
+      const t = c.currentTime + delay;
+      const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur * 0.9);
+      f.type = "lowpass"; f.frequency.value = cutoff;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + Math.min(0.02, dur * 0.2));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(f).connect(g).connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    },
+    syllable() { const p = this.base * rnd(0.85, 1.35); this.tone("triangle", p, p * rnd(0.8, 1.2), rnd(0.07, 0.11), 0.045, 2000); },
+    thump(s = 1) { this.tone("sine", 150, 55, 0.16, 0.07 * s, 600); },
+    hop() { this.tone("sine", 380, 720, 0.12, 0.035, 1800); },
+    chirp() { this.tone("triangle", 700, 1100, 0.08, 0.04); this.tone("triangle", 900, 1400, 0.08, 0.04, 2400, 0.09); },
+    yawn() { this.tone("triangle", 480, 190, 0.9, 0.035, 900); },
+    sigh() { this.tone("triangle", 380, 240, 0.5, 0.03, 900); },
+    setOn(v) { this.on = !!v; if (window.EkoSettings && window.EkoSettings.get().voice !== !!v) window.EkoSettings.set("voice", !!v); },
+  };
+
+  // ---------- Símbolos flotantes ----------
+  const FX = { heart: ["♥", "#ef6b86"], bang: ["!", "#f2a33a"], ask: ["?", "#8a7cc9"], note: ["♪", "#5fa8d8"], spark: ["✦", "#f2c14e"], drop: ["…", "#9d8a7f"] };
+  function fx(kind, n = 1) {
+    const [ch, color] = FX[kind] || [kind, "#3b2f2a"];
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        const s = document.createElement("span");
+        s.className = "fx";
+        s.textContent = ch;
+        s.style.color = color;
+        s.style.left = 104 + rnd(-26, 26) + "px";
+        s.style.top = 92 + rnd(-6, 8) + "px";
+        s.style.setProperty("--dx", rnd(-14, 14) + "px");
+        fxLayer.appendChild(s);
+        setTimeout(() => s.remove(), 1500);
+      }, i * 180);
+    }
+  }
+
+  // ---------- Manía: guarda las descargas como paquetitos ----------
+  const boxes = [];
+  function addBox() {
+    if (boxes.length >= 5) removeBox(boxes[0]);
+    const b = document.createElement("div");
+    b.className = "box";
+    b.innerHTML = '<svg viewBox="-30 -30 68 54"><use href="#boxArt" /></svg>';
+    const i = boxes.length;
+    const slots = [[0, 0], [20, 0], [10, 14], [0, 28], [20, 28]];
+    b.style.left = slots[i][0] + "px";
+    b.style.bottom = slots[i][1] + "px";
+    boxesEl.appendChild(b);
+    boxes.push(b);
+    b._timer = setTimeout(() => removeBox(b), 15 * 60 * 1000);
+  }
+  function removeBox(b) {
+    const i = boxes.indexOf(b);
+    if (i < 0) return;
+    boxes.splice(i, 1);
+    clearTimeout(b._timer);
+    b.classList.add("out");
+    setTimeout(() => b.remove(), 450);
+  }
+
+  // ---------- Mundo: el "suelo" es el borde superior de la barra de tareas ----------
+  const world = { left: 0, top: 0, width: 0, height: 0 };
+  function readBounds() {
+    if (NATIVE) {
+      world.left = screen.availLeft || 0; world.top = screen.availTop || 0;
+      world.width = screen.availWidth; world.height = screen.availHeight;
+    } else {
+      world.left = 0; world.top = 0; world.width = innerWidth; world.height = innerHeight - (window.EKO_FLOOR_OFFSET || 0);
+    }
+  }
+  const floorY = () => world.top + world.height - H;
+  // Límites para la ventana: Eko (en el centro) puede llegar hasta el borde de la pantalla
+  const minX = () => world.left - W / 2 + 70;
+  const maxX = () => world.left + world.width - W / 2 - 70;
+  const centerX = () => world.left + world.width / 2 - W / 2;
+
+  // ---------- Estado ----------
+  const S = {
+    x: 0, y: 0, vx: 0, vy: 0, prevX: 0,
+    airborne: false, dragging: false, pressed: false,
+    mode: "idle", modeUntil: 0, targetX: 0, facing: 1, speed: 46, then: null, peekSide: 0,
+    sleeping: false, sulking: false, fly: null,
+  };
+  const A = {
+    t: 0, squash: 0, squashV: 0, appear: 0,
+    tilt: 0, tiltTarget: 0, turn: 0, lag: 0, lagV: 0, sit: 0,
+    eyeX: 0, eyeY: 0, eyeTX: 0, eyeTY: 0,
+    blink: 1, nextBlink: 2, blinkEnd: 0,
+    walkPhase: 0, kick: 0,
+    mood: "normal", moodUntil: 0,
+    dance: false, danceUntil: 0, hot: false,
+    action: null, armsFront: false,
+    talkUntil: 0, nextSyl: 0, gNod: 0,
+    pose: { aL: 0, aR: 0 },
+  };
+  const cursor = { x: -1e4, y: -1e4, over: false, lastX: 0, lastY: 0, pet: 0, lastMove: -10 };
+  let lastInteraction = Date.now();
+  const touched = () => { lastInteraction = Date.now(); if (S.sulking) endSulk(true); };
+
+  // ---------- Cara ----------
+  let faceKey = "";
+  function setFace(eyes, brows) {
+    const key = eyes + "|" + brows;
+    if (key === faceKey) return;
+    faceKey = key;
+    stage.dataset.eyes = eyes;
+    stage.dataset.brows = brows;
+  }
+  let blushTimer = 0;
+  function blush(secs = 2.5) {
+    stage.classList.add("blushing");
+    clearTimeout(blushTimer);
+    blushTimer = setTimeout(() => stage.classList.remove("blushing"), secs * 1000);
+  }
+  function setMood(m, secs = 0) {
+    A.mood = m;
+    A.moodUntil = secs ? A.t + secs : 0;
+    stage.dataset.mood = m;
+  }
+  const bump = (amount) => { A.squashV += amount; };
+
+  // ---------- Acciones (gestos con duración) ----------
+  // Cada acción modifica la pose base. k = progreso 0..1, e = envolvente suave.
+  function waveF(P, k, e) { P.aR = lerp(P.aR, -112 + Math.sin(k * Math.PI * 6) * 24, e); P.front = true; P.tilt += 6 * e; }
+
+  // Paquete: le cae en las manos, lo enseña, se gira y lo deja en su montón
+  function showBoxF(P, k, e, o) {
+    P.front = true;
+    const box = { x: 0, y: 105, s: 1, vis: true };
+    if (k < 0.2) {
+      const m = k / 0.2;
+      box.y = -150 + 255 * m * m;
+      P.aR = lerp(P.aR, 40, m); P.aL = lerp(P.aL, -40, m); P.eyeY = -3 * (1 - m);
+    } else if (k < 0.55) {
+      const m = (k - 0.2) / 0.35, up = Math.sin(m * Math.PI);
+      if (!o.shown) { o.shown = true; hop(-300); fx("spark", 2); }
+      box.y = 105 - 26 * up;
+      P.aR = lerp(40, 72, up); P.aL = -P.aR;
+      if (up > 0.3) P.eyes = "happy";
+    } else if (k < 0.88) {
+      const m = (k - 0.55) / 0.33;
+      P.turn -= 0.6 * Math.sin(Math.min(1, m * 2) * Math.PI / 2);
+      box.x = lerp(0, -150, m); box.y = lerp(105, 162, m); box.s = lerp(1, 0.75, m);
+      P.aL = lerp(-40, 60, m); P.aR = lerp(40, 0, m); P.eyeX = -4;
+    } else {
+      box.vis = false;
+      if (!o.placed) { o.placed = true; addBox(); }
+    }
+    P.box = box;
+  }
+
+  const ACTIONS = {
+    wave: { dur: 1.7, eyes: "happy", f: waveF },
+    bye: { dur: 1.7, eyes: "happy", f: waveF },
+    nod: { dur: 1.1, f(P, k) { P.nod += Math.sin(k * Math.PI * 4) * 7 * (1 - k * 0.35); } },
+    shake: { dur: 1.1, f(P, k) { P.hturn += Math.sin(k * Math.PI * 4) * 0.45 * (1 - k * 0.5); } },
+    shrug: { dur: 1.2, brows: "up", f(P, k, e) { P.aL = lerp(P.aL, 58, e); P.aR = lerp(P.aR, -58, e); P.nod -= 3 * e; P.tilt += 9 * e; } },
+    point: { dur: 1.9, f(P, k, e, o) {
+      const d = o.dir || 1;
+      P.turn += 0.55 * d * e;
+      if (d > 0) P.aR = lerp(P.aR, -98, e); else P.aL = lerp(P.aL, 98, e);
+      P.front = true; P.eyeX = 5 * d * e;
+    } },
+    stretch: { dur: 2.6, f(P, k) {
+      const s = Math.sin(clamp(k, 0, 1) * Math.PI);
+      P.aL = lerp(P.aL, 122, s); P.aR = lerp(P.aR, -122, s); P.front = s > 0.3;
+      P.sy *= 1 + 0.09 * s; P.sx *= 1 - 0.045 * s; P.lift += 5 * s;
+      if (s > 0.35) P.eyes = "closed";
+      P.mouth = Math.max(P.mouth, clamp((s - 0.55) * 2.4, 0, 1));
+    } },
+    yawn: { dur: 1.8, f(P, k) {
+      const s = Math.sin(k * Math.PI);
+      P.mouth = Math.max(P.mouth, s); P.nod -= 4 * s; P.tilt += 7 * s;
+      if (s > 0.25) P.eyes = "closed";
+    } },
+    scratch: { dur: 2.6, eyes: "squint", f(P, k, e) {
+      const sc = Math.sin(A.t * 26);
+      P.aR = lerp(P.aR, -160 + sc * 10, e); P.front = true;
+      P.tilt += 12 * e; P.hturn += 0.15 * e; P.nod += sc * 1.2 * e; P.eyeY = -2 * e;
+    } },
+    think: { dur: 3.6, f(P, k, e) {
+      P.aR = lerp(P.aR, 104 + Math.sin(A.t * 9) * 4, e); P.front = true;
+      P.tilt -= 10 * e; P.hturn -= 0.18 * e; P.eyeX = -4 * e; P.eyeY = -4.5 * e;
+      if (k > 0.35) P.brows = "up";
+    } },
+    lookAround: { dur: 3.4, f(P, k, e) { P.hturn += Math.sin(k * Math.PI * 2) * 0.75 * e; P.eyeX = Math.sin(k * Math.PI * 2) * 4 * e; } },
+    curious: { dur: 2.8, f(P, k, e, o) {
+      const d = o.dir || 1;
+      P.turn += 0.35 * d * e; P.hturn += 0.2 * d * e; P.sway += 7 * d * e; P.tilt += 9 * d * e;
+      P.eyeScale = 1 + 0.25 * e; P.eyeX = 5 * d * e; P.eyeY = -1.5 * e;
+      P.aL = lerp(P.aL, -12, e); P.aR = lerp(P.aR, 12, e);
+    } },
+    showBox: { dur: 3.6, f: showBoxF },
+    eat: { dur: 3.4, f(P, k, e, o) {
+      P.aL = lerp(P.aL, -100, e); P.aR = lerp(P.aR, 100, e); P.front = true;
+      const chew = k > 0.2 && k < 0.8;
+      P.mouth = chew ? Math.abs(Math.sin(A.t * 11)) * 0.8 : 0;
+      P.eyes = k > 0.25 ? "happy" : null; P.nod += chew ? Math.sin(A.t * 11) * 1.5 : 0;
+      P.snack = k < 0.8 ? 1 - Math.floor(clamp((k - 0.2) / 0.6, 0, 0.99) * 4) / 4 : 0;
+      if (chew && Math.floor(A.t * 3.5) !== o.lastCrumb) { o.lastCrumb = Math.floor(A.t * 3.5); fx("·"); }
+      if (k > 0.82 && !o.done) { o.done = true; blush(2); fx("heart", 2); Voice.chirp(); }
+    } },
+    rps: { dur: 1.5, f(P, k, e) {
+      P.aR = lerp(P.aR, -70 + Math.sin(k * Math.PI * 6) * 35, e); P.front = true; P.brows = "angry"; P.nod += Math.sin(k * Math.PI * 6) * 2;
+    } },
+    fists: { dur: 1.8, f(P, k, e) { P.aL = lerp(P.aL, -14, e); P.aR = lerp(P.aR, 14, e); P.eyes = "wink"; P.tilt += 6 * e; } },
+    reveal: { dur: 2.2, f(P, k, e, o) {
+      const d = o.dir || 1;
+      if (d < 0) { P.aL = lerp(P.aL, 95, e); P.aR = lerp(P.aR, -30, e); } else { P.aR = lerp(P.aR, -95, e); P.aL = lerp(P.aL, 30, e); }
+      P.front = true; P.eyeX = 5 * d * e; P.turn += 0.3 * d * e;
+    } },
+    flip: { dur: 0.9, f(P, k) { P.spin = 360 * (k < 0.15 ? 0 : Math.min(1, (k - 0.15) / 0.7)); P.aL = 70; P.aR = -70; P.eyes = "closed"; } },
+    hug: { dur: 2.6, eyes: "happy", f(P, k, e) {
+      const open = k < 0.4 ? e : 0;
+      const close = k >= 0.4 ? e : 0;
+      P.aL = lerp(lerp(P.aL, 118, open), -38, close);
+      P.aR = lerp(lerp(P.aR, -118, open), 38, close);
+      P.front = true; P.sy *= 1 + 0.04 * close; P.tilt += 5 * close;
+    } },
+    dizzy: { dur: 2.6, eyes: "spiral", f(P, k) { P.tilt += Math.sin(A.t * 7) * 13 * (1 - k); P.sway += Math.sin(A.t * 5) * 4 * (1 - k); } },
+    surprise: { dur: 1.4, f(P, k, e) {
+      P.eyeScale = 1 + 0.8 * e; P.brows = "up"; P.mouth = Math.max(P.mouth, 0.45 * e);
+      P.lift += 9 * Math.sin(clamp(k * 2.2, 0, 1) * Math.PI); P.aL = lerp(P.aL, 38, e); P.aR = lerp(P.aR, -38, e);
+    } },
+    sad: { dur: 2.2, f(P, k, e) { P.brows = "sad"; P.nod += 4 * e; P.eyeY = 2 * e; P.sy *= 1 - 0.03 * e; } },
+    angry: { dur: 1.6, f(P, k, e) { P.brows = "angry"; P.sx *= 1 + 0.03 * e; P.aL = lerp(P.aL, 30, e); P.aR = lerp(P.aR, -30, e); } },
+    wink: { dur: 1.2, eyes: "wink", f(P, k, e) { P.tilt += 8 * e; } },
+  };
+
+  function act(name, opts = {}) {
+    const a = ACTIONS[name];
+    if (!a || S.dragging) return;
+    A.action = { name, t0: A.t, dur: opts.dur || a.dur, opts };
+    if (name === "stretch") Voice.yawn();
+    if (name === "yawn") Voice.yawn();
+    if (name === "scratch") setTimeout(() => fx("ask"), 500);
+    if (name === "think") {
+      stage.classList.add("thinking");
+      clearTimeout(act.thinkTimer);
+      act.thinkTimer = setTimeout(() => stage.classList.remove("thinking"), (opts.dur || a.dur) * 1000 - 300);
+    }
+    if (name === "dizzy") fx("spark", 2);
+    if (name === "hug") setTimeout(() => { fx("heart", 3); blush(2.5); Voice.chirp(); }, 900);
+    if (name === "surprise") fx("bang");
+  }
+
+  // ---------- Bocadillo + hablar con el cuerpo ----------
+  let bubbleTimer = 0, lastSay = 0;
+  function say(text, ms = 2800, force = false, gesture = null) {
+    const now = performance.now();
+    if (!force && (now - lastSay < 6000 || window.Eko.quiet)) return false;
+    lastSay = now;
+    bubble.textContent = text;
+    bubble.classList.add("show");
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => bubble.classList.remove("show"), ms);
+    const syl = clamp(Math.round(text.replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12);
+    A.talkUntil = A.t + syl * 0.15;
+    A.nextSyl = A.t;
+    if (gesture) {
+      if (FX[gesture]) fx(gesture, gesture === "heart" ? 3 : 1);
+      else act(gesture);
+    }
+    return true;
+  }
+
+  // ---------- Posición de la ventana ----------
+  let lastPosKey = "";
+  function place() {
+    const px = Math.round(S.x), py = Math.round(S.y);
+    const key = px + "," + py;
+    if (key === lastPosKey) return;
+    lastPosKey = key;
+    if (NATIVE) win.setPosition(new T.dpi.LogicalPosition(px, py));
+    else stage.style.transform = `translate(${px}px, ${py}px)`;
+  }
+
+  // ---------- Días especiales y complementos ----------
+  const today = () => new Date();
+  const isMonday = () => today().getDay() === 1 && today().getHours() < 13;
+  const isFridayEve = () => today().getDay() === 5 && today().getHours() >= 16;
+  const isLate = () => { const h = today().getHours(); return h >= 23 || h < 5; };
+  function season(d = today()) {
+    const m = d.getMonth() + 1, day = d.getDate();
+    if ((m === 12 && day === 31) || (m === 1 && day === 1)) return "party";
+    if ((m === 12 && day >= 5) || (m === 1 && day <= 6)) return "xmas";
+    if ((m === 10 && day >= 25) || (m === 11 && day <= 1)) return "halloween";
+    return null;
+  }
+  function personalDay(d = today()) {
+    const md = String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const bd = window.EkoSettings ? window.EkoSettings.get().birthday : store.get("eko-user-birthday");
+    if (bd && bd === md) return { kind: "birthday" };
+    const born = store.get("eko-born");
+    if (born) {
+      const b = new Date(born);
+      const years = d.getFullYear() - b.getFullYear();
+      if (years >= 1 && b.getMonth() === d.getMonth() && b.getDate() === d.getDate()) return { kind: "anniversary", years };
+    }
+    return null;
+  }
+  // Disfraces por temporada: van rotando cada 2 horas
+  const COSTUMES = { halloween: ["witch", "pumpkin", "vampire", "ghost"], xmas: ["santa", "reindeer", "elf", "scarf"], party: ["party", "crown"] };
+  const ALL_ACC = ["witch", "pumpkin", "vampire", "ghost", "santa", "reindeer", "elf", "scarf", "party", "crown"];
+  const TALL = new Set(["witch", "pumpkin", "santa", "elf", "reindeer", "party", "crown"]);
+  const ACC_CYCLE = ["auto", ...ALL_ACC, "none"];
+  let accMode = "auto", shownAcc = null;
+  function currentAcc() {
+    if (accMode !== "auto") return accMode;
+    const s = personalDay() ? "party" : season();
+    if (!s) return "none";
+    const list = COSTUMES[s];
+    return list[Math.floor(Date.now() / (2 * 3600e3)) % list.length];
+  }
+  function applyAcc(animate) {
+    const a = currentAcc();
+    if (a === shownAcc) return;
+    const first = shownAcc === null;
+    shownAcc = a;
+    for (const e of el.accEls) e.style.display = e.dataset.acc === a ? "inline" : "none";
+    stage.classList.toggle("has-hat", TALL.has(a));
+    stage.classList.toggle("acc-ghost", a === "ghost");
+    if (!first && animate && a !== "none") {
+      fx("spark", 3); hop(-360);
+      setTimeout(() => say(pick(TXT.costume), 2400, false, "wink"), 500);
+    }
+  }
+  function specialGreeting() {
+    const p = personalDay();
+    const d = today(), m = d.getMonth() + 1, day = d.getDate();
+    const key = "eko-greeted-" + d.toDateString();
+    if (store.get(key)) return null;
+    let msg = null;
+    if (p && p.kind === "birthday") msg = pick(TXT.birthday);
+    else if (p && p.kind === "anniversary") msg = TXT.anniversary(p.years);
+    else if (m === 12 && (day === 24 || day === 25)) msg = pick(TXT.xmas);
+    else if ((m === 12 && day === 31) || (m === 1 && day === 1)) msg = pick(TXT.newyear);
+    else if (m === 10 && day === 31) msg = pick(TXT.halloween);
+    if (msg) store.set(key, "1");
+    return msg;
+  }
+
+  // ---------- Cerebro (rutina en reposo) ----------
+  function weighted(options) {
+    const total = options.reduce((s, o) => s + o[1], 0);
+    let r = Math.random() * total;
+    for (const [v, w] of options) { if ((r -= w) <= 0) return v; }
+    return options[0][0];
+  }
+
+  function decide() {
+    if (S.sleeping || S.sulking || S.airborne || S.dragging) return;
+    const sleepy = isMonday() || isLate();
+    const cfg = window.EkoSettings ? window.EkoSettings.get() : { walk: true, fly: true };
+    const cursorRecent = A.t - cursor.lastMove < 8;
+    const choice = weighted([
+      ["idle", 30], ["walk", cfg.walk ? 24 : 0], ["look", 7], ["sit", 8],
+      ["stretch", sleepy ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
+      ["peek", cfg.walk ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0], ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly ? 2 : 0],
+    ]);
+    S.speed = sleepy ? 34 : 46;
+    S.then = null;
+    switch (choice) {
+      case "walk":
+        S.mode = "walk"; S.targetX = clamp(S.x + rnd(-450, 450), minX() + 40, maxX() - 40); S.modeUntil = A.t + 30; break;
+      case "look":
+        S.mode = "idle"; S.modeUntil = A.t + 4; act("lookAround"); break;
+      case "sit":
+        S.mode = "sit"; S.modeUntil = A.t + rnd(6, 16); break;
+      case "stretch": case "yawn": case "scratch": case "think":
+        S.mode = "idle"; S.modeUntil = A.t + ACTIONS[choice].dur + rnd(1, 3); act(choice); break;
+      case "peek": startPeek(); break;
+      case "fly": startFlight(); break;
+      case "approach":
+        S.mode = "walk"; S.targetX = clamp(cursor.x - W / 2 + rnd(-60, 60), minX() + 40, maxX() - 40);
+        S.then = "curious"; S.modeUntil = A.t + 30; break;
+      case "friday":
+        S.mode = "idle"; S.modeUntil = A.t + 9; A.danceUntil = A.t + 8; fx("note", 2);
+        if (Math.random() < 0.4) say(pick(TXT.friday)); break;
+      default:
+        S.mode = "idle"; S.modeUntil = A.t + rnd(3, 8);
+        A.tiltTarget = Math.random() < 0.35 ? rnd(-9, 9) : 0;
+    }
+  }
+
+  function startPeek() {
+    const side = S.x - world.left < world.left + world.width - (S.x + W) ? -1 : 1;
+    S.peekSide = side;
+    S.mode = "walk"; S.speed = 46;
+    S.targetX = side < 0 ? world.left - W / 2 - 8 : world.left + world.width - W / 2 + 8;
+    S.then = "peek"; S.modeUntil = A.t + 40;
+  }
+
+  // ---------- Volar ----------
+  function setFlyGear(kind) { for (const e of el.flyEls) e.style.display = e.dataset.fly === kind ? "inline" : "none"; }
+  function startFlight(kind) {
+    if (S.sleeping || S.sulking || S.dragging || S.airborne || S.fly) return;
+    kind = "cape";
+    const span = world.width;
+    let x1 = clamp(S.x + (Math.random() < 0.5 ? -1 : 1) * rnd(0.35, 0.7) * span, minX() + 40, maxX() - 40);
+    if (Math.abs(x1 - S.x) < 250) x1 = clamp(S.x + (S.x < world.left + span / 2 ? 1 : -1) * 0.5 * span, minX() + 40, maxX() - 40);
+    const h = clamp(rnd(180, 330), 120, world.height - 280);
+    S.fly = { kind, t0: A.t, prep: 1.1, dur: clamp(Math.abs(x1 - S.x) / 260, 3.5, 7), x0: S.x, x1, h, dir: Math.sign(x1 - S.x) || 1 };
+    S.mode = "fly"; A.action = null;
+    setFlyGear(kind); fx("spark", 3); Voice.chirp();
+    say(pick(TXT.fly), 2200, true);
+  }
+  function updateFlight(dt) {
+    const f = S.fly, fy = floorY();
+    const tt = A.t - f.t0;
+    if (tt < f.prep) { S.y = fy; if (tt > f.prep - 0.35 && !f.crouched) { f.crouched = true; bump(4); } return; }
+    const u = clamp((tt - f.prep) / f.dur, 0, 1);
+    if (!f.launched) { f.launched = true; bump(-6); Voice.hop(); }
+    const ease = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+    S.x = lerp(f.x0, f.x1, ease);
+    S.y = fy - f.h * Math.pow(Math.sin(u * Math.PI), 0.75) - Math.sin(tt * 3) * 6 * Math.sin(u * Math.PI);
+    S.facing = f.dir;
+    if (u >= 1) {
+      S.y = fy; S.fly = null; S.mode = "idle"; S.modeUntil = A.t + 3;
+      bump(7); Voice.thump(1);
+      setTimeout(() => { if (!S.fly) { setFlyGear(null); fx("spark", 2); } }, 1300);
+    }
+  }
+
+  function arrive() {
+    const then = S.then;
+    S.then = null;
+    if (then === "peek") { S.mode = "peeking"; S.modeUntil = A.t + rnd(4, 7); S.facing = -S.peekSide; return; }
+    if (then === "curious") { S.mode = "idle"; S.modeUntil = A.t + 3.5; act("curious", { dir: Math.sign(cursor.x - (S.x + W / 2)) || 1 }); return; }
+    if (then === "hug") { S.mode = "idle"; S.modeUntil = A.t + 4; hop(-380); setTimeout(() => act("hug"), 450); return; }
+    S.mode = "idle"; S.modeUntil = A.t + rnd(2, 6); A.tiltTarget = 0;
+  }
+
+  function hop(v = -420) {
+    if (S.dragging || S.sleeping) return;
+    S.airborne = true; S.vy = v; S.vx = 0; bump(-3); Voice.hop();
+  }
+
+  function goToSleep(talk = true) {
+    if (S.sleeping) return;
+    if (talk) { act("yawn"); say(pick(TXT.sleep), 2400, true); }
+    setTimeout(() => { S.sleeping = true; S.mode = "sit"; setMood("sleep"); }, talk ? 1200 : 0);
+  }
+  function wakeUp(talk = true) {
+    if (!S.sleeping) return;
+    S.sleeping = false;
+    setMood("normal");
+    S.mode = "idle"; S.modeUntil = A.t + 3;
+    bump(-2.5);
+    act("stretch");
+    if (talk) setTimeout(() => say(pick(TXT.wake), 2400, true), 900);
+  }
+  function missYou() {
+    if (S.sleeping) wakeUp(false);
+    S.mode = "walk"; S.speed = 150; S.targetX = clamp(centerX(), minX() + 40, maxX() - 40);
+    S.then = "hug"; S.modeUntil = A.t + 20;
+    setTimeout(() => say(pick(TXT.missed), 3000, true), 300);
+  }
+  function sulk(minutes = 2) {
+    if (S.sleeping || S.sulking) return;
+    S.sulking = true; S.mode = "sit"; S.modeUntil = A.t + minutes * 60;
+    Voice.sigh();
+    say(pick(TXT.sulk), 2000, true);
+  }
+  function endSulk(forgiven) {
+    S.sulking = false; S.mode = "idle"; S.modeUntil = A.t + 3;
+    if (forgiven) { setMood("happy", 2.5); blush(); fx("heart", 3); say(pick(TXT.forgiven), 2400, true); }
+  }
+
+  // ---------- Física y lógica ----------
+  function update(dt) {
+    A.t += dt;
+    const fy = floorY();
+    S.prevX = S.x;
+
+    if (S.dragging) {
+      A.kick += dt * 18;
+    } else if (S.fly) {
+      updateFlight(dt);
+    } else if (S.airborne) {
+      S.vy += 2300 * dt;
+      S.y += S.vy * dt;
+      S.x += S.vx * dt;
+      S.vx *= Math.pow(0.4, dt);
+      if (S.x < minX()) { S.x = minX(); S.vx = Math.abs(S.vx) * 0.4; }
+      if (S.x > maxX()) { S.x = maxX(); S.vx = -Math.abs(S.vx) * 0.4; }
+      if (S.y >= fy) {
+        S.y = fy;
+        const impact = S.vy;
+        if (impact > 420) {
+          bump(Math.min(11, impact / 220));
+          Voice.thump(Math.min(1.5, impact / 900));
+          S.vy = -impact * 0.28;
+          if (impact > 1350 && !(A.action && A.action.name === "dizzy")) {
+            act("dizzy");
+            setTimeout(() => say(pick(TXT.dizzy), 2400), 700);
+          }
+        } else {
+          S.vy = 0; S.vx = 0; S.airborne = false;
+          bump(Math.min(5, impact / 170));
+          if (S.mode !== "walk") { S.mode = "idle"; S.modeUntil = Math.max(S.modeUntil, A.t + rnd(1.5, 3)); }
+        }
+      }
+    } else {
+      S.y = fy;
+      if (A.t > S.modeUntil) {
+        if (S.sulking) endSulk(false);
+        else if (S.mode === "peeking") { S.mode = "walk"; S.targetX = clamp(S.x - S.peekSide * rnd(200, 400), minX() + 40, maxX() - 40); S.modeUntil = A.t + 30; }
+        else decide();
+      }
+      if (S.mode === "walk") {
+        const d = S.targetX - S.x;
+        if (Math.abs(d) < 2) arrive();
+        else {
+          S.facing = Math.sign(d);
+          const ready = clamp((A.turn * S.facing - 0.35) / 0.4, 0, 1);
+          const v = Math.min(S.speed, Math.abs(d) * 4 + 10);
+          S.x += S.facing * v * ready * dt;
+          A.walkPhase += dt * (S.speed > 100 ? 16 : 8.5) * ready;
+          A.tiltTarget = S.facing * (S.speed > 100 ? 6 : 3);
+        }
+      }
+    }
+
+    if (A.moodUntil && A.t > A.moodUntil) setMood(S.sleeping ? "sleep" : "normal");
+    if (A.action && A.t - A.action.t0 > A.action.dur) A.action = null;
+
+    // Hablar: pequeños rebotes y sílabas mientras sale el bocadillo
+    if (A.t < A.talkUntil && A.t >= A.nextSyl && !S.sleeping) {
+      A.nextSyl = A.t + rnd(0.11, 0.18);
+      bump(-1.1);
+      Voice.syllable();
+    }
+
+    // Muelles: aplastar/estirar y cabeza con inercia
+    const k = 170, damp = 10;
+    A.squashV += (-k * A.squash - damp * A.squashV) * dt;
+    A.squash += A.squashV * dt;
+    A.appear += ((A.hidden ? 0 : 1) - A.appear) * Math.min(1, dt * 7);
+    const velX = (S.x - S.prevX) / Math.max(dt, 1e-3);
+    const lagTarget = clamp(-velX * 0.012, -7, 7);
+    A.lagV += ((lagTarget - A.lag) * 120 - A.lagV * 9) * dt;
+    A.lag += A.lagV * dt;
+
+    // Sentarse
+    const sitGoal = (S.mode === "sit" || S.sleeping || S.sulking) && !S.airborne && !S.dragging ? 1 : 0;
+    A.sit += (sitGoal - A.sit) * Math.min(1, dt * 5);
+
+    // Inclinación, mirada y giro
+    const tiltGoal = S.sleeping ? 11 : (A.dance || A.t < A.danceUntil) && S.mode !== "walk" && !S.airborne ? Math.sin(A.t * 3.2) * 7 : S.mode === "peeking" ? -S.peekSide * 14 : A.tiltTarget;
+    A.tilt += (tiltGoal - A.tilt) * Math.min(1, dt * 5);
+
+    const cx = S.x + W / 2, cy = S.y + H - 95;
+    const dx = cursor.x - cx, dy = cursor.y - cy, dist = Math.hypot(dx, dy) || 1;
+    const recent = A.t - cursor.lastMove < 4 && (!window.EkoSettings || window.EkoSettings.get().follow);
+    if (S.dragging) { A.eyeTX = 0; A.eyeTY = -2; }
+    else if (S.mode === "peeking") { A.eyeTX = -S.peekSide * 5; A.eyeTY = 0; }
+    else if (dist < 1400 && recent) { A.eyeTX = (dx / dist) * 8; A.eyeTY = (dy / dist) * 9; }
+    else { A.eyeTX = S.mode === "walk" ? S.facing * 2 : 0; A.eyeTY = 0; }
+    A.eyeX += (A.eyeTX - A.eyeX) * Math.min(1, dt * 10);
+    A.eyeY += (A.eyeTY - A.eyeY) * Math.min(1, dt * 10);
+
+    let turnGoal = 0;
+    if (S.mode === "walk" && !S.airborne && !S.dragging) turnGoal = S.facing * 0.85;
+    else if (S.mode === "peeking") turnGoal = -S.peekSide * 0.5;
+    else if (S.fly) turnGoal = S.fly.dir * 0.75;
+    else if (!S.dragging && !S.sleeping && !S.sulking && dist < 1400 && recent) turnGoal = clamp(dx / 600, -0.5, 0.5);
+    const gazeGoal = !S.dragging && !S.sleeping && !S.sulking && !S.fly && dist < 1400 && recent ? clamp(dy / 260, -1, 1) * 10 : 0;
+    A.gNod += (gazeGoal - A.gNod) * Math.min(1, dt * 4);
+    A.turn += (turnGoal - A.turn) * Math.min(1, dt * 5);
+
+    if (A.t > A.nextBlink) { A.blinkEnd = A.t + 0.13; A.nextBlink = A.t + (Math.random() < 0.2 ? 0.25 : rnd(2, 6)); }
+    A.blink = A.t < A.blinkEnd ? 0.1 : 1;
+
+    if ((A.dance || A.t < A.danceUntil) && !S.sleeping) {
+      const q = Math.floor(A.t * 1.9 / 4);
+      if (q !== A.lastNote) { A.lastNote = q; fx("note"); }
+    }
+
+    const moving = !!S.fly || S.airborne || S.dragging || S.mode === "walk";
+    if (moving !== A.moving) { A.moving = moving; stage.classList.toggle("moving", moving); }
+
+    computePose(dt);
+  }
+
+  // ---------- Baile: coreografía a ~114 ppm, cambia de paso cada 8 tiempos ----------
+  function dancePose(P) {
+    const b = A.t * 1.9, bi = Math.floor(b), ph = b - bi;
+    const phrase = Math.floor(bi / 8) % 4, pb = bi % 8;
+    const beat = Math.sin(ph * Math.PI);
+    const side = bi % 2 ? 1 : -1;
+    P.bob = beat * 5;
+    if (phrase === 0) {            // balanceo de lado a lado
+      P.sway += side * 7 * beat; P.shift += side * 7 * beat; P.tilt += side * 8 * beat;
+      P.aL = 45 + side * 28 * beat; P.aR = -45 + side * 28 * beat;
+      if (side > 0) P.legR = -6 * beat; else P.legL = -6 * beat;
+    } else if (phrase === 1) {     // brazos arriba
+      P.aL = 112 + beat * 18; P.aR = -112 - beat * 18; P.front = true;
+      P.eyes = "happy"; P.sy *= 1 + 0.05 * beat; P.legL = -4 * beat; P.legR = -4 * beat;
+    } else if (phrase === 2) {     // pasos laterales girando
+      const sw = Math.sin(b * Math.PI / 2);
+      P.turn += sw * 0.6; P.shift += sw * 10; P.hturn += sw * 0.15;
+      P.aL = 20 + Math.max(0, sw) * 70; P.aR = -20 - Math.max(0, -sw) * 70;
+      if (sw > 0) P.legL = -6 * beat; else P.legR = -6 * beat;
+    } else if (pb < 4) {           // vuelta
+      P.turn += Math.sin((b % 4) / 4 * Math.PI * 2);
+      P.aL = 60; P.aR = -60; P.eyes = "happy";
+    } else if (pb < 6) {           // saltito con brazos arriba
+      P.lift += beat * 14; P.aL = 120; P.aR = -120; P.front = true; P.eyes = "happy";
+    } else {                       // pose final con guiño
+      P.aR = -112; P.aL = 22; P.front = true; P.eyes = "wink"; P.tilt += 10;
+    }
+  }
+
+  function flyPose(P) {
+    const f = S.fly, d = f.dir, tt = A.t - f.t0;
+    if (tt < f.prep) {             // se prepara: se agacha y mira arriba
+      const c = clamp(tt / f.prep, 0, 1);
+      P.sy *= 1 - 0.08 * c; P.sx *= 1 + 0.05 * c; P.eyeY = -4 * c; P.brows = "angry";
+      P.aL = lerp(P.aL, 30, c); P.aR = lerp(P.aR, -30, c);
+      return;
+    }
+    P.brows = "angry";
+    // pose de superhéroe: un brazo adelante, el cuerpo inclinado en la dirección del vuelo
+    P.sway += d * 22;
+    if (d > 0) { P.aR = -118; P.aL = 28; } else { P.aL = 118; P.aR = -28; }
+    P.front = true; P.legL = -4; P.legR = 2; P.eyeX = 5 * d;
+  }
+
+  // ---------- Pose ----------
+  function computePose(dt) {
+    const walking = S.mode === "walk" && !S.airborne && !S.dragging;
+    const dancing = (A.dance || A.t < A.danceUntil) && !walking && !S.airborne && !S.dragging && !S.sleeping;
+    const P = {
+      aL: 0, aR: 0, front: false, nod: 0, tilt: 0, turn: 0, hturn: 0, sway: 0, shift: 0, sx: 1, sy: 1, lift: 0,
+      legL: 0, legR: 0, bob: 0, box: null, spin: 0, snack: 0,
+      mouth: 0, eyeX: null, eyeY: null, eyeScale: S.dragging ? 1.25 : 1, eyes: null, brows: "none",
+    };
+    const at = Math.abs(A.turn);
+    if (walking) {
+      P.aL = Math.sin(A.walkPhase + Math.PI) * 18 * at;
+      P.aR = Math.sin(A.walkPhase) * 18 * at;
+    } else if (S.dragging) {
+      P.aL = 70 + Math.sin(A.kick * 0.7) * 12; P.aR = -70 - Math.sin(A.kick * 0.7) * 12;
+      P.sy = 1.09; P.sx = 0.93; P.sway = clamp(S.vx * 0.008, -14, 14);
+    } else if (S.airborne) {
+      P.aL = 40; P.aR = -40;
+    } else if (dancing) {
+      dancePose(P);
+    } else {
+      P.aL = Math.sin(A.t * 2.2) * 2; P.aR = -P.aL;
+    }
+
+    if (shownAcc === "ghost") { P.lift += 9 + Math.sin(A.t * 2.2) * 5; P.sway += Math.sin(A.t * 1.6) * 4; }
+    P.nod += A.gNod;
+    if (S.fly) flyPose(P);
+    if (A.menuPose && !A.action && !S.fly && !S.dragging && !S.airborne) {
+      P.aR = 104 + Math.sin(A.t * 9) * 4; P.front = true; P.tilt -= 8;
+    }
+    const a = A.action;
+    if (a) {
+      const def = ACTIONS[a.name];
+      const k = clamp((A.t - a.t0) / a.dur, 0, 1);
+      def.f(P, k, env(k), a.opts);
+      if (def.eyes && !P.eyes) P.eyes = def.eyes;
+      if (def.brows && P.brows === "none") P.brows = def.brows;
+    }
+
+    let eyes = P.eyes;
+    if (!eyes) {
+      if (S.sulking) eyes = "hidden";
+      else if (A.mood === "sleep") eyes = "closed";
+      else if (A.mood === "happy") eyes = "happy";
+      else eyes = "open";
+    }
+    if (S.sulking && P.brows === "none") P.brows = "sad";
+    setFace(eyes, P.brows);
+
+    const sm = Math.min(1, dt * 14);
+    A.pose.aL += (P.aL - A.pose.aL) * sm;
+    A.pose.aR += (P.aR - A.pose.aR) * sm;
+    A.pose.P = P;
+  }
+
+  // ---------- Dibujo ----------
+  function render() {
+    const P = A.pose.P;
+    if (!P) return;
+    const walking = S.mode === "walk" && !S.airborne && !S.dragging;
+    const dancing = (A.dance || A.t < A.danceUntil) && !walking && !S.airborne && !S.dragging && !S.sleeping;
+    const breathe = Math.sin(A.t * (S.sleeping ? 1.3 : 2.2)) * (S.sleeping ? 0.022 : 0.012);
+    const step = walking ? Math.abs(Math.sin(A.walkPhase)) : 0;
+    const bob = walking ? -step * 5 : dancing ? -P.bob : 0;
+    const shiver = A.hot && !S.sleeping ? Math.sin(A.t * 55) * 0.9 : 0;
+    const sq = clamp(A.squash * 0.075, -0.32, 0.4);
+    const sy = (1 - sq + breathe - step * 0.035) * P.sy * A.appear;
+    const sx = (1 + sq * 0.8 - breathe * 0.5 + step * 0.02) * P.sx * A.appear;
+
+    const t = clamp(A.turn + P.turn, -1, 1), at = Math.abs(t);
+    const th = clamp(t + P.hturn, -1, 1), ath = Math.abs(th);
+    const lean = (walking ? t * 3 : 0) + P.sway;
+    el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+
+    const lift = clamp((floorY() - S.y) / 300, 0, 1);
+    const sh = (1 - lift * 0.7) * A.appear;
+    el.shadow.setAttribute("transform", `translate(0 ${floorY() - S.y}) translate(0 176) scale(${sh} ${sh}) translate(0 -176)`);
+    el.shadow.style.opacity = String(0.28 * (1 - lift * 0.6));
+
+    let lL = 0, lR = 0;
+    if (walking) { lL = -Math.max(0, Math.sin(A.walkPhase)) * 7; lR = -Math.max(0, Math.sin(A.walkPhase + Math.PI)) * 7; }
+    else if (S.dragging) { lL = Math.sin(A.kick) * 8; lR = Math.sin(A.kick + Math.PI) * 8; }
+    else { lL = P.legL; lR = P.legR; }
+    const stride = walking ? 10 * t : 0;
+    const xL = 10 * at + Math.sin(A.walkPhase) * stride;
+    const xR = -10 * at + Math.sin(A.walkPhase + Math.PI) * stride;
+    const sitDrop = 29 * A.sit;
+    el.legs.setAttribute("transform", `translate(0 176) scale(1 ${(1 - 0.5 * A.sit).toFixed(3)}) translate(0 -176)`);
+    el.legL.setAttribute("transform", `translate(${xL.toFixed(2)} ${lL})`);
+    el.legR.setAttribute("transform", `translate(${xR.toFixed(2)} ${lR})`);
+    el.upper.setAttribute("transform", `translate(0 ${sitDrop.toFixed(2)})`);
+
+    if (P.front !== A.armsFront) {
+      A.armsFront = P.front;
+      if (P.front) { el.pet.appendChild(el.armL); el.pet.appendChild(el.armR); }
+      else { el.pet.insertBefore(el.armL, el.upper); el.pet.insertBefore(el.armR, el.upper); }
+    }
+    const dxL = t > 0 ? 22 * t : -8 * t;
+    const dxR = t > 0 ? -8 * t : 22 * t;
+    el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
+    el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
+    el.body.setAttribute("transform", `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
+    el.bodyHl.setAttribute("transform", `translate(${(-12 * t).toFixed(2)} 0)`);
+    // Los complementos del cuerpo siguen al cuerpo; el cuello del vampiro y la capa, también a la cabeza y al sentarse
+    const bodyT = `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`;
+    el.accBody.setAttribute("transform", bodyT);
+
+    const headDrop = (S.sleeping ? 4 : 0) + P.nod;
+    el.accBack.setAttribute("transform", `translate(${(2 * th + A.lag * 0.6).toFixed(2)} ${(sitDrop + Math.min(0, headDrop) * 0.3).toFixed(2)}) scale(${(1 - 0.1 * at).toFixed(4)} 1)`);
+    el.head.setAttribute("transform", `translate(${(4 * th + A.lag).toFixed(2)} ${headDrop.toFixed(2)}) rotate(${(A.tilt + P.tilt).toFixed(2)} 0 40) scale(${(1 - 0.05 * ath).toFixed(4)} 1)`);
+    el.hl.setAttribute("transform", `translate(${(-14 * th).toFixed(2)} ${(P.nod * 0.5).toFixed(2)})`);
+    el.hat.setAttribute("transform", `translate(${(10 * th).toFixed(2)} 0)`);
+
+    const ex = P.eyeX != null ? P.eyeX : A.eyeX;
+    const ey = (P.eyeY != null ? P.eyeY : A.eyeY) + P.nod * 0.9;
+    el.eyes.setAttribute("transform", `translate(${ex.toFixed(2)} ${ey.toFixed(2)})`);
+    const pos = [];
+    el.eyeEls.forEach((e, i) => {
+      const base = i === 0 ? -32 : 32;
+      const far = Math.sign(base) !== Math.sign(th) && ath > 0.01;
+      const x = base * (1 - 0.3 * ath) + th * 24;
+      const esx = far ? 1 - 0.3 * ath : 1 - 0.04 * ath;
+      pos.push([x, esx]);
+      e.setAttribute("transform", `translate(${x.toFixed(2)} 20) scale(${esx.toFixed(3)} 1)`);
+    });
+    el.bridge.setAttribute("x1", (pos[0][0] + 12 * pos[0][1]).toFixed(2));
+    el.bridge.setAttribute("x2", (pos[1][0] - 12 * pos[1][1]).toFixed(2));
+    const es = P.eyeScale;
+    for (const o of el.opens) o.setAttribute("transform", `scale(${es} ${A.blink * es})`);
+
+    el.mouth.setAttribute("cx", (th * 30 + ex * 0.6).toFixed(2));
+    el.mouth.setAttribute("cy", (40 + ey * 0.6).toFixed(2));
+    el.accFace.setAttribute("transform", `translate(${(th * 30 + ex * 0.6).toFixed(2)} ${(ey * 0.6).toFixed(2)}) scale(${(1 - 0.3 * ath).toFixed(3)} 1)`);
+    if (shownAcc === "ghost") {
+      el.ghostSheet.setAttribute("d", ghostPath(walking || S.fly ? t : 0));
+      el.accFront.setAttribute("transform", `translate(0 ${(sitDrop * 0.4).toFixed(2)}) rotate(${((A.tilt + P.tilt) * 0.4).toFixed(2)} 0 40)`);
+    }
+    if (shownAcc === "pumpkin") {
+      el.carves.forEach((c, i) => c.setAttribute("transform", `translate(${(pos[i][0] * 1.15 + ex).toFixed(2)} ${(-4 + ey).toFixed(2)}) scale(${(pos[i][1] * 1.75).toFixed(3)} ${(A.blink < 1 ? 0.3 : 1.75)})`));
+      el.carveMouth.setAttribute("transform", `translate(${(th * 26 + ex * 0.6).toFixed(2)} ${(-6 + ey * 0.6).toFixed(2)}) scale(${(1.35 * (1 - 0.3 * ath)).toFixed(3)} 1.35)`);
+    }
+    el.ghostEyes.forEach((g, i) => {
+      g.setAttribute("cx", (pos[i][0] + ex + A.lag + 4 * th).toFixed(2));
+      g.setAttribute("cy", (16 + ey + sitDrop * 0.4).toFixed(2));
+      g.setAttribute("rx", (11 * pos[i][1]).toFixed(2));
+      g.setAttribute("ry", (15 * (A.blink < 1 ? 0.15 : 1)).toFixed(2));
+    });
+    if (S.fly) {
+      const d = S.fly.dir, airborne = A.t - S.fly.t0 > S.fly.prep;
+      el.cape.setAttribute("transform", airborne ? `rotate(${(-d * 32 + Math.sin(A.t * 14) * 4).toFixed(2)} 0 50) skewX(${(Math.sin(A.t * 11) * 6).toFixed(2)})` : "");
+    } else el.cape.setAttribute("transform", "");
+    if (P.box && P.box.vis) {
+      el.heldBox.style.display = "inline";
+      el.heldBox.setAttribute("transform", `translate(${P.box.x.toFixed(2)} ${(P.box.y + sitDrop).toFixed(2)}) scale(${P.box.s.toFixed(3)})`);
+    } else el.heldBox.style.display = "none";
+    el.mouth.setAttribute("ry", (P.mouth * 7).toFixed(2));
+    el.mouth.setAttribute("rx", (4 + P.mouth * 2).toFixed(2));
+    if (P.snack > 0) { el.snack.style.display = "inline"; el.snack.setAttribute("transform", `translate(${(th * 30).toFixed(2)} 54) scale(${(P.snack * 1.7).toFixed(2)})`); }
+    else el.snack.style.display = "none";
+
+    place();
+  }
+
+  // Sábana del fantasma: el bajo ondea y se arrastra hacia atrás al moverse
+  function ghostPath(drift) {
+    const tt = A.t, sw = Math.sin(tt * 1.7) * 6 - drift * 18;
+    const n = 7, y0 = 162, x0 = 100 + sw, x1 = -100 + sw;
+    let d = `M-106,10 C-106,-88 -54,-118 0,-118 C54,-118 106,-88 106,10 C112,62 ${(112 + sw * 0.6).toFixed(1)},118 ${x0.toFixed(1)},${y0}`;
+    for (let i = 0; i < n; i++) {
+      const xa = lerp(x0, x1, i / n), xb = lerp(x0, x1, (i + 1) / n);
+      const yb = y0 + Math.sin(tt * 3.2 + (i + 1) * 1.3) * 5;
+      const cy = y0 + 16 + Math.sin(tt * 3.2 + i * 1.3 + 0.6) * 6;
+      d += ` Q${((xa + xb) / 2).toFixed(1)},${cy.toFixed(1)} ${xb.toFixed(1)},${yb.toFixed(1)}`;
+    }
+    d += ` C${(-112 + sw * 0.6).toFixed(1)},118 -112,62 -106,10Z`;
+    return d;
+  }
+
+  // ---------- Bucle ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Ratón: coger, lanzar, toquecito ----------
+  let downX = 0, downY = 0, offX = 0, offY = 0, downT = 0, prevX = 0, prevY = 0, prevT = 0;
+
+  hit.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    hit.setPointerCapture(e.pointerId);
+    S.pressed = true;
+    Voice.ensure();
+    downX = e.screenX; downY = e.screenY; downT = performance.now();
+    offX = e.screenX - S.x; offY = e.screenY - S.y;
+    prevX = S.x; prevY = S.y; prevT = downT;
+  });
+
+  hit.addEventListener("pointermove", (e) => {
+    if (!S.pressed) return;
+    if (!S.dragging && Math.hypot(e.screenX - downX, e.screenY - downY) > 5) {
+      S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null;
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; }
+      if (window.EkoMenu) window.EkoMenu.close();
+      if (S.fly) { S.fly = null; setTimeout(() => setFlyGear(null), 800); }
+      hit.classList.add("dragging");
+      invoke("set_dragging", { value: true });
+      if (S.sleeping) { S.sleeping = false; setMood("normal"); }
+      touched();
+      bump(-3);
+      fx("bang");
+    }
+    if (S.dragging) {
+      const now = performance.now();
+      S.x = e.screenX - offX;
+      S.y = Math.min(e.screenY - offY, floorY());
+      const dtm = Math.max(1, now - prevT) / 1000;
+      S.vx = S.vx * 0.5 + ((S.x - prevX) / dtm) * 0.5;
+      S.vy = S.vy * 0.5 + ((S.y - prevY) / dtm) * 0.5;
+      prevX = S.x; prevY = S.y; prevT = now;
+    }
+  });
+
+  function release() {
+    if (!S.pressed) return;
+    S.pressed = false;
+    if (S.dragging) {
+      S.dragging = false;
+      hit.classList.remove("dragging");
+      invoke("set_dragging", { value: false });
+      S.vx = clamp(S.vx, -1800, 1800);
+      S.vy = clamp(S.vy, -1800, 1800);
+      S.airborne = true; S.mode = "idle";
+      setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pick(TXT.drop)); }, 900);
+    } else if (performance.now() - downT < 350) {
+      // Clic = menú; doble clic = saltito. Se espera un instante para distinguirlos.
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; poke(); }
+      else clickTimer = setTimeout(() => { clickTimer = 0; tap(); }, 260);
+    }
+  }
+  hit.addEventListener("pointerup", release);
+  hit.addEventListener("pointercancel", release);
+
+  let clickTimer = 0;
+  function tap() {
+    if (window.EkoMenu && !S.sleeping) window.EkoMenu.toggle();
+    else poke();
+  }
+
+  const pokes = [];
+  function poke() {
+    touched();
+    if (S.sleeping) { wakeUp(); return; }
+    const now = performance.now();
+    pokes.push(now);
+    while (pokes.length && now - pokes[0] > 20000) pokes.shift();
+    if (pokes.length >= 4) {            // muchos toquecitos seguidos: se enfada un poco
+      act("angry"); bump(3); Voice.sigh();
+      say(pick(TXT.pokeAnnoyed), 2400, true);
+      S.mode = "idle"; S.modeUntil = A.t + 4;
+      return;
+    }
+    hop(-480);
+    A.tiltTarget = rnd(-10, 10);
+    S.mode = "idle"; S.modeUntil = A.t + 3;
+    const r = Math.random();
+    if (r < 0.25) setTimeout(() => act("shrug"), 350);
+    else if (r < 0.45) setTimeout(() => act("wink"), 350);
+    else if (r < 0.6) setTimeout(() => act("nod"), 350);
+    if (Math.random() < 0.6) say(pick(TXT.poke));
+  }
+
+  // ---------- Caricias ----------
+  function onCursor(p) {
+    const moved = Math.hypot(p.x - cursor.lastX, p.y - cursor.lastY);
+    if (moved > 0.5) cursor.lastMove = A.t;
+    if (p.over && !S.pressed && moved > 0.5 && moved < 22) {
+      cursor.pet += moved;
+      if (cursor.pet > 260 && A.mood !== "happy") {
+        cursor.pet = 0;
+        touched();
+        if (S.sleeping) { S.sleeping = false; setMood("normal"); }
+        setMood("happy", 2.5);
+        blush(2.8);
+        fx("heart", 2);
+        A.tiltTarget = rnd(-12, 12);
+        bump(1.5);
+        Voice.chirp();
+        if (Math.random() < 0.5) say(pick(TXT.pet));
+      }
+    } else {
+      cursor.pet *= 0.96;
+    }
+    cursor.x = p.x; cursor.y = p.y; cursor.over = p.over;
+    cursor.lastX = p.x; cursor.lastY = p.y;
+  }
+
+  // ---------- API para otros módulos ----------
+  window.Eko = {
+    S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
+    missYou, sulk, addBox, Voice, forcePeek: startPeek,
+    setDance(v) { A.dance = !!v; },
+    setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
+    setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
+    setHat(mode) { accMode = mode; applyAcc(true); },
+    fly: (k) => startFlight(k),
+    quiet: false,
+    setHidden(v) { A.hidden = !!v; },
+    // Mete la ventana entera dentro de la pantalla (para menús y tarjetas); llama a done al llegar
+    keepInside(done) {
+      const lo = world.left, hi = world.left + world.width - W;
+      const target = clamp(S.x, lo, hi);
+      if (Math.abs(target - S.x) < 2 || S.airborne) { done && done(); return; }
+      S.mode = "walk"; S.speed = 320; S.targetX = target; S.then = null; S.modeUntil = A.t + 10;
+      const t0 = performance.now();
+      const iv = setInterval(() => {
+        if (Math.abs(S.x - target) < 3 || performance.now() - t0 > 2500) { clearInterval(iv); S.mode = "idle"; done && done(); }
+      }, 50);
+    },
+    setMenuPose(v) { A.menuPose = !!v; },
+    setHitFull(v) {
+      if (v) invoke("set_hitbox", { x: 0, y: 0, w: W, h: H });
+      else { const r = hit.getBoundingClientRect(); invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height }); }
+    },
+    world, W, H, cursor, floorY, minX, maxX, clamp,
+    walkTo(x, speed = 46, then = null) { S.mode = "walk"; S.speed = speed; S.targetX = clamp(x - W / 2, minX(), maxX()); S.then = then; S.modeUntil = A.t + 60; },
+    hold(secs) { S.mode = "idle"; S.modeUntil = A.t + secs; },
+    curious() { S.mode = "walk"; S.speed = 60; S.targetX = clamp(cursor.x - W / 2 + rnd(-40, 40), minX() + 40, maxX() - 40); S.then = "curious"; S.modeUntil = A.t + 30; },
+    lastInteraction: () => lastInteraction,
+    native: NATIVE, listen,
+  };
+
+  // ---------- Ajustes en vivo ----------
+  const pod = $("#pod");
+  function sendHitbox() {
+    const r = hit.getBoundingClientRect();
+    invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
+  }
+  function applySettings(cfg) {
+    pod.style.transform = cfg.size && cfg.size !== 1 ? `scale(${cfg.size})` : "";
+    Voice.base = cfg.pitch || 560;
+    Voice.on = !!cfg.voice;
+    invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
+    if (NATIVE) setTimeout(sendHitbox, 50);
+  }
+  if (window.EkoSettings) window.EkoSettings.onChange(applySettings);
+
+  // ---------- Arranque ----------
+  async function start() {
+    readBounds();
+    if (!store.get("eko-born")) store.set("eko-born", new Date().toISOString());
+    S.x = world.left + world.width * 0.72;
+    S.y = floorY();
+    S.modeUntil = 3;
+    A.appear = 0.01;
+    applyAcc(false);
+    if (window.EkoSettings) applySettings(window.EkoSettings.get());
+    const onboarding = !store.get("eko-onboarded");
+    if (onboarding) { A.hidden = true; S.modeUntil = 1e9; }
+    update(0.016);
+    render();
+
+    if (NATIVE) {
+      const r = hit.getBoundingClientRect();
+      invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
+      invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
+      listen("cursor", (e) => onCursor(e.payload));
+      listen("eko-reset", () => location.reload());
+      listen("cmd", (e) => {
+        const c = e.payload;
+        if (c === "sleep") S.sleeping ? wakeUp() : goToSleep();
+        if (c === "wake") lastPosKey = "";
+        if (c === "updating") { act("bye"); say(pick(TXT.updating), 4000, true); }
+        if (c === "sound-on") { Voice.setOn(true); Voice.chirp(); }
+        if (c === "sound-off") Voice.setOn(false);
+        if (c === "hat-cycle") {
+          accMode = ACC_CYCLE[(ACC_CYCLE.indexOf(accMode) + 1) % ACC_CYCLE.length];
+          applyAcc(false); hop(-360); fx("spark", 2);
+          say(TXT.hats[accMode], 2000, true);
+        }
+      });
+      await win.show();
+    } else {
+      addEventListener("mousemove", (e) => {
+        const r = hit.getBoundingClientRect();
+        onCursor({ x: e.clientX, y: e.clientY, over: e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom });
+      });
+      addEventListener("resize", readBounds);
+    }
+
+    setInterval(() => { readBounds(); applyAcc(true); }, 5000);
+    if (onboarding) { requestAnimationFrame(frame); return; }   // el bautizo se encarga del saludo
+    bump(-4);
+
+    let greeting = specialGreeting();
+    let gesture = greeting ? "hug" : "wave";
+    if (!greeting && NATIVE) {
+      try {
+        const v = await T.app.getVersion();
+        const prev = store.get("eko-version");
+        if (prev && prev !== v) { greeting = pick(TXT.updated); gesture = "surprise"; }
+        store.set("eko-version", v);
+      } catch (_) {}
+    }
+    const user = window.EkoSettings ? window.EkoSettings.get().userName : "";
+    if (!greeting) greeting = isMonday() ? pick(TXT.monday) : user && Math.random() < 0.5 ? (LANG === "es" ? `¡Holi, ${user}!` : `Hi, ${user}!`) : pick(TXT.hello);
+    if (isMonday() && gesture === "wave") gesture = "yawn";
+    setTimeout(() => say(greeting, 3000, true, gesture), 700);
+    requestAnimationFrame(frame);
+  }
+
+  start();
+})();
+</script><script>// Eko · menú en burbujas: un clic en Eko lo abre, él se pone a pensar y salen las opciones.
+(() => {
+  "use strict";
+  const E = window.Eko;
+  if (!E) return;
+  const ES = E.LANG === "es";
+  const $ = (s) => document.querySelector(s);
+  const stage = $("#stage"), menu = $("#menu");
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} },
+  };
+  const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : null;
+
+  // ---------- Iconos (trazos simples) ----------
+  const I = {
+    play: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/><circle cx="15" cy="15" r="1.3" fill="currentColor"/><circle cx="15" cy="9" r="1.3" fill="currentColor"/><circle cx="9" cy="15" r="1.3" fill="currentColor"/>',
+    util: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>',
+    hanger: '<path d="M10 6.5a2 2 0 1 1 2.6 1.9c-.4.1-.6.5-.6.9V10"/><path d="M12 10L3.5 16.5c-.8.6-.4 1.5.5 1.5h16c.9 0 1.3-.9.5-1.5L12 10Z"/>',
+    moon: '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z"/>',
+    sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+    ball: '<circle cx="12" cy="12" r="8.5"/><path d="M4 10c5 2 11 2 16 0M8.5 4.5c-2 5-2 10 0 15"/>',
+    cookie: '<circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="9.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="15" r="1.2" fill="currentColor"/>',
+    dice: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/>',
+    star: '<path d="M12 3.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.6L12 15.9l-5 2.8 1.2-5.6L4 9.3l5.6-.6L12 3.5Z"/>',
+    rock: '<path d="M5 15c-1-3 1-7 4-8 3-1.5 7 0 9 3 1.5 2.5.5 6-2.5 7-3 1-9 1-10.5-2Z"/>',
+    paper: '<path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4"/>',
+    scissors: '<circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M8.5 16L17 5M15.5 16L7 5"/>',
+    left: '<path d="M14.5 6l-6 6 6 6"/>',
+    right: '<path d="M9.5 6l6 6-6 6"/>',
+    hide: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><path d="M4 4l16 16"/>',
+    bell: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    timer: '<circle cx="12" cy="13" r="7.5"/><path d="M12 13V9M10 3h4"/>',
+    pencil: '<path d="M4 20l1-4L16 5l3 3L8 19l-4 1Z"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/>',
+    bolt: '<path d="M13 3L5 13.5h6L10 21l8-11h-6L13 3Z"/>',
+    download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/>',
+    folder: '<path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2h6.5a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-10Z"/>',
+    camera: '<rect x="3.5" y="7" width="17" height="12" rx="2.5"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 7l1.5-2.5h4L15.5 7"/>',
+    pause: '<path d="M6 5.5l7 6.5-7 6.5z" /><path d="M16 6v12M19.5 6v12"/>',
+    next: '<path d="M5 5.5l9 6.5-9 6.5z"/><path d="M18.5 6v12"/>',
+    mute: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+    feather: '<path d="M20 4c-7 0-13 5-13 12v4M7 16h7M10 12h7"/>',
+    sparkle: '<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/>',
+    back: '<path d="M14.5 6l-6 6 6 6"/>',
+    swatch: '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',
+    none: '<circle cx="12" cy="12" r="7.5"/><path d="M6.7 17.3L17.3 6.7"/>',
+  };
+  const svg = (k, color) => `<svg viewBox="0 0 24 24" ${color ? `style="color:${color}"` : ""}>${I[k] || ""}</svg>`;
+
+  const L = ES ? {
+    play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
+    ball: "Pelota", snack: "Snack", games: "Juegos", trick: "Truco",
+    rps: "Piedra, papel…", hand: "¿Qué mano?", hide: "Escondite",
+    rock: "Piedra", paper: "Papel", scissors: "Tijera", lefth: "Izquierda", righth: "Derecha",
+    remind: "Recordatorio", pomo: "Pomodoro", note: "Nota", tasks: "Tareas", shortcuts: "Atajos",
+    lastdl: "Última descarga", dlfolder: "Descargas", shot: "Captura", playpause: "Pausar", nexttrack: "Siguiente",
+    sleep: "Dormir", mute: "Silencio 1 h", discreet: "Discreto", back: "Volver",
+    auto: "Automático", none: "Ninguno",
+    remindAsk: "¿Qué te recuerdo?", noteAsk: "Apunta una tarea o nota", ok: "Vale",
+    stopPomo: "Parar pomodoro",
+    soon: "Ajustes: nombre, cumpleaños, sonido, apps por categoría… ¡muy pronto!",
+    onlyApp: "Eso solo funciona en la app",
+  } : {
+    play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
+    ball: "Ball", snack: "Snack", games: "Games", trick: "Trick",
+    rps: "Rock, paper…", hand: "Which hand?", hide: "Hide & seek",
+    rock: "Rock", paper: "Paper", scissors: "Scissors", lefth: "Left", righth: "Right",
+    remind: "Reminder", pomo: "Pomodoro", note: "Note", tasks: "Tasks", shortcuts: "Shortcuts",
+    lastdl: "Last download", dlfolder: "Downloads", shot: "Screenshot", playpause: "Pause", nexttrack: "Next",
+    sleep: "Sleep", mute: "Mute 1 h", discreet: "Discreet", back: "Back",
+    auto: "Automatic", none: "None",
+    remindAsk: "What should I remind you?", noteAsk: "Write a task or note", ok: "OK",
+    stopPomo: "Stop pomodoro",
+    soon: "Settings: name, birthday, sound, app categories… coming soon!",
+    onlyApp: "That only works in the app",
+  };
+  const SAY = ES ? {
+    snack: ["¡Ñam!", "Qué rico", "¿Hay más?"], win: ["¡Gané!", "¡Toma ya!"], lose: ["Vaaale, has ganado", "¡Revancha!"], tie: ["¡Empate!"],
+    rpsPick: ["¡Piedra, papel o tijera!"], handAsk: ["¿En qué mano está?"], handYes: ["¡Bien visto!", "¡Correcto!"], handNo: ["¡Nop!", "Era la otra"],
+    hide: ["¡A que no me encuentras!"], found: ["¡Me has pillado!", "¡Jo, qué rápido!"], ball: ["¡Lánzamela!", "¡Otra vez!"], fetch: ["¡Aquí tienes!", "¡Otra, otra!"],
+    remindSet: (m) => `Vale, te aviso en ${m}`, pomoStart: ["¡A concentrarse! 25 minutos"], pomoBreak: ["¡Descanso! 5 minutos para estirarte"], pomoEnd: ["¡Otra ronda cuando quieras!"],
+    noted: ["Apuntado", "Lo guardo"], done: ["¡Una menos!", "¡Bien hecho!"], empty: ["No tienes tareas pendientes"], muted: ["Me callo una horita"], discreetOn: ["Modo discreto"], discreetOff: ["Vuelvo a hablar"],
+  } : {
+    snack: ["Yum!", "Delicious", "Is there more?"], win: ["I win!", "Yes!"], lose: ["Fine, you win", "Rematch!"], tie: ["Tie!"],
+    rpsPick: ["Rock, paper, scissors!"], handAsk: ["Which hand is it in?"], handYes: ["Well spotted!", "Correct!"], handNo: ["Nope!", "It was the other one"],
+    hide: ["Bet you can't find me!"], found: ["You found me!", "That was fast!"], ball: ["Throw it!", "Again!"], fetch: ["Here you go!", "Again, again!"],
+    remindSet: (m) => `OK, I'll remind you in ${m}`, pomoStart: ["Focus time! 25 minutes"], pomoBreak: ["Break! 5 minutes to stretch"], pomoEnd: ["Another round whenever you want!"],
+    noted: ["Noted", "Saved"], done: ["One less!", "Well done!"], empty: ["No pending tasks"], muted: ["I'll be quiet for an hour"], discreetOn: ["Discreet mode"], discreetOff: ["I'll talk again"],
+  };
+  const pick = E.pick;
+
+  // ---------- Árbol del menú ----------
+  const COSTUMES = [
+    ["auto", L.auto, "sparkle"], ["witch", "Bruja", "swatch", "#4a3863"], ["pumpkin", "Calabaza", "swatch", "#ec7a1a"], ["vampire", "Vampiro", "swatch", "#a3203a"],
+    ["ghost", "Fantasma", "swatch", "#c9cedb"], ["santa", "Papá Noel", "swatch", "#d93d3d"], ["reindeer", "Reno", "swatch", "#8a5a36"], ["elf", "Elfo", "swatch", "#37ad62"],
+    ["scarf", "Bufanda", "swatch", "#c33434"], ["party", "Fiesta", "swatch", "#5fb3e8"], ["crown", "Corona", "swatch", "#e2a52a"], ["none", L.none, "none"],
+  ];
+  const TREE = {
+    root: [
+      { id: "play", icon: "play", label: L.play, go: "play" },
+      { id: "util", icon: "util", label: L.util, go: "util" },
+      { id: "wardrobe", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
+      { id: "rest", icon: "moon", label: L.rest, go: "rest" },
+      { id: "settings", icon: "sliders", label: L.settings, run: openSettings },
+    ],
+    play: [
+      { icon: "ball", label: L.ball, run: startBall },
+      { icon: "cookie", label: L.snack, run: giveSnack },
+      { icon: "dice", label: L.games, go: "games" },
+      { icon: "star", label: L.trick, run: trick },
+    ],
+    games: [
+      { icon: "rock", label: L.rps, go: "rps", enter: () => { E.say(pick(SAY.rpsPick), 2000, true); } },
+      { text: "?", label: L.hand, go: "hand", enter: startHand },
+      { icon: "hide", label: L.hide, run: startHide },
+    ],
+    rps: [
+      { icon: "rock", label: L.rock, run: () => playRps(0) },
+      { icon: "paper", label: L.paper, run: () => playRps(1) },
+      { icon: "scissors", label: L.scissors, run: () => playRps(2) },
+    ],
+    hand: [
+      { icon: "left", label: L.lefth, run: () => guessHand(-1) },
+      { icon: "right", label: L.righth, run: () => guessHand(1) },
+    ],
+    util: [
+      { icon: "bell", label: L.remind, go: "remind" },
+      { icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
+      { icon: "pencil", label: L.note, run: askNote },
+      { icon: "list", label: L.tasks, run: showTasks },
+      { icon: "bolt", label: L.shortcuts, go: "shortcuts" },
+    ],
+    remind: [["5 min", 5], ["15 min", 15], ["30 min", 30], ["1 h", 60], ["2 h", 120]].map(([lab, m]) => ({ text: lab, label: "", run: () => askReminder(m, lab) })),
+    shortcuts: [
+      { icon: "download", label: L.lastdl, run: () => native("open_last_download") },
+      { icon: "folder", label: L.dlfolder, run: () => native("open_downloads") },
+      { icon: "camera", label: L.shot, run: () => native("screenshot") },
+      { icon: "pause", label: L.playpause, run: () => native("media_play_pause") },
+      { icon: "next", label: L.nexttrack, run: () => native("media_next") },
+    ],
+    wardrobe: COSTUMES.map(([id, lab, ic, col]) => ({ icon: ic, color: col, label: lab, run: () => { E.setHat(id); }, keep: true })),
+    rest: [
+      { icon: "moon", label: L.sleep, run: () => E.goToSleep() },
+      { icon: "mute", label: L.mute, run: muteHour },
+      { icon: "feather", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
+    ],
+  };
+
+  // ---------- Dibujo del menú ----------
+  const HEAD = { x: 210, y: 282 };          // centro de la cabeza dentro de la ventana
+  let open = false, level = null;
+
+  function layout(n) {
+    const out = [];
+    if (n > 6) {                      // muchas opciones (armario): rejilla encima de la cabeza
+      const cols = 4, rows = Math.ceil(n / cols);
+      for (let i = 0; i < n; i++) {
+        const r = Math.floor(i / cols), c = i % cols, inRow = Math.min(cols, n - r * cols);
+        out.push({ x: HEAD.x + (c - (inRow - 1) / 2) * 78, y: HEAD.y - 104 - (rows - 1 - r) * 68, small: true });
+      }
+      return out;
+    }
+    const radius = n <= 4 ? 122 : 138;  // arco por encima de la cabeza
+    for (let i = 0; i < n; i++) {
+      const a = (n === 1 ? 270 : 200 + 140 * (i / (n - 1))) * Math.PI / 180;
+      out.push({ x: HEAD.x + Math.cos(a) * radius, y: HEAD.y + Math.sin(a) * radius });
+    }
+    return out;
+  }
+
+  function render(levelId) {
+    level = levelId;
+    menu.innerHTML = "";
+    const items = TREE[levelId];
+    const pos = layout(items.length);
+    const all = [...items];
+    if (levelId !== "root") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
+    all.forEach((it, i) => {
+      const b = document.createElement("button");
+      b.className = "blob" + (it.back ? " back" : "") + (it.text ? " txt" : "") + (pos[i].small ? " small" : "");
+      b.style.setProperty("--x", pos[i].x + "px");
+      b.style.setProperty("--y", pos[i].y + "px");
+      b.style.setProperty("--d", i * 45 + "ms");
+      b.style.setProperty("--r", Math.random() * 2 + "s");
+      const label = it.dyn ? it.dyn() : it.label;
+      b.innerHTML = (it.text ? `<b>${it.text}</b>` : svg(it.icon, it.color)) + (label ? `<span>${label}</span>` : "");
+      b.addEventListener("click", (ev) => { ev.stopPropagation(); choose(it); });
+      b.addEventListener("mouseenter", () => E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 80, 1000 + i * 80, 0.05, 0.015));
+      menu.appendChild(b);
+      requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add("in")));
+    });
+  }
+
+  function choose(it) {
+    E.Voice.ensure && E.Voice.ensure();
+    if (it.back) { render(parentOf(level)); return; }
+    if (it.go) { if (it.enter) it.enter(); render(it.go); return; }
+    if (it.run) {
+      if (!it.keep) close();
+      it.run();
+    }
+  }
+  function parentOf(lv) {
+    for (const [k, items] of Object.entries(TREE)) if (items.some((i) => i.go === lv)) return k;
+    return "root";
+  }
+
+  function openMenu() {
+    if (open) return;
+    open = true;
+    lastUse = performance.now();
+    stage.classList.add("menu-open");
+    E.setMenuPose(true);
+    E.hold(1e6);
+    E.setHitFull(true);
+    E.Voice.tone && E.Voice.tone("sine", 520, 780, 0.12, 0.03);
+    E.keepInside(() => { if (open) render("root"); });
+  }
+  function close() {
+    if (!open) return;
+    open = false;
+    stage.classList.remove("menu-open");
+    E.setMenuPose(false);
+    E.hold(2);
+    for (const b of menu.children) b.classList.remove("in");
+    setTimeout(() => { if (!open) menu.innerHTML = ""; }, 260);
+    if (!ball && !hideGame) E.setHitFull(false);
+  }
+  // Clic fuera de las burbujas: cerrar
+  stage.addEventListener("click", (e) => { if (open && !e.target.closest(".blob") && !e.target.closest(".card") && !e.target.closest("#hit")) close(); });
+
+  // ---------- Tarjeta (texto, formularios, listas) ----------
+  let cardTimer = 0;
+  function card(html, autoClose = 0) {
+    let c = $("#card");
+    if (!c) { c = document.createElement("div"); c.id = "card"; c.className = "card"; stage.appendChild(c); }
+    c.innerHTML = html;
+    c.classList.add("in");
+    E.setHitFull(true);
+    clearTimeout(cardTimer);
+    if (autoClose) cardTimer = setTimeout(closeCard, autoClose);
+    return c;
+  }
+  function closeCard() {
+    const c = $("#card");
+    if (c) c.classList.remove("in");
+    if (!open && !ball && !hideGame) E.setHitFull(false);
+  }
+  function ask(question, onOk) {
+    const c = card(`<p>${question}</p><form><input maxlength="80" autocomplete="off" /><button>${L.ok}</button></form>`);
+    const inp = c.querySelector("input");
+    setTimeout(() => inp.focus(), 50);
+    c.querySelector("form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = inp.value.trim();
+      closeCard();
+      if (v) onOk(v);
+    });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
+  }
+
+  // ---------- Jugar: snack, truco ----------
+  function giveSnack() {
+    E.act("eat");
+    setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);
+  }
+  function trick() {
+    const t = pick(["dance", "fly", "flip", "flip", "dance"]);
+    if (t === "dance") { E.setDance(true); setTimeout(() => E.setDance(false), 8500); }
+    else if (t === "fly") E.fly();
+    else { E.hop(-700); setTimeout(() => E.act("flip"), 80); }
+  }
+
+  // ---------- Piedra, papel o tijera ----------
+  function playRps(you) {
+    E.act("rps");
+    setTimeout(() => {
+      const me = Math.floor(Math.random() * 3);
+      const names = [L.rock, L.paper, L.scissors];
+      const res = (me - you + 3) % 3; // 0 empate, 1 gana Eko, 2 ganas tú
+      const tail = res === 0 ? pick(SAY.tie) : res === 1 ? pick(SAY.win) : pick(SAY.lose);
+      E.say(`${names[me]}… ${tail}`, 3000, true, res === 1 ? "wink" : res === 2 ? "sad" : "shrug");
+      if (res === 1) { E.hop(-380); E.fx("spark", 2); }
+    }, 1500);
+  }
+
+  // ---------- ¿En qué mano está? ----------
+  let handSecret = 1;
+  function startHand() {
+    handSecret = Math.random() < 0.5 ? -1 : 1;
+    E.act("fists", { dur: 30 });
+    E.say(pick(SAY.handAsk), 2400, true);
+  }
+  function guessHand(dir) {
+    E.act("reveal", { dir: handSecret });
+    E.fx("spark", 2);
+    setTimeout(() => {
+      if (dir === handSecret) { E.say(pick(SAY.handYes), 2400, true); E.hop(-360); }
+      else E.say(pick(SAY.handNo), 2400, true, "wink");
+    }, 600);
+  }
+
+  // ---------- Escondite ----------
+  let hideGame = false;
+  function startHide() {
+    hideGame = true;
+    E.say(pick(SAY.hide), 2200, true, "wink");
+    setTimeout(() => E.forcePeek(), 900);
+    // Si lo encuentras (clic en él mientras se esconde) se ríe
+    const onFound = () => {
+      if (!hideGame) return;
+      hideGame = false;
+      E.say(pick(SAY.found), 2600, true, "heart");
+      E.hop(-420);
+      document.removeEventListener("eko-tap", onFound);
+    };
+    document.addEventListener("eko-tap", onFound);
+    setTimeout(() => { hideGame = false; document.removeEventListener("eko-tap", onFound); }, 40000);
+  }
+
+  // ---------- Pelota ----------
+  let ball = null;
+  const ballEl = document.createElement("div");
+  ballEl.id = "ball";
+  ballEl.innerHTML = '<svg viewBox="-12 -12 24 24"><circle r="11" fill="#f05d5e"/><path d="M-11,-2 C-4,2 4,2 11,-2" stroke="#fff" stroke-width="2.4" fill="none"/><circle cx="-4" cy="-5" r="3" fill="#fff" opacity=".5"/></svg>';
+  stage.appendChild(ballEl);
+
+  function startBall() {
+    const cx = E.S.x + E.W / 2;
+    ball = { x: cx + 60, y: E.S.y + 200, vx: 0, vy: 0, held: false, grabbed: false, rot: 0, chasing: false, idleSince: performance.now() };
+    ballEl.classList.add("in");
+    E.setHitFull(true);
+    E.say(pick(SAY.ball), 2400, true);
+  }
+  function endBall() {
+    ball = null;
+    ballEl.classList.remove("in");
+    if (!open) E.setHitFull(false);
+  }
+  let drag = null;
+  ballEl.addEventListener("pointerdown", (e) => {
+    if (!ball) return;
+    ballEl.setPointerCapture(e.pointerId);
+    drag = { px: e.screenX, py: e.screenY, t: performance.now(), vx: 0, vy: 0 };
+    ball.grabbed = true; ball.held = false; ball.chasing = false;
+  });
+  ballEl.addEventListener("pointermove", (e) => {
+    if (!drag || !ball) return;
+    const now = performance.now(), dt = Math.max(1, now - drag.t) / 1000;
+    const dx = e.screenX - drag.px, dy = e.screenY - drag.py;
+    ball.x += dx; ball.y += dy;
+    drag.vx = drag.vx * 0.4 + (dx / dt) * 0.6; drag.vy = drag.vy * 0.4 + (dy / dt) * 0.6;
+    drag.px = e.screenX; drag.py = e.screenY; drag.t = now;
+  });
+  ballEl.addEventListener("pointerup", () => {
+    if (!drag || !ball) return;
+    ball.grabbed = false;
+    ball.vx = E.clamp(drag.vx, -1600, 1600); ball.vy = E.clamp(drag.vy, -1600, 900);
+    if (Math.hypot(ball.vx, ball.vy) < 60) { ball.vx = (Math.random() < 0.5 ? -1 : 1) * 500; ball.vy = -500; }
+    drag = null;
+    ball.idleSince = performance.now();
+    E.act("surprise");
+  });
+
+  function ballStep(dt) {
+    if (!ball) return;
+    const S = E.S, W = E.W, H = E.H;
+    const floor = S.y + H - 14;
+    const pet = S.x + W / 2;
+    if (ball.held) {
+      ball.x = pet + 34; ball.y = S.y + H - 70;
+    } else if (!ball.grabbed) {
+      ball.vy += 1800 * dt;
+      ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+      ball.rot += ball.vx * dt * 2;
+      // paredes: la ventana de Eko (la pelota no se pierde de vista)
+      const lo = S.x + 16, hi = S.x + W - 16;
+      if (ball.x < lo) { ball.x = lo; ball.vx = Math.abs(ball.vx) * 0.6; }
+      if (ball.x > hi) { ball.x = hi; ball.vx = -Math.abs(ball.vx) * 0.6; }
+      if (ball.y > floor) { ball.y = floor; ball.vy = -Math.abs(ball.vy) * 0.55; ball.vx *= 0.82; if (Math.abs(ball.vy) < 60) ball.vy = 0; }
+      const resting = ball.vy === 0 && Math.abs(ball.vx) < 20 && ball.y >= floor - 1;
+      // Eko va a por ella
+      if (Math.abs(ball.x - pet) > 26 && !S.airborne && !S.dragging) {
+        E.walkTo(ball.x, 150);
+        ball.chasing = true;
+      } else if (resting && ball.chasing) {
+        ball.chasing = false; ball.held = true;
+        E.hold(2.5);
+        setTimeout(() => {           // te la devuelve: salto y la suelta delante
+          if (!ball) return;
+          ball.held = false; ball.vx = (Math.random() < 0.5 ? -1 : 1) * 140; ball.vy = -420;
+          E.hop(-360);
+          E.say(pick(SAY.fetch), 2200);
+          ball.idleSince = performance.now();
+        }, 900);
+      }
+    }
+    ballEl.style.transform = `translate(${(ball.x - S.x - 13).toFixed(1)}px, ${(ball.y - S.y - 13).toFixed(1)}px) rotate(${ball.rot.toFixed(0)}deg)`;
+    if (performance.now() - ball.idleSince > 45000 && !ball.held) endBall();
+  }
+
+  // ---------- Recordatorios ----------
+  let reminders = store.get("eko-reminders", []);
+  function askReminder(min, label) {
+    ask(L.remindAsk, (text) => {
+      reminders.push({ at: Date.now() + min * 60000, text });
+      store.set("eko-reminders", reminders);
+      E.say(SAY.remindSet(label), 2600, true, "nod");
+    });
+  }
+  function checkReminders() {
+    const now = Date.now();
+    const due = reminders.filter((r) => r.at <= now);
+    if (!due.length) return;
+    reminders = reminders.filter((r) => r.at > now);
+    store.set("eko-reminders", reminders);
+    const r = due[0];
+    if (E.S.sleeping) E.wakeUp(false);
+    E.hop(-460);
+    E.act("surprise");
+    E.fx("bang", 2);
+    E.Voice.chirp(); setTimeout(() => E.Voice.chirp(), 300);
+    E.say(r.text, 9000, true);
+  }
+
+  // ---------- Pomodoro ----------
+  const badge = $("#badge");
+  let pomo = null;
+  function startPomo() {
+    pomo = { phase: "focus", end: Date.now() + 25 * 60000 };
+    E.say(pick(SAY.pomoStart), 2600, true, "nod");
+    badge.classList.add("in");
+  }
+  function stopPomo() { pomo = null; badge.classList.remove("in"); }
+  function tickPomo() {
+    if (!pomo) return;
+    const left = Math.max(0, pomo.end - Date.now());
+    const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+    badge.textContent = `${pomo.phase === "focus" ? "●" : "~"} ${m}:${String(s).padStart(2, "0")}`;
+    badge.classList.toggle("break", pomo.phase === "break");
+    if (left > 0) return;
+    if (pomo.phase === "focus") {
+      pomo = { phase: "break", end: Date.now() + 5 * 60000 };
+      E.setDance(true); setTimeout(() => E.setDance(false), 4500);
+      E.say(pick(SAY.pomoBreak), 4000, true);
+      setTimeout(() => E.act("stretch"), 4800);
+    } else {
+      stopPomo();
+      E.say(pick(SAY.pomoEnd), 3000, true, "wave");
+    }
+  }
+
+  // ---------- Notas y tareas ----------
+  let tasks = store.get("eko-tasks", []);
+  function askNote() {
+    ask(L.noteAsk, (text) => {
+      tasks.push({ text, done: false, at: Date.now() });
+      store.set("eko-tasks", tasks);
+      E.say(pick(SAY.noted), 2200, true, "nod");
+    });
+  }
+  function showTasks() {
+    const pending = tasks.filter((t) => !t.done);
+    if (!pending.length) { E.say(pick(SAY.empty), 2400, true, "shrug"); return; }
+    const c = card(`<ul>${pending.map((t, i) => `<li data-i="${tasks.indexOf(t)}"><i></i>${t.text.replace(/</g, "&lt;")}</li>`).join("")}</ul>`);
+    c.querySelectorAll("li").forEach((li) => li.addEventListener("click", () => {
+      const t = tasks[+li.dataset.i]; if (!t) return;
+      t.done = true; store.set("eko-tasks", tasks);
+      li.classList.add("done");
+      E.say(pick(SAY.done), 2200, true); E.hop(-360); E.fx("spark", 2);
+      setTimeout(() => { if (!tasks.some((x) => !x.done)) closeCard(); }, 900);
+    }));
+    setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
+  }
+
+  // ---------- Descanso ----------
+  function muteHour() {
+    E.say(pick(SAY.muted), 2400, true, "nod");
+    setTimeout(() => {
+      E.Voice.setOn(false);
+      setTimeout(() => E.Voice.setOn(true), 3600000);
+    }, 2600);
+  }
+  function toggleDiscreet() {
+    E.quiet = !E.quiet;
+    E.say(pick(E.quiet ? SAY.discreetOn : SAY.discreetOff), 2000, true);
+  }
+
+  function openSettings() {
+    if (invoke) invoke("open_settings").catch(() => {});
+    else window.open("settings.html", "eko-settings", "width=540,height=700");
+    E.act("nod");
+  }
+
+  // ---------- Atajos del PC (solo en la app) ----------
+  function native(cmd) {
+    if (!invoke) { E.say(L.onlyApp, 2400, true, "shrug"); return; }
+    E.act("point", { dir: 1 });
+    invoke(cmd).catch(() => E.say(L.onlyApp, 2400, true, "shrug"));
+  }
+
+  // ---------- Bucle ----------
+  let last = performance.now();
+  (function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    ballStep(dt);
+    requestAnimationFrame(loop);
+  })(last);
+  setInterval(() => { checkReminders(); tickPomo(); }, 1000);
+
+  // Cerrar el menú si el ratón se va lejos de Eko o si no se usa en un rato
+  let awaySince = 0, openedAt = 0;
+  setInterval(() => {
+    if (!open) { awaySince = 0; return; }
+    if (!openedAt) openedAt = performance.now();
+    const c = E.cursor, S = E.S;
+    const inside = c.x >= S.x && c.x <= S.x + E.W && c.y >= S.y && c.y <= S.y + E.H;
+    if (inside) awaySince = 0; else if (!awaySince) awaySince = performance.now();
+    if ((awaySince && performance.now() - awaySince > 1200) || performance.now() - lastUse > 20000) close();
+  }, 200);
+  let lastUse = performance.now();
+  menu.addEventListener("pointermove", () => { lastUse = performance.now(); });
+
+  window.EkoMenu = {
+    toggle() {
+      const wasHiding = hideGame;
+      document.dispatchEvent(new Event("eko-tap"));
+      if (wasHiding) return;
+      open ? close() : openMenu();
+    },
+    close,
+    isOpen: () => open,
+  };
+})();
+</script><script>// Eko · primer arranque: nace de una semilla y se presenta.
+(() => {
+  "use strict";
+  const E = window.Eko, S = window.EkoSettings;
+  if (!E || !S) return;
+  const $ = (s) => document.querySelector(s);
+  const stage = $("#stage"), pod = $("#pod");
+  const done = () => { try { return !!localStorage.getItem("eko-onboarded"); } catch (_) { return true; } };
+  const ES = E.LANG === "es";
+
+  const TX = ES ? {
+    hint: "Algo se mueve… acarícialo",
+    hello: "¡Hola! ¿Eres tú quien me va a cuidar?",
+    askName: "¿Cómo me llamo?", nameOk: (n) => `¡Me encanta! Soy ${n}`,
+    askUser: "¿Y tú cómo te llamas?", userOk: (n) => `Encantado, ${n}`, skip: "Prefiero no decirlo",
+    askBday: "¿Cuándo es tu cumple?", bdayOk: "¡Apuntado! Ese día habrá fiesta",
+    askBed: "¿A qué hora sueles irte a dormir?", bedOk: "Te avisaré si se hace tarde", varies: "Varía",
+    privacy: "Para hacerte compañía miro qué programa usas, los títulos de las ventanas, cómo va el PC, tus descargas y lo que suena. Todo se queda en tu ordenador; no envío nada a ningún sitio. Puedes cambiarlo en Ajustes.",
+    gotIt: "Entendido",
+    end: (u) => `¡Vamos a llevarnos genial${u ? ", " + u : ""}!`,
+    ok: "Vale", months: ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"],
+  } : {
+    hint: "Something's moving… pet it",
+    hello: "Hi! Are you the one who'll look after me?",
+    askName: "What's my name?", nameOk: (n) => `I love it! I'm ${n}`,
+    askUser: "And what's your name?", userOk: (n) => `Nice to meet you, ${n}`, skip: "I'd rather not say",
+    askBday: "When's your birthday?", bdayOk: "Noted! There'll be a party that day",
+    askBed: "What time do you usually go to bed?", bedOk: "I'll tell you if it gets late", varies: "It varies",
+    privacy: "To keep you company I look at which app you use, window titles, how the PC is doing, your downloads and what's playing. Everything stays on your computer; I don't send anything anywhere. You can change it in Settings.",
+    gotIt: "Got it",
+    end: (u) => `We're going to get along great${u ? ", " + u : ""}!`,
+    ok: "OK", months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  };
+
+  // ---------- Tarjetas ----------
+  function card(html) {
+    let c = $("#obCard");
+    if (!c) { c = document.createElement("div"); c.id = "obCard"; c.className = "card ob"; stage.appendChild(c); }
+    c.classList.remove("in");
+    c.innerHTML = html;
+    requestAnimationFrame(() => requestAnimationFrame(() => c.classList.add("in")));
+    return c;
+  }
+  const hideCard = () => { const c = $("#obCard"); if (c) c.classList.remove("in"); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function askText(q, chips, maxlen = 20, skip = null) {
+    return new Promise((resolve) => {
+      const c = card(`<p>${q}</p>${chips.length ? `<div class="chips">${chips.map((x) => `<button type="button" class="chip">${x}</button>`).join("")}</div>` : ""}
+        <form><input maxlength="${maxlen}" autocomplete="off" /><button>${TX.ok}</button></form>${skip ? `<button type="button" class="link">${skip}</button>` : ""}`);
+      const inp = c.querySelector("input");
+      setTimeout(() => inp.focus(), 80);
+      c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { inp.value = b.textContent; inp.focus(); E.bump(-1.5); }));
+      c.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); const v = inp.value.trim(); if (v) { hideCard(); resolve(v); } else { E.act("shake"); } });
+      const sk = c.querySelector(".link"); if (sk) sk.addEventListener("click", () => { hideCard(); resolve(""); });
+      inp.addEventListener("input", () => { if (Math.random() < 0.5) E.Voice.syllable && E.Voice.syllable(); });
+    });
+  }
+  function askChips(q, options) {
+    return new Promise((resolve) => {
+      const c = card(`<p>${q}</p><div class="chips">${options.map(([v, l]) => `<button type="button" class="chip" data-v="${v}">${l}</button>`).join("")}</div>`);
+      c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { hideCard(); resolve(b.dataset.v); }));
+    });
+  }
+  function askBday() {
+    return new Promise((resolve) => {
+      const days = Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, "0")}">${i + 1}</option>`).join("");
+      const months = TX.months.map((m, i) => `<option value="${String(i + 1).padStart(2, "0")}">${m}</option>`).join("");
+      const c = card(`<p>${TX.askBday}</p><form><select class="d">${days}</select><select class="m">${months}</select><button>${TX.ok}</button></form><button type="button" class="link">${TX.skip}</button>`);
+      c.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); hideCard(); resolve(`${c.querySelector(".m").value}-${c.querySelector(".d").value}`); });
+      c.querySelector(".link").addEventListener("click", () => { hideCard(); resolve(""); });
+    });
+  }
+  function info(text, btn) {
+    return new Promise((resolve) => {
+      const c = card(`<p class="small">${text}</p><div class="chips"><button type="button" class="chip main">${btn}</button></div>`);
+      c.querySelector(".chip").addEventListener("click", () => { hideCard(); resolve(); });
+    });
+  }
+
+  // ---------- La semilla ----------
+  function hatch() {
+    return new Promise((resolve) => {
+      const seed = document.createElement("div");
+      seed.id = "seed";
+      seed.innerHTML = `<svg viewBox="-40 -60 80 90"><defs><radialGradient id="sg" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fffaf5"/><stop offset=".6" stop-color="#efe2d8"/><stop offset="1" stop-color="#c7b0a2"/></radialGradient></defs>
+        <ellipse cx="0" cy="26" rx="26" ry="5" fill="#2a1a12" opacity=".25"/>
+        <path d="M0,-34 C20,-34 30,-8 30,6 C30,22 16,28 0,28 C-16,28 -30,22 -30,6 C-30,-8 -20,-34 0,-34Z" fill="url(#sg)"/>
+        <path class="crack c1" d="M-6,-30 L-1,-20 L-8,-12" /><path class="crack c2" d="M-8,-12 L2,-4 L-4,6" /><path class="crack c3" d="M8,-26 L4,-14 L12,-6" />
+        <path d="M0,-34 C-2,-44 4,-52 12,-54 C12,-46 8,-40 0,-34Z" fill="#7cc48a"/></svg>`;
+      pod.appendChild(seed);
+      E.setHitFull(true);
+      card(`<p>${TX.hint}</p>`);
+      let energy = 0, stagePhase = 0;
+      const crack = () => {
+        stagePhase++;
+        seed.classList.add("c" + stagePhase);
+        seed.classList.remove("jolt"); void seed.offsetWidth; seed.classList.add("jolt");
+        E.Voice.tone && E.Voice.tone("triangle", 600 + stagePhase * 120, 900 + stagePhase * 120, 0.08, 0.04);
+        if (stagePhase >= 3) {
+          hideCard();
+          seed.classList.add("burst");
+          E.fx("spark", 4);
+          setTimeout(() => { seed.remove(); E.setHidden(false); E.bump(-6); E.Voice.chirp(); setTimeout(() => E.act("stretch"), 300); }, 380);
+          setTimeout(resolve, 2400);
+        }
+      };
+      seed.addEventListener("click", () => { energy = 0; crack(); });
+      let lx = 0, ly = 0;
+      seed.addEventListener("pointermove", (e) => {
+        const d = Math.hypot(e.clientX - lx, e.clientY - ly); lx = e.clientX; ly = e.clientY;
+        if (d < 25) { energy += d; if (energy > 220) { energy = 0; crack(); } }
+      });
+    });
+  }
+
+  // ---------- Secuencia ----------
+  async function run() {
+    E.setHidden(true);
+    E.S.x = Math.min(Math.max(E.S.x, E.world.left), E.world.left + E.world.width - E.W);   // ventana entera en pantalla
+    E.hold(1e6);
+    await wait(600);
+    await hatch();
+    E.say(TX.hello, 3200, true, "wave");
+    await wait(3300);
+
+    const name = await askText(TX.askName, ES ? ["Eko", "Mochi", "Bolo", "Nube"] : ["Eko", "Mochi", "Bobo", "Cloud"]);
+    S.set("petName", name);
+    E.hop(-420); E.fx("heart", 3); E.blush(2.5);
+    E.say(TX.nameOk(name), 2800, true);
+    await wait(2900);
+
+    const user = await askText(TX.askUser, [], 24, TX.skip);
+    if (user) { S.set("userName", user); E.say(TX.userOk(user), 2600, true, "nod"); await wait(2700); }
+
+    const bday = await askBday();
+    if (bday) { S.set("birthday", bday); E.say(TX.bdayOk, 2600, true, "spark"); await wait(2700); }
+
+    const bed = await askChips(TX.askBed, [["22:30", "22:30"], ["23:30", "23:30"], ["00:30", "00:30"], ["01:30", "01:30"], ["", TX.varies]]);
+    S.set("bedtime", bed || "01:30");
+    E.say(TX.bedOk, 2600, true, "yawn");
+    await wait(2700);
+
+    E.act("think");
+    await info(TX.privacy, TX.gotIt);
+
+    try { localStorage.setItem("eko-onboarded", new Date().toISOString()); } catch (_) {}
+    E.setHitFull(false);
+    E.hold(4);
+    E.act("hug");
+    E.say(TX.end(S.get().userName), 3200, true);
+  }
+
+  window.EkoOnboarding = { run, pending: () => !done() };
+  if (!done()) setTimeout(run, 300);
+})();
+</script>
+<script>
+(function(){
+const E=window.Eko;const $=s=>document.querySelectorAll(s);
+const on=(sel,fn)=>$(sel).forEach(b=>b.addEventListener('click',()=>{E.Voice.ensure();fn(b);}));
+on('[data-a]',b=>{E.act(b.dataset.a); if(b.dataset.a==='dizzy') E.say('Todo da vueltas…',2400,true);});
+on('[data-p]',b=>E.act('point',{dir:+b.dataset.p}));
+on('[data-talk]',()=>E.say('¡Hola! Soy Eko, encantado',3000,true));
+on('[data-sit]',()=>{E.S.mode='sit';E.S.modeUntil=E.A.t+8;});
+on('[data-peek]',()=>E.forcePeek());
+on('[data-curious]',()=>E.curious());
+on('[data-walk]',()=>{E.S.modeUntil=0;});
+on("[data-flyb]",b=>E.fly(b.dataset.flyb));
+on('[data-happy]',()=>{E.setMood('happy',2.5);E.blush(2.8);E.fx('heart',2);E.Voice.chirp();});
+let hot=false;on('[data-hot]',()=>{hot=!hot;E.setHot(hot);if(hot)E.say('Uf, qué calor',2400,true);});
+on('[data-sleep]',()=>E.S.sleeping?E.wakeUp():E.goToSleep());
+on('[data-miss]',()=>E.missYou());
+on('[data-sulk]',()=>E.sulk(0.4));
+on('[data-box]',()=>{E.act('showBox');E.say('Ha llegado: informe.pdf',2600,true);});
+let gl=false;on('[data-glasses]',()=>{gl=!gl;E.setGlasses(gl);});
+let dn=false;on('[data-dance]',()=>{dn=!dn;E.setDance(dn);if(dn)E.fx('note',2);});
+on('[data-fx]',b=>E.fx(b.dataset.fx,2));
+on('[data-hat]',b=>{E.setHat(b.dataset.hat);E.hop(-360);E.fx('spark',2);});
+on('[data-sound]',b=>{E.Voice.setOn(!E.Voice.on);b.textContent='Sonido: '+(E.Voice.on?'sí':'no');});
+on('[data-bg]',()=>document.body.classList.toggle('light'));
+on('[data-reborn]',()=>{localStorage.removeItem('eko-onboarded');location.reload();});
+})();
+</script></body></html>

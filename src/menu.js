@@ -250,7 +250,8 @@
   function ask(question, onOk) {
     const c = card(`<p>${question}</p><form><input maxlength="80" autocomplete="off" /><button>${L.ok}</button></form>`);
     const inp = c.querySelector("input");
-    setTimeout(() => inp.focus(), 50);
+    setTimeout(() => E.focusInput(inp), 50);
+    inp.addEventListener("pointerdown", () => E.focusInput(inp));
     c.querySelector("form").addEventListener("submit", (e) => {
       e.preventDefault();
       const v = inp.value.trim();

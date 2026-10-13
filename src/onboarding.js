@@ -49,7 +49,8 @@
       const c = card(`<p>${q}</p>${chips.length ? `<div class="chips">${chips.map((x) => `<button type="button" class="chip">${x}</button>`).join("")}</div>` : ""}
         <form><input maxlength="${maxlen}" autocomplete="off" /><button>${TX.ok}</button></form>${skip ? `<button type="button" class="link">${skip}</button>` : ""}`);
       const inp = c.querySelector("input");
-      setTimeout(() => inp.focus(), 80);
+      setTimeout(() => E.focusInput(inp), 80);
+      inp.addEventListener("pointerdown", () => E.focusInput(inp));
       c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { inp.value = b.textContent; inp.focus(); E.bump(-1.5); }));
       c.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); const v = inp.value.trim(); if (v) { hideCard(); resolve(v); } else { E.act("shake"); } });
       const sk = c.querySelector(".link"); if (sk) sk.addEventListener("click", () => { hideCard(); resolve(""); });

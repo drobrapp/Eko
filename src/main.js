@@ -1048,6 +1048,11 @@
     fly: (k) => startFlight(k),
     quiet: false,
     setHidden(v) { A.hidden = !!v; },
+    // La ventana de Eko no se activa sola: para escribir en una casilla hay que pedirle el foco a Windows
+    focusInput(inp) {
+      const go = () => { try { inp.focus(); } catch (_) {} };
+      if (NATIVE) win.setFocus().then(() => setTimeout(go, 30)).catch(go); else go();
+    },
     // Mete la ventana entera dentro de la pantalla (para menús y tarjetas); llama a done al llegar
     keepInside(done) {
       const lo = world.left, hi = world.left + world.width - W;

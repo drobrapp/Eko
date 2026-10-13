@@ -7,27 +7,30 @@
 
   const ES = E.LANG === "es";
   const T = ES ? {
-    morning: ["Buenos días", "¡Buenos días! ¿Café?"],
-    afternoon: ["Buenas tardes", "¡Hola de nuevo!"],
-    night: ["Buenas noches", "¿Turno de noche?"],
+    morning: ["¡Buenos días! ¿Café o té?", "Arriba, que hay mucho que hacer"],
+    afternoon: ["¡Buenas tardes!", "¿Qué tal la mañana?"],
+    night: ["¿Turno de noche?", "Buenas noches, búho"],
     back: ["¡Has vuelto!", "Te echaba de menos", "Ya era hora"],
-    late: ["Es tarde…", "¿No deberíamos dormir?", "Las pantallas a estas horas…"],
+    late: ["¿Qué horas son estas?", "Mañana tendrás ojeras… ¡Y yo también!"],
     creative: ["¿Editando? Te hago compañía", "Qué colores", "Modo artista"],
     code: ["Modo programador", "Mucho texto raro…"],
     office: ["Papeleo… ánimo", "Hoja de cálculo, mi favorita"],
     video: ["¿Vemos algo?", "Me pido sitio"],
     social: ["Llevas un rato de scroll…", "¿Seguimos deslizando?", "Ese scroll no se acaba nunca"],
     github: ["¿Subiendo una versión mía?", "Que no se rompa nada…"],
-    hot: ["Uf, qué calor", "El PC va a tope", "Estoy sudando"],
-    ram: ["Me falta sitio en la cabeza", "Memoria casi llena"],
-    battery: (n) => `Batería al ${n}%`,
-    offline: ["Me he quedado sin internet", "¿Y la conexión?"],
-    online: ["Vuelve a haber internet"],
-    disk: (n) => `El disco está casi lleno (${n}% libre)`,
-    card: (n) => n > 0 ? `¡Una tarjeta! Veo ${n.toLocaleString("es")} fotos` : "¡Una tarjeta! Está vacía",
-    usb: (name) => `Ha llegado un USB${name ? ": " + name : ""}`,
-    download: (n) => `Ha llegado: ${n}`,
+    hot: ["¡Me derrito!", "Esto es un horno", "¿Quién ha encendido la calefacción?"],
+    ram: ["Tengo la cabeza a reventar"],
+    battery: (n) => `Me quedo sin pilas (${n}%)`,
+    offline: ["¡Socorro, sin internet!"],
+    online: ["Ya hay WiFi, falsa alarma"],
+    disk: (n) => `El disco está a reventar (${n}% libre)`,
+    card: (n) => n > 0 ? `¡Tarjeta nueva! ¡${n.toLocaleString("es")} fotos! ¿Buena sesión?` : "¡Tarjeta nueva! Está vacía",
+    usb: () => "¡Un USB! ¿Qué traes?",
+    download: (n) => `¡Paquete para ti: ${n}!`,
     song: (t) => `Suena: ${t}`,
+    longApp: (n) => `${n} y tú ya sois inseparables. ¿Estiramos?`,
+    lunch: ["Me ruge la barriga… ¿y a ti?"],
+    dinner: ["¿Qué hay de cena? Yo me pido postre"],
   } : {
     morning: ["Good morning", "Morning! Coffee?"],
     afternoon: ["Good afternoon", "Hi again!"],
@@ -50,6 +53,9 @@
     usb: (name) => `A USB arrived${name ? ": " + name : ""}`,
     download: (n) => `Arrived: ${n}`,
     song: (t) => `Now playing: ${t}`,
+    longApp: (n) => `You've been on ${n} for a while. Stretch?`,
+    lunch: ["Lunch time?", "My tummy's rumbling… yours?"],
+    dinner: ["What's for dinner?", "It's getting late…"],
   };
 
   // ---------- Categorías de apps (más adelante, editables en ajustes) ----------
@@ -94,6 +100,7 @@
   let autoSlept = false, longestIdle = 0;
   let hotCount = 0, ramCount = 0, offlineCount = 0, wasOffline = false;
   let batteryWarned = false, lastSong = "", glasses = false;
+  let lastKey = "", lastApp = "", appSince = Date.now();
 
   function greetingByHour() {
     const h = new Date().getHours();
@@ -130,14 +137,26 @@
     }
 
     // Cambio de actividad
-    if (cat !== lastCat) {
-      lastCat = cat;
-      catSince = Date.now();
-      if (T[cat] && Array.isArray(T[cat]) && cat !== "social" && Math.random() < 0.5 && once("cat-" + cat, 30)) {
-        const g = { creative: "spark", code: "think", office: "nod", video: "note", github: "surprise" }[cat];
-        setTimeout(() => E.say(E.pick(T[cat]), 2800, false, g), 1500);
+    if (cat !== lastCat) { lastCat = cat; catSince = Date.now(); }
+    // Comentarios según la app o la web concreta (ver comments.js)
+    const key = (s.app || "") + "|" + (s.title || "").slice(0, 60);
+    if (key !== lastKey) {
+      lastKey = key;
+      const isBrowser = CATS.browser.some((k) => (s.app || "").startsWith(k));
+      if (Math.random() < 0.6 && window.EkoComments) {
+        const c = window.EkoComments.find(s.app || "", s.title || "", isBrowser, ES);
+        if (c) setTimeout(() => E.say(c.text, 3200, false, c.gesture), 1200);
       }
     }
+    // Mucho rato seguido en la misma app: propone una pausa
+    if (s.app !== lastApp) { lastApp = s.app; appSince = Date.now(); }
+    if (s.app && Date.now() - appSince > 90 * 60000 && s.idle < 60 && once("long-" + s.app, 90)) {
+      const name = s.app.charAt(0).toUpperCase() + s.app.slice(1);
+      E.say(T.longApp(name), 3500, false, "stretch");
+    }
+    // Horas de comer, una vez al día
+    if (h === 14 && s.idle < 60 && once("lunch", 20 * 60)) E.say(E.pick(T.lunch), 3000, false, "think");
+    if (h === 21 && s.idle < 60 && once("dinner", 20 * 60)) E.say(E.pick(T.dinner), 3000, false, "think");
     // Gafitas para "leer" cuando llevas un rato trabajando con texto o imagen
     const reading = (cat === "code" || cat === "office" || cat === "creative") && Date.now() - catSince > 2 * 60000;
     if (reading !== glasses) { glasses = reading; E.setGlasses(reading); }

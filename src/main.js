@@ -40,32 +40,34 @@
   // ---------- Textos ----------
   const TXT = {
     es: {
-      hello: ["¡Hola!", "Ya estoy aquí", "¿Qué hacemos hoy?"],
-      poke: ["¿Mm?", "¡Eh!", "¿Sí?", "Dime"],
-      pet: ["mmm…", "Qué gustito", "Otra vez"],
-      drop: ["¡Uf!", "Aterrizaje perfecto", "Otra vez no…"],
-      dizzy: ["Todo da vueltas…", "¿Dónde estoy?"],
-      sleep: ["Buenas noches…", "Cinco minutitos…"],
-      wake: ["¿Ya?", "Estaba descansando los ojos"],
-      updating: ["Voy a cambiarme, ahora vuelvo"],
-      updated: ["¡Estreno versión!", "Me noto distinto…"],
+      hello: ["¡Holi!", "¡Ya estoy de vuelta!", "¿Qué estamos haciendo hoy?"],
+      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!"],
+      pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!"],
+      pet: ["Esto es mejor que una actualización", "Qué gustitito", "No pares, porfa"],
+      drop: ["¡Mis piernitas!", "Diez de diez en el aterrizaje", "Avisa la próxima vez", "¿Eso es todo?", "Ni un rasguño", "Otra, otra"],
+      dizzy: ["Veo tres pantallas…", "¿Quién ha apagado la gravedad?", "Necesito sentarme"],
+      sleep: ["Me echo una siestecita", "Despiértame si me necesitas", "Zzz… digo, buenas noches"],
+      wake: ["¡No estaba dormido!", "¿Qué hora es?", "Soñaba con una pelota gigante"],
+      updating: ["Me voy a la peluquería, ahora vuelvo"],
+      updated: ["¿Notas algo distinto?", "Versión nueva, mismo encanto"],
       missed: ["¡Te echaba de menos!", "¡Por fin!"],
       sulk: ["Hmpf.", "…"],
       forgiven: ["Vale, te perdono", "¡Así sí!"],
       anniversary: (n) => `¡Hoy hace ${n} ${n === 1 ? "año" : "años"} que nos conocemos!`,
-      birthday: ["¡Feliz cumpleaños!"],
+      birthday: ["¡Feliz cumpleaños! ¿Y mi trozo de tarta?"],
       xmas: ["¡Feliz Navidad!"],
       newyear: ["¡Feliz año nuevo!"],
-      halloween: ["¡Buuu!"],
-      friday: ["¡Viernes!"],
-      monday: ["Lunes… otra vez"],
-      fly: ["¡Allá voy!", "¡Al infinito!", "¡Despegando!"],
+      halloween: ["¡Buuu! ¿Te he asustado?"],
+      friday: ["¡Viernes! ¿Planes?", "Huele a finde"],
+      monday: ["Lunes… ánimo, que tú puedes", "¿Ya es lunes otra vez?"],
+      fly: ["¡Al rescate!", "¡Capa activada!", "¡Esto es un trabajo para Eko!"],
       costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
       hats: { auto: "Complemento automático", witch: "Bruja", pumpkin: "Calabaza", vampire: "Vampiro", ghost: "Fantasma", santa: "Papá Noel", reindeer: "Reno", elf: "Elfo", scarf: "Bufanda", party: "Fiesta", crown: "Corona", none: "Sin complemento" },
     },
     en: {
       hello: ["Hi!", "I'm here", "What are we doing today?"],
-      poke: ["Hm?", "Hey!", "Yes?", "Tell me"],
+      poke: ["You called?", "Present!", "What's up?", "Here!"],
+      pokeAnnoyed: ["Enough!", "Again?", "You'll wear me out", "I'm not a button!"],
       pet: ["mmm…", "That's nice", "Again"],
       drop: ["Oof!", "Perfect landing", "Not again…"],
       dizzy: ["Everything's spinning…", "Where am I?"],
@@ -985,9 +987,19 @@
     else poke();
   }
 
+  const pokes = [];
   function poke() {
     touched();
     if (S.sleeping) { wakeUp(); return; }
+    const now = performance.now();
+    pokes.push(now);
+    while (pokes.length && now - pokes[0] > 20000) pokes.shift();
+    if (pokes.length >= 4) {            // muchos toquecitos seguidos: se enfada un poco
+      act("angry"); bump(3); Voice.sigh();
+      say(pick(TXT.pokeAnnoyed), 2400, true);
+      S.mode = "idle"; S.modeUntil = A.t + 4;
+      return;
+    }
     hop(-480);
     A.tiltTarget = rnd(-10, 10);
     S.mode = "idle"; S.modeUntil = A.t + 3;

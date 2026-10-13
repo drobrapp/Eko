@@ -228,7 +228,12 @@
     if (!ball && !hideGame) E.setHitFull(false);
   }
   // Clic fuera de las burbujas: cerrar
-  stage.addEventListener("click", (e) => { if (open && !e.target.closest(".blob") && !e.target.closest(".card") && !e.target.closest("#hit")) close(); });
+  stage.addEventListener("click", (e) => {
+    if (e.target.closest(".card") || e.target.closest("#hit")) return;
+    if (open && !e.target.closest(".blob")) close();
+    const c = $("#card");
+    if (c && c.classList.contains("in")) closeCard();
+  });
 
   // ---------- Tarjeta (texto, formularios, listas) ----------
   let cardTimer = 0;

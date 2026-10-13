@@ -92,6 +92,13 @@
     fill();
   });
 
+  // Sin menú del navegador ni recargas accidentales (se permite en las casillas de texto)
+  document.addEventListener("contextmenu", (e) => { if (!e.target.closest("input, textarea")) e.preventDefault(); });
+  document.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "f5" || k === "f7" || (e.ctrlKey && ["r", "p", "f", "g", "j", "u", "s"].includes(k))) e.preventDefault();
+  });
+
   S.onChange(fill);
   fill();
 })();

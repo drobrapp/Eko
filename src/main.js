@@ -897,6 +897,14 @@
     if (P.snack > 0) { el.snack.style.display = "inline"; el.snack.setAttribute("transform", `translate(${(th * 30).toFixed(2)} 54) scale(${(P.snack * 1.7).toFixed(2)})`); }
     else el.snack.style.display = "none";
 
+    // Que el bocadillo no se salga de la pantalla aunque Eko esté pegado al borde
+    if (bubble.classList.contains("show")) {
+      const w = bubble.offsetWidth || 0;
+      const cx = S.x + W / 2, half = w / 2 + 6;
+      const shift = clamp(0, world.left + half - cx, world.left + world.width - half - cx);
+      bubble.style.setProperty("--shift", shift.toFixed(0) + "px");
+    }
+
     place();
   }
 
@@ -1076,6 +1084,15 @@
     lastInteraction: () => lastInteraction,
     native: NATIVE, listen,
   };
+
+  // ---------- Comportamiento de "app", no de página web ----------
+  // Sin menú contextual del navegador (Inspeccionar, Recargar…) ni atajos que recarguen o impriman
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "f5" || k === "f7" || k === "f3" || (e.ctrlKey && ["r", "p", "f", "g", "j", "u", "s", "+", "-", "="].includes(k))) e.preventDefault();
+  });
+  document.addEventListener("dragstart", (e) => e.preventDefault());
 
   // ---------- Ajustes en vivo ----------
   const pod = $("#pod");

@@ -54,6 +54,7 @@
       c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { inp.value = b.textContent; inp.focus(); E.bump(-1.5); }));
       c.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); const v = inp.value.trim(); if (v) { hideCard(); resolve(v); } else { E.act("shake"); } });
       const sk = c.querySelector(".link"); if (sk) sk.addEventListener("click", () => { hideCard(); resolve(""); });
+      inp.addEventListener("keydown", (e) => { if (e.key === "Escape" && skip) { hideCard(); resolve(""); } });
       inp.addEventListener("input", () => { if (Math.random() < 0.5) E.Voice.syllable && E.Voice.syllable(); });
     });
   }
@@ -63,15 +64,36 @@
       c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { hideCard(); resolve(b.dataset.v); }));
     });
   }
+  // Cumpleaños con selectores propios: los desplegables nativos no funcionan en la ventana transparente de Eko
   function askBday() {
     return new Promise((resolve) => {
-      const days = Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, "0")}">${i + 1}</option>`).join("");
-      const months = TX.months.map((m, i) => `<option value="${String(i + 1).padStart(2, "0")}">${m}</option>`).join("");
-      const c = card(`<p>${TX.askBday}</p><form><select class="d">${days}</select><select class="m">${months}</select><button>${TX.ok}</button></form><button type="button" class="link">${TX.skip}</button>`);
-      c.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); hideCard(); resolve(`${c.querySelector(".m").value}-${c.querySelector(".d").value}`); });
+      let d = 1, m = 1;
+      const picker = (cls) => `<div class="picker ${cls}"><button type="button" class="pk-prev">‹</button><span class="pk-val"></span><button type="button" class="pk-next">›</button></div>`;
+      const c = card(`<p>${TX.askBday}</p><div class="pickers">${picker("pd")}${picker("pm")}</div>
+        <div class="chips"><button type="button" class="chip main ok">${TX.ok}</button><button type="button" class="link">${TX.skip}</button></div>`);
+      const days = (mm) => [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mm - 1];
+      const show = () => {
+        if (d > days(m)) d = days(m);
+        c.querySelector(".pd .pk-val").textContent = d;
+        c.querySelector(".pm .pk-val").textContent = TX.months[m - 1];
+      };
+      const step = (which, delta) => {
+        if (which === "pd") d = ((d - 1 + delta + days(m)) % days(m)) + 1;
+        else m = ((m - 1 + delta + 12) % 12) + 1;
+        show(); E.Voice.tone && E.Voice.tone("sine", 700, 760, 0.04, 0.02);
+      };
+      for (const which of ["pd", "pm"]) {
+        const el = c.querySelector("." + which);
+        el.querySelector(".pk-prev").addEventListener("click", () => step(which, -1));
+        el.querySelector(".pk-next").addEventListener("click", () => step(which, 1));
+        el.addEventListener("wheel", (e) => { e.preventDefault(); step(which, e.deltaY > 0 ? 1 : -1); }, { passive: false });
+      }
+      show();
+      c.querySelector(".ok").addEventListener("click", () => { hideCard(); resolve(`${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`); });
       c.querySelector(".link").addEventListener("click", () => { hideCard(); resolve(""); });
     });
   }
+
   function info(text, btn) {
     return new Promise((resolve) => {
       const c = card(`<p class="small">${text}</p><div class="chips"><button type="button" class="chip main">${btn}</button></div>`);

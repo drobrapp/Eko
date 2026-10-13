@@ -112,7 +112,7 @@ html, body {
 #bubble::after {
   content: "";
   position: absolute;
-  left: 50%;
+  left: calc(50% - var(--shift, 0px));
   bottom: -5px;
   width: 10px;
   height: 10px;
@@ -120,7 +120,7 @@ html, body {
   transform: translateX(-50%) rotate(45deg);
   border-radius: 2px;
 }
-#bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+#bubble.show { opacity: 1; transform: translate(calc(-50% + var(--shift, 0px)), 0) scale(1); }
 .has-hat #bubble { bottom: 176px; }
 .has-hat #thought { bottom: 172px; }
 
@@ -376,3 +376,11 @@ html, body {
 .card .link { border: none; background: none; padding: 6px 0 0; font: 12px "Segoe UI", system-ui, sans-serif; color: #8a7468; text-decoration: underline; cursor: pointer; }
 .card select { border: 1px solid #e3d2c7; border-radius: 10px; padding: 6px; font: inherit; background: #fff; color: inherit; }
 .card p.small { font-size: 12px; line-height: 1.45; }
+
+/* Selectores propios (sin desplegables nativos) */
+.card .pickers { display: flex; gap: 8px; margin: 0 0 10px; }
+.card .picker { flex: 1; display: flex; align-items: center; justify-content: space-between; background: #f3e6dc; border-radius: 12px; padding: 2px; user-select: none; }
+.card .picker button { border: none; background: #fff; color: #6b5348; width: 28px; height: 28px; border-radius: 10px; font: 700 16px "Segoe UI", system-ui, sans-serif; cursor: pointer; box-shadow: 0 1px 2px rgba(60, 40, 30, .15); }
+.card .picker button:hover { background: #fffaf6; }
+.card .pk-val { font: 700 14px "Segoe UI", system-ui, sans-serif; color: #3b2f2a; min-width: 36px; text-align: center; }
+.card .chips .link { padding: 5px 4px; }

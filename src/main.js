@@ -15,7 +15,8 @@
   const el = {
     pet: $("#pet"), head: $("#head"), body: $("#body"), eyes: $("#eyes"),
     legL: $("#legL"), legR: $("#legR"), armL: $("#armL"), armR: $("#armR"),
-    shadow: $("#shadow"), opens: [...document.querySelectorAll(".eye .open")],
+    shadow: $("#shadow"), hl: $("#hl"), opens: [...document.querySelectorAll(".eye .open")],
+    eyeEls: [...document.querySelectorAll(".eye")],
   };
 
   // ---------- Textos (es / en) ----------
@@ -82,7 +83,7 @@
     tilt: 0, tiltTarget: 0,
     eyeX: 0, eyeY: 0, eyeTX: 0, eyeTY: 0,
     blink: 1, nextBlink: 2, blinkEnd: 0,
-    walkPhase: 0, kick: 0, mood: "normal", moodUntil: 0,
+    walkPhase: 0, kick: 0, turn: 0, mood: "normal", moodUntil: 0,
   };
   const cursor = { x: -1e4, y: -1e4, over: false, lastX: 0, lastY: 0, pet: 0, lastMove: 0 };
 
@@ -173,8 +174,10 @@
         if (Math.abs(d) < 2) { S.mode = "idle"; S.modeUntil = A.t + rnd(2, 6); A.tiltTarget = 0; }
         else {
           S.facing = Math.sign(d);
-          S.x += S.facing * 46 * dt;
-          A.walkPhase += dt * 8.5;
+          // Primero se gira; solo avanza cuando ya mira hacia donde va
+          const ready = clamp((A.turn * S.facing - 0.35) / 0.4, 0, 1);
+          S.x += S.facing * 46 * ready * dt;
+          A.walkPhase += dt * 8.5 * ready;
           A.tiltTarget = S.facing * 3;
         }
       }
@@ -197,7 +200,13 @@
     const dx = cursor.x - cx, dy = cursor.y - cy, dist = Math.hypot(dx, dy);
     if (S.dragging) { A.eyeTX = 0; A.eyeTY = -2; }
     else if (dist < 700 && A.t - cursor.lastMove < 4) { A.eyeTX = (dx / dist) * 5; A.eyeTY = (dy / dist) * 3.5; }
-    else { A.eyeTX = S.mode === "walk" ? S.facing * 4 : 0; A.eyeTY = 0; }
+    else { A.eyeTX = S.mode === "walk" ? S.facing * 2 : 0; A.eyeTY = 0; }
+
+    // Giro "3D": de frente en reposo, de tres cuartos al caminar, se orienta un poco hacia el cursor
+    let turnGoal = 0;
+    if (S.mode === "walk" && !S.airborne && !S.dragging) turnGoal = S.facing * 0.85;
+    else if (!S.dragging && !S.sleeping && dist < 700 && A.t - cursor.lastMove < 4) turnGoal = clamp(dx / 900, -0.3, 0.3);
+    A.turn += (turnGoal - A.turn) * Math.min(1, dt * 5);
     A.eyeX += (A.eyeTX - A.eyeX) * Math.min(1, dt * 10);
     A.eyeY += (A.eyeTY - A.eyeY) * Math.min(1, dt * 10);
 
@@ -215,7 +224,9 @@
     const sy = (1 - sq + breathe) * A.appear;
     const sx = (1 + sq * 0.75 - breathe * 0.5) * A.appear;
 
-    el.pet.setAttribute("transform", `translate(0 ${bob}) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+    const t = A.turn, at = Math.abs(t);
+    const lean = walking ? t * 3 : 0;
+    el.pet.setAttribute("transform", `translate(0 ${bob}) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
     // Sombra: se encoge cuando está en el aire
     const lift = clamp((floorY() - S.y) / 300, 0, 1);
@@ -228,7 +239,7 @@
     if (walking) {
       lL = -Math.max(0, Math.sin(A.walkPhase)) * 7;
       lR = -Math.max(0, Math.sin(A.walkPhase + Math.PI)) * 7;
-      aL = Math.sin(A.walkPhase) * 8; aR = Math.sin(A.walkPhase) * 8;
+      aL = Math.sin(A.walkPhase + Math.PI) * 18 * at; aR = Math.sin(A.walkPhase) * 18 * at;
     } else if (S.dragging) {
       lL = Math.sin(A.kick) * 8; lR = Math.sin(A.kick + Math.PI) * 8;
       aL = 70 + Math.sin(A.kick * 0.7) * 12; aR = -70 - Math.sin(A.kick * 0.7) * 12;
@@ -237,14 +248,29 @@
     } else {
       aL = Math.sin(A.t * 2.2) * 2; aR = -aL;
     }
-    el.legL.setAttribute("transform", `translate(0 ${lL})`);
-    el.legR.setAttribute("transform", `translate(0 ${lR})`);
-    el.armL.setAttribute("transform", `rotate(${aL} -50 58)`);
-    el.armR.setAttribute("transform", `rotate(${aR} 50 58)`);
+    // De perfil las piernas se juntan y dan zancadas; el brazo lejano se esconde tras el cuerpo
+    const stride = walking ? 10 * t : 0;
+    const xL = 10 * at + Math.sin(A.walkPhase) * stride;
+    const xR = -10 * at + Math.sin(A.walkPhase + Math.PI) * stride;
+    const dxL = t > 0 ? 22 * t : -8 * t;
+    const dxR = t > 0 ? -8 * t : 22 * t;
+    el.legL.setAttribute("transform", `translate(${xL.toFixed(2)} ${lL})`);
+    el.legR.setAttribute("transform", `translate(${xR.toFixed(2)} ${lR})`);
+    el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} 0) rotate(${aL} -50 58)`);
+    el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} 0) rotate(${aR} 50 58)`);
+    el.body.setAttribute("transform", `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
 
     // Cabeza
     const headDrop = S.sleeping ? 4 : 0;
-    el.head.setAttribute("transform", `translate(0 ${headDrop}) rotate(${A.tilt.toFixed(2)} 0 40)`);
+    el.head.setAttribute("transform", `translate(${(4 * t).toFixed(2)} ${headDrop}) rotate(${A.tilt.toFixed(2)} 0 40) scale(${(1 - 0.05 * at).toFixed(4)} 1)`);
+    el.hl.setAttribute("transform", `translate(${(-14 * t).toFixed(2)} 0)`);
+    el.eyeEls.forEach((e, i) => {
+      const base = i === 0 ? -32 : 32;
+      const far = Math.sign(base) !== Math.sign(t) && at > 0.01;
+      const ex = base * (1 - 0.42 * at) + t * 30;
+      const esx = far ? 1 - 0.45 * at : 1 - 0.08 * at;
+      e.setAttribute("transform", `translate(${ex.toFixed(2)} 20) scale(${esx.toFixed(3)} 1)`);
+    });
     el.eyes.setAttribute("transform", `translate(${A.eyeX.toFixed(2)} ${A.eyeY.toFixed(2)})`);
     const eyeScale = S.dragging ? 1.25 : 1;
     for (const o of el.opens) o.setAttribute("transform", `scale(${eyeScale} ${A.blink * eyeScale})`);

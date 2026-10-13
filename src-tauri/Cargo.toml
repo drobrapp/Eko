@@ -1,6 +1,6 @@
 [package]
 name = "eko"
-version = "0.1.1"
+version = "0.1.2"
 description = "Eko, tu inquilino de escritorio"
 edition = "2021"
 
@@ -20,6 +20,7 @@ serde_json = "1"
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
 
 [profile.release]
 codegen-units = 1

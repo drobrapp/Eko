@@ -12,6 +12,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_updater::UpdaterExt;
 
 /// Zona "sólida" de la mascota en px lógicos, relativa a la ventana.
 #[derive(Default)]
@@ -148,6 +149,27 @@ fn first_run_autostart(app: &tauri::App) {
     let _ = std::fs::write(marker, b"1");
 }
 
+/// Busca una versión nueva en GitHub Releases; si la hay, la instala y reinicia Eko.
+async fn check_update(app: &AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = app.updater()?.check().await? {
+        let _ = app.emit_to("main", "cmd", "updating");
+        update.download_and_install(|_, _| {}, || {}).await?;
+        app.restart();
+    }
+    Ok(())
+}
+
+/// Comprueba actualizaciones 30 s después de arrancar y luego cada 6 horas.
+fn start_update_loop(app: AppHandle) {
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(30));
+        loop {
+            let _ = tauri::async_runtime::block_on(check_update(&app));
+            std::thread::sleep(Duration::from_secs(6 * 60 * 60));
+        }
+    });
+}
+
 pub fn run() {
     let panic_key = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyE);
 
@@ -157,6 +179,7 @@ pub fn run() {
                 let _ = w.show();
             }
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -174,6 +197,7 @@ pub fn run() {
             build_tray(app)?;
             let _ = app.global_shortcut().register(panic_key);
             start_cursor_loop(app.handle().clone());
+            start_update_loop(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -29,6 +29,8 @@
       drop: ["¡Uf!", "Aterrizaje perfecto", "Otra vez no…"],
       sleep: ["Buenas noches…", "Cinco minutitos…"],
       wake: ["¿Ya?", "Estaba descansando los ojos"],
+      updating: ["Voy a cambiarme, ahora vuelvo"],
+      updated: ["¡Estreno versión!", "Me noto distinto…"],
     },
     en: {
       hello: ["Hi!", "I'm here", "What are we doing today?"],
@@ -37,6 +39,8 @@
       drop: ["Oof!", "Perfect landing", "Not again…"],
       sleep: ["Good night…", "Five more minutes…"],
       wake: ["Already?", "I was just resting my eyes"],
+      updating: ["Changing clothes, be right back"],
+      updated: ["New version!", "I feel different…"],
     },
   }[LANG];
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -384,6 +388,7 @@
       listen("cmd", (e) => {
         if (e.payload === "sleep") S.sleeping ? wakeUp() : goToSleep();
         if (e.payload === "wake") { lastPosKey = ""; }
+        if (e.payload === "updating") say(pick(TXT.updating), 4000, true);
       });
       await win.show();
     } else {
@@ -396,7 +401,15 @@
 
     setInterval(readBounds, 5000);
     bump(-4);
-    setTimeout(() => say(pick(TXT.hello), 3000, true), 700);
+    let greeting = pick(TXT.hello);
+    if (NATIVE) {
+      try {
+        const v = await T.app.getVersion();
+        if (localStorage.getItem("eko-version") && localStorage.getItem("eko-version") !== v) greeting = pick(TXT.updated);
+        localStorage.setItem("eko-version", v);
+      } catch (_) {}
+    }
+    setTimeout(() => say(greeting, 3000, true), 700);
     requestAnimationFrame(frame);
   }
 

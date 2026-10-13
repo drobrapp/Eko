@@ -102,7 +102,7 @@
       { id: "util", icon: "util", label: L.util, go: "util" },
       { id: "wardrobe", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
       { id: "rest", icon: "moon", label: L.rest, go: "rest" },
-      { id: "settings", icon: "sliders", label: L.settings, run: () => card(`<p>${L.soon}</p>`, 3500) },
+      { id: "settings", icon: "sliders", label: L.settings, run: openSettings },
     ],
     play: [
       { icon: "ball", label: L.ball, run: startBall },
@@ -215,7 +215,7 @@
     E.hold(1e6);
     E.setHitFull(true);
     E.Voice.tone && E.Voice.tone("sine", 520, 780, 0.12, 0.03);
-    render("root");
+    E.keepInside(() => { if (open) render("root"); });
   }
   function close() {
     if (!open) return;
@@ -485,6 +485,12 @@
   function toggleDiscreet() {
     E.quiet = !E.quiet;
     E.say(pick(E.quiet ? SAY.discreetOn : SAY.discreetOff), 2000, true);
+  }
+
+  function openSettings() {
+    if (invoke) invoke("open_settings").catch(() => {});
+    else window.open("settings.html", "eko-settings", "width=540,height=700");
+    E.act("nod");
   }
 
   // ---------- Atajos del PC (solo en la app) ----------

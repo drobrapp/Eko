@@ -65,7 +65,7 @@ window.EkoComments = (() => {
   const cooldown = {};
   const COOLDOWN = 45 * 60000;     // la misma regla, como mucho cada 45 min
   let lastAny = 0;
-  const GAP = 3 * 60000;            // entre comentarios espontáneos, mínimo 3 min
+  let GAP = 3 * 60000;              // entre comentarios espontáneos (se ajusta con "Cuánto comenta")
 
   function docName(title) {
     let t = (title || "").replace(/\s*[-–—|]\s*(Word|Excel|PowerPoint|Adobe Acrobat.*|Microsoft.*|Google.*|Sumatra.*)$/i, "").trim();
@@ -99,5 +99,5 @@ window.EkoComments = (() => {
     return null;
   }
 
-  return { find };
+  return { find, setGap(min) { GAP = min * 60000; } };
 })();

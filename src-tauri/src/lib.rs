@@ -56,6 +56,65 @@ fn set_sound_menu(item: tauri::State<SoundItem>, value: bool) {
     let _ = item.0.set_checked(value);
 }
 
+/// Abre (o trae al frente) la ventana de Ajustes.
+#[tauri::command]
+async fn open_settings(app: AppHandle) -> Result<(), String> {
+    show_settings(&app)
+}
+
+fn show_settings(app: &AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("settings") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(app, "settings", tauri::WebviewUrl::App("settings.html".into()))
+        .title("Eko · Ajustes")
+        .inner_size(560.0, 720.0)
+        .min_inner_size(420.0, 480.0)
+        .center()
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_autostart(app: AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+#[tauri::command]
+fn set_autostart(app: AppHandle, value: bool) {
+    let al = app.autolaunch();
+    let _ = if value { al.enable() } else { al.disable() };
+}
+
+#[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// Busca actualización ya; si la hay, la instala en segundo plano y reinicia.
+#[tauri::command]
+async fn check_update_now(app: AppHandle) -> Result<Option<String>, String> {
+    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    match update {
+        Some(u) => {
+            let version = u.version.clone();
+            let handle = app.clone();
+            let _ = app.emit_to("main", "cmd", "updating");
+            tauri::async_runtime::spawn(async move {
+                if u.download_and_install(|_, _| {}, || {}).await.is_ok() {
+                    handle.restart();
+                }
+            });
+            Ok(Some(version))
+        }
+        None => Ok(None),
+    }
+}
+
 #[tauri::command]
 fn set_dragging(state: tauri::State<AppState>, value: bool) {
     state.dragging.store(value, Ordering::Relaxed);
@@ -121,9 +180,10 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let auto = CheckMenuItem::with_id(app, "autostart", "Arrancar con Windows", true, autostart_on, None::<&str>)?;
     let sound = CheckMenuItem::with_id(app, "sound", "Sonido", true, true, None::<&str>)?;
     let hat = MenuItem::with_id(app, "hat", "Probar complemento", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "Ajustes…", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&sleep, &toggle, &sound, &hat, &auto, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&settings, &sleep, &toggle, &sound, &hat, &auto, &sep, &quit])?;
     app.manage(SoundItem(sound.clone()));
 
     let auto_item = auto.clone();
@@ -145,6 +205,9 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
             "sound" => {
                 let on = app.state::<SoundItem>().0.is_checked().unwrap_or(true);
                 let _ = app.emit_to("main", "cmd", if on { "sound-on" } else { "sound-off" });
+            }
+            "settings" => {
+                let _ = show_settings(app);
             }
             "hat" => {
                 let _ = app.emit_to("main", "cmd", "hat-cycle");
@@ -223,7 +286,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, open_settings, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

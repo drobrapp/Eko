@@ -91,7 +91,6 @@ html, body {
   position: absolute;
   left: 50%;
   bottom: 152px;
-  max-width: 200px;
   transform: translate(-50%, 6px) scale(.9);
   transform-origin: 50% 100%;
   padding: 7px 12px;
@@ -105,7 +104,9 @@ html, body {
   opacity: 0;
   pointer-events: none;
   transition: opacity .18s ease, transform .25s cubic-bezier(.3, 1.6, .5, 1);
-  white-space: nowrap;
+  white-space: normal;
+  width: max-content;
+  max-width: 230px;
   z-index: 3;
 }
 #bubble::after {
@@ -354,3 +355,24 @@ html, body {
 #badge.in { opacity: .92; transform: translateX(-50%) scale(1); }
 #badge.break { background: #5fa87a; }
 .menu-open #bubble, .menu-open #badge { opacity: 0; }
+
+#pod { transform-origin: 50% 100%; transition: transform .3s ease; }
+
+/* ---------- Bautizo ---------- */
+#seed { position: absolute; left: 50%; bottom: 2px; width: 70px; height: 80px; margin-left: -35px; cursor: pointer; z-index: 4; animation: seedwiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+#seed svg { width: 100%; height: 100%; overflow: visible; }
+#seed .crack { fill: none; stroke: #8a6f62; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .2s; }
+#seed.c1 .c1, #seed.c2 .c1, #seed.c2 .c2, #seed.c3 .crack { opacity: 1; }
+#seed.jolt { animation: seedjolt .35s ease, seedwiggle 2.2s ease-in-out .35s infinite; }
+#seed.burst { animation: seedburst .38s ease-in forwards; }
+@keyframes seedwiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(-6deg); } 20% { transform: rotate(5deg); } 30% { transform: rotate(0); } }
+@keyframes seedjolt { 0% { transform: scale(1); } 40% { transform: scale(1.15, .85); } 100% { transform: scale(1); } }
+@keyframes seedburst { to { transform: scale(1.6); opacity: 0; } }
+.card.ob { top: 40px; }
+.card .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.card .chip { border: none; border-radius: 999px; padding: 5px 11px; font: 600 12px "Segoe UI", system-ui, sans-serif; background: #f3e6dc; color: #6b5348; cursor: pointer; }
+.card .chip:hover { background: #ead8cb; }
+.card .chip.main { background: #6b5348; color: #fff; }
+.card .link { border: none; background: none; padding: 6px 0 0; font: 12px "Segoe UI", system-ui, sans-serif; color: #8a7468; text-decoration: underline; cursor: pointer; }
+.card select { border: 1px solid #e3d2c7; border-radius: 10px; padding: 6px; font: inherit; background: #fff; color: inherit; }
+.card p.small { font-size: 12px; line-height: 1.45; }

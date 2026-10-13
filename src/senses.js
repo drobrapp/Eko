@@ -70,6 +70,24 @@
   const SOCIAL = ["instagram", "tiktok", "facebook", "twitter", " / x", "reddit", "threads", "pinterest"];
   const VIDEO = ["youtube", "netflix", "twitch", "prime video", "disney+", "filmin"];
 
+  const cfg = () => (window.EkoSettings ? window.EkoSettings.get() : { chatty: 2, breaks: true, breakMinutes: 90, scrollMinutes: 20, bedtime: "00:30" });
+  // Las listas de apps editables en Ajustes sustituyen a las de serie
+  function syncCats() {
+    const S = window.EkoSettings; if (!S) return;
+    for (const k of ["creative", "code", "office", "browser", "media"]) { const l = S.list(k); if (l.length) CATS[k] = l; }
+  }
+  syncCats();
+  if (window.EkoSettings) window.EkoSettings.onChange(syncCats);
+  const ignored = (app) => !!window.EkoSettings && window.EkoSettings.list("ignore").includes(app);
+  // ¿Es más tarde que tu hora de dormir? (hasta las 5:00)
+  function pastBedtime(d) {
+    const bt = cfg().bedtime; if (!bt) return false;
+    const [bh, bm] = bt.split(":").map(Number);
+    const mins = d.getHours() * 60 + d.getMinutes(), bed = bh * 60 + bm;
+    if (bed >= 12 * 60) return mins >= bed || mins < 5 * 60;
+    return mins >= bed && mins < 5 * 60;
+  }
+
   function categorize(app, title) {
     const t = (title || "").toLowerCase();
     for (const [cat, list] of Object.entries(CATS)) {
@@ -132,7 +150,7 @@
 
     // Trasnochar (00:30–5:00), una vez por noche
     const now = new Date(), h = now.getHours(), m = now.getMinutes();
-    if (((h === 0 && m >= 30) || (h >= 1 && h < 5)) && s.idle < 60 && once("late", 240)) {
+    if (pastBedtime(now) && s.idle < 60 && once("late", 240)) {
       E.say(E.pick(T.late), 3200, false, "yawn");
     }
 
@@ -143,14 +161,16 @@
     if (key !== lastKey) {
       lastKey = key;
       const isBrowser = CATS.browser.some((k) => (s.app || "").startsWith(k));
-      if (Math.random() < 0.6 && window.EkoComments) {
+      const chatty = cfg().chatty, prob = [0, 0.3, 0.6, 0.85][chatty] ?? 0.6;
+      if (window.EkoComments) window.EkoComments.setGap([99, 6, 3, 1.5][chatty] ?? 3);
+      if (!ignored(s.app || "") && Math.random() < prob && window.EkoComments) {
         const c = window.EkoComments.find(s.app || "", s.title || "", isBrowser, ES);
         if (c) setTimeout(() => E.say(c.text, 3200, false, c.gesture), 1200);
       }
     }
     // Mucho rato seguido en la misma app: propone una pausa
     if (s.app !== lastApp) { lastApp = s.app; appSince = Date.now(); }
-    if (s.app && Date.now() - appSince > 90 * 60000 && s.idle < 60 && once("long-" + s.app, 90)) {
+    if (cfg().breaks && s.app && !ignored(s.app) && Date.now() - appSince > cfg().breakMinutes * 60000 && s.idle < 60 && once("long-" + s.app, cfg().breakMinutes)) {
       const name = s.app.charAt(0).toUpperCase() + s.app.slice(1);
       E.say(T.longApp(name), 3500, false, "stretch");
     }
@@ -164,7 +184,8 @@
     // Si llevas horas activo sin hacerle ni caso, se enfurruña un rato
     if (s.idle < 60 && Date.now() - E.lastInteraction() > 3 * 3600000 && once("sulk", 180)) E.sulk(2);
     // Scroll infinito: aviso cada 20 min seguidos en redes
-    if (cat === "social" && Date.now() - catSince > 20 * 60000 && once("social", 20)) {
+    const sm = cfg().scrollMinutes;
+    if (sm > 0 && cat === "social" && Date.now() - catSince > sm * 60000 && once("social", sm)) {
       E.say(E.pick(T.social), 3500, true, "shake");
     }
 

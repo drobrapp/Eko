@@ -94,8 +94,8 @@
   // ---------- Voz y sonidos (sintetizados, sin archivos) ----------
   const Voice = {
     ctx: null,
-    on: store.get("eko-sound") !== "off",
-    base: 560,
+    on: window.EkoSettings ? window.EkoSettings.get().voice : true,
+    base: window.EkoSettings ? window.EkoSettings.get().pitch : 560,
     ensure() {
       if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; } }
       if (this.ctx.state === "suspended") this.ctx.resume();
@@ -122,7 +122,7 @@
     chirp() { this.tone("triangle", 700, 1100, 0.08, 0.04); this.tone("triangle", 900, 1400, 0.08, 0.04, 2400, 0.09); },
     yawn() { this.tone("triangle", 480, 190, 0.9, 0.035, 900); },
     sigh() { this.tone("triangle", 380, 240, 0.5, 0.03, 900); },
-    setOn(v) { this.on = !!v; store.set("eko-sound", v ? "on" : "off"); },
+    setOn(v) { this.on = !!v; if (window.EkoSettings && window.EkoSettings.get().voice !== !!v) window.EkoSettings.set("voice", !!v); },
   };
 
   // ---------- Símbolos flotantes ----------
@@ -399,7 +399,8 @@
   }
   function personalDay(d = today()) {
     const md = String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    if (store.get("eko-user-birthday") === md) return { kind: "birthday" };
+    const bd = window.EkoSettings ? window.EkoSettings.get().birthday : store.get("eko-user-birthday");
+    if (bd && bd === md) return { kind: "birthday" };
     const born = store.get("eko-born");
     if (born) {
       const b = new Date(born);
@@ -460,11 +461,12 @@
   function decide() {
     if (S.sleeping || S.sulking || S.airborne || S.dragging) return;
     const sleepy = isMonday() || isLate();
+    const cfg = window.EkoSettings ? window.EkoSettings.get() : { walk: true, fly: true };
     const cursorRecent = A.t - cursor.lastMove < 8;
     const choice = weighted([
-      ["idle", 30], ["walk", 24], ["look", 7], ["sit", 8],
+      ["idle", 30], ["walk", cfg.walk ? 24 : 0], ["look", 7], ["sit", 8],
       ["stretch", sleepy ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
-      ["peek", 5], ["approach", cursorRecent ? 8 : 0], ["friday", isFridayEve() ? 6 : 0], ["fly", 2],
+      ["peek", cfg.walk ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0], ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly ? 2 : 0],
     ]);
     S.speed = sleepy ? 34 : 46;
     S.then = null;
@@ -644,7 +646,7 @@
     const k = 170, damp = 10;
     A.squashV += (-k * A.squash - damp * A.squashV) * dt;
     A.squash += A.squashV * dt;
-    A.appear += (1 - A.appear) * Math.min(1, dt * 7);
+    A.appear += ((A.hidden ? 0 : 1) - A.appear) * Math.min(1, dt * 7);
     const velX = (S.x - S.prevX) / Math.max(dt, 1e-3);
     const lagTarget = clamp(-velX * 0.012, -7, 7);
     A.lagV += ((lagTarget - A.lag) * 120 - A.lagV * 9) * dt;
@@ -660,7 +662,7 @@
 
     const cx = S.x + W / 2, cy = S.y + H - 95;
     const dx = cursor.x - cx, dy = cursor.y - cy, dist = Math.hypot(dx, dy) || 1;
-    const recent = A.t - cursor.lastMove < 4;
+    const recent = A.t - cursor.lastMove < 4 && (!window.EkoSettings || window.EkoSettings.get().follow);
     if (S.dragging) { A.eyeTX = 0; A.eyeTY = -2; }
     else if (S.mode === "peeking") { A.eyeTX = -S.peekSide * 5; A.eyeTY = 0; }
     else if (dist < 1400 && recent) { A.eyeTX = (dx / dist) * 8; A.eyeTY = (dy / dist) * 9; }
@@ -1045,6 +1047,18 @@
     setHat(mode) { accMode = mode; applyAcc(true); },
     fly: (k) => startFlight(k),
     quiet: false,
+    setHidden(v) { A.hidden = !!v; },
+    // Mete la ventana entera dentro de la pantalla (para menús y tarjetas); llama a done al llegar
+    keepInside(done) {
+      const lo = world.left, hi = world.left + world.width - W;
+      const target = clamp(S.x, lo, hi);
+      if (Math.abs(target - S.x) < 2 || S.airborne) { done && done(); return; }
+      S.mode = "walk"; S.speed = 320; S.targetX = target; S.then = null; S.modeUntil = A.t + 10;
+      const t0 = performance.now();
+      const iv = setInterval(() => {
+        if (Math.abs(S.x - target) < 3 || performance.now() - t0 > 2500) { clearInterval(iv); S.mode = "idle"; done && done(); }
+      }, 50);
+    },
     setMenuPose(v) { A.menuPose = !!v; },
     setHitFull(v) {
       if (v) invoke("set_hitbox", { x: 0, y: 0, w: W, h: H });
@@ -1058,6 +1072,21 @@
     native: NATIVE, listen,
   };
 
+  // ---------- Ajustes en vivo ----------
+  const pod = $("#pod");
+  function sendHitbox() {
+    const r = hit.getBoundingClientRect();
+    invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
+  }
+  function applySettings(cfg) {
+    pod.style.transform = cfg.size && cfg.size !== 1 ? `scale(${cfg.size})` : "";
+    Voice.base = cfg.pitch || 560;
+    Voice.on = !!cfg.voice;
+    invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
+    if (NATIVE) setTimeout(sendHitbox, 50);
+  }
+  if (window.EkoSettings) window.EkoSettings.onChange(applySettings);
+
   // ---------- Arranque ----------
   async function start() {
     readBounds();
@@ -1067,6 +1096,9 @@
     S.modeUntil = 3;
     A.appear = 0.01;
     applyAcc(false);
+    if (window.EkoSettings) applySettings(window.EkoSettings.get());
+    const onboarding = !store.get("eko-onboarded");
+    if (onboarding) { A.hidden = true; S.modeUntil = 1e9; }
     update(0.016);
     render();
 
@@ -1075,6 +1107,7 @@
       invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
       invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
       listen("cursor", (e) => onCursor(e.payload));
+      listen("eko-reset", () => location.reload());
       listen("cmd", (e) => {
         const c = e.payload;
         if (c === "sleep") S.sleeping ? wakeUp() : goToSleep();
@@ -1098,6 +1131,7 @@
     }
 
     setInterval(() => { readBounds(); applyAcc(true); }, 5000);
+    if (onboarding) { requestAnimationFrame(frame); return; }   // el bautizo se encarga del saludo
     bump(-4);
 
     let greeting = specialGreeting();
@@ -1110,7 +1144,8 @@
         store.set("eko-version", v);
       } catch (_) {}
     }
-    if (!greeting) greeting = isMonday() ? pick(TXT.monday) : pick(TXT.hello);
+    const user = window.EkoSettings ? window.EkoSettings.get().userName : "";
+    if (!greeting) greeting = isMonday() ? pick(TXT.monday) : user && Math.random() < 0.5 ? (LANG === "es" ? `¡Holi, ${user}!` : `Hi, ${user}!`) : pick(TXT.hello);
     if (isMonday() && gesture === "wave") gesture = "yawn";
     setTimeout(() => say(greeting, 3000, true, gesture), 700);
     requestAnimationFrame(frame);

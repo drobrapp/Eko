@@ -1,6 +1,6 @@
 [package]
 name = "eko"
-version = "0.1.2"
+version = "0.2.0"
 description = "Eko, tu inquilino de escritorio"
 edition = "2021"
 
@@ -21,6 +21,13 @@ tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+active-win-pos-rs = "0.9"
+sysinfo = "0.37"
+notify = "8"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
+windows = { version = "0.62", features = ["Foundation", "Media_Control", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_SystemInformation", "Win32_System_Power"] }
 
 [profile.release]
 codegen-units = 1

@@ -109,3 +109,23 @@ html, body {
   20% { opacity: .9; }
   100% { transform: translate(16px, -34px); opacity: 0; }
 }
+
+/* Gota de sudor (CPU/RAM al límite) */
+#sweat {
+  position: absolute;
+  left: 142px;
+  bottom: 112px;
+  width: 9px;
+  height: 13px;
+  background: radial-gradient(circle at 35% 35%, #fff, #9fd3f0 60%, #6bb6e0);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  transform: rotate(-20deg);
+  opacity: 0;
+  pointer-events: none;
+}
+.mood-hot #sweat { animation: sweat 1.6s infinite ease-in; }
+@keyframes sweat {
+  0% { opacity: 0; transform: translateY(0) rotate(-20deg); }
+  20% { opacity: .95; }
+  100% { opacity: 0; transform: translateY(16px) rotate(-20deg); }
+}

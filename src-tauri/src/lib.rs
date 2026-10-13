@@ -3,6 +3,8 @@
 //! - Emite la posición global del cursor al frontend (para mirarte y las caricias).
 //! - Icono en la bandeja, arranque con Windows, atajo de pánico y una sola instancia.
 
+mod senses;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -24,9 +26,13 @@ struct HitBox {
 }
 
 #[derive(Default)]
-struct AppState {
+pub(crate) struct AppState {
     hitbox: Mutex<HitBox>,
     dragging: AtomicBool,
+    /// Oculto por el usuario (bandeja o Ctrl+Alt+E).
+    pub(crate) user_hidden: AtomicBool,
+    /// Oculto automáticamente (pantalla completa o llamada).
+    pub(crate) auto_hidden: AtomicBool,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -48,11 +54,18 @@ fn set_dragging(state: tauri::State<AppState>, value: bool) {
 
 fn toggle_visible(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
-        if w.is_visible().unwrap_or(false) {
-            let _ = w.hide();
-        } else {
+        let state = app.state::<AppState>();
+        let hidden_now = state.user_hidden.load(Ordering::Relaxed)
+            || state.auto_hidden.load(Ordering::Relaxed)
+            || !w.is_visible().unwrap_or(false);
+        if hidden_now {
+            state.user_hidden.store(false, Ordering::Relaxed);
+            state.auto_hidden.store(false, Ordering::Relaxed);
             let _ = w.show();
             let _ = app.emit_to("main", "cmd", "wake");
+        } else {
+            state.user_hidden.store(true, Ordering::Relaxed);
+            let _ = w.hide();
         }
     }
 }
@@ -198,6 +211,7 @@ pub fn run() {
             let _ = app.global_shortcut().register(panic_key);
             start_cursor_loop(app.handle().clone());
             start_update_loop(app.handle().clone());
+            senses::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

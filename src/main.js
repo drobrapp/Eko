@@ -87,7 +87,7 @@
     tilt: 0, tiltTarget: 0,
     eyeX: 0, eyeY: 0, eyeTX: 0, eyeTY: 0,
     blink: 1, nextBlink: 2, blinkEnd: 0,
-    walkPhase: 0, kick: 0, turn: 0, mood: "normal", moodUntil: 0,
+    walkPhase: 0, kick: 0, turn: 0, dance: false, hot: false, mood: "normal", moodUntil: 0,
   };
   const cursor = { x: -1e4, y: -1e4, over: false, lastX: 0, lastY: 0, pet: 0, lastMove: 0 };
 
@@ -196,7 +196,7 @@
     A.appear += (1 - A.appear) * Math.min(1, dt * 7);
 
     // Inclinación de cabeza
-    const tiltGoal = S.sleeping ? 11 : A.tiltTarget;
+    const tiltGoal = S.sleeping ? 11 : (A.dance && S.mode !== "walk" && !S.airborne) ? Math.sin(A.t * 3.2) * 7 : A.tiltTarget;
     A.tilt += (tiltGoal - A.tilt) * Math.min(1, dt * 5);
 
     // Mirada: hacia el cursor si está cerca, si no hacia donde camina
@@ -223,14 +223,16 @@
   function render() {
     const breathe = Math.sin(A.t * (S.sleeping ? 1.3 : 2.2)) * (S.sleeping ? 0.022 : 0.012);
     const walking = S.mode === "walk" && !S.airborne && !S.dragging;
-    const bob = walking ? -Math.abs(Math.sin(A.walkPhase)) * 5 : 0;
+    const dancing = A.dance && !walking && !S.airborne && !S.dragging && !S.sleeping;
+    const bob = walking ? -Math.abs(Math.sin(A.walkPhase)) * 5 : dancing ? -Math.abs(Math.sin(A.t * 6.4)) * 4 : 0;
+    const shiver = A.hot && !S.sleeping ? Math.sin(A.t * 55) * 0.9 : 0;
     const sq = clamp(A.squash * 0.06, -0.3, 0.35);
     const sy = (1 - sq + breathe) * A.appear;
     const sx = (1 + sq * 0.75 - breathe * 0.5) * A.appear;
 
     const t = A.turn, at = Math.abs(t);
     const lean = walking ? t * 3 : 0;
-    el.pet.setAttribute("transform", `translate(0 ${bob}) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+    el.pet.setAttribute("transform", `translate(${shiver.toFixed(2)} ${bob}) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
     // Sombra: se encoge cuando está en el aire
     const lift = clamp((floorY() - S.y) / 300, 0, 1);
@@ -371,6 +373,15 @@
     cursor.x = p.x; cursor.y = p.y; cursor.over = p.over;
     cursor.lastX = p.x; cursor.lastY = p.y;
   }
+
+  // ---------- API para otros módulos (sentidos, bienestar…) ----------
+  window.Eko = {
+    S, A, LANG, say, pick, rnd, setMood, bump, goToSleep, wakeUp,
+    hop(v = -420) { if (!S.dragging && !S.sleeping) { S.airborne = true; S.vy = v; S.vx = 0; bump(-3); } },
+    setDance(v) { A.dance = !!v; },
+    setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
+    native: NATIVE, listen,
+  };
 
   // ---------- Arranque ----------
   async function start() {

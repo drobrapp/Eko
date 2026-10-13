@@ -37,24 +37,53 @@ html, body {
 }
 #hit.dragging { cursor: grabbing; }
 
-/* Ojos: abiertos por defecto; los humores cambian la forma */
-.eye .happy, .eye .closed {
+/* ---------- Ojos ---------- */
+.eye .line {
   fill: none;
   stroke: #1d1614;
   stroke-width: 3.2;
   stroke-linecap: round;
   display: none;
 }
-.mood-happy .eye .open, .mood-sleep .eye .open { display: none; }
-.mood-happy .eye .happy { display: inline; }
-.mood-sleep .eye .closed { display: inline; }
+.eye .spiral { stroke-width: 2.2; }
+.eye .brow { stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.eye .rim { fill: rgba(255, 255, 255, .12); stroke: #3b2f2a; stroke-width: 2.6; display: none; }
+#bridge { stroke: #3b2f2a; stroke-width: 2.6; stroke-linecap: round; display: none; }
+.has-glasses .eye .rim, .has-glasses #bridge { display: inline; }
+.eye .blush { opacity: 0; transition: opacity .4s ease; }
+.blushing .eye .blush { opacity: .55; }
 
-/* Bocadillo */
+[data-eyes="happy"] .eye .open,
+[data-eyes="closed"] .eye .open,
+[data-eyes="spiral"] .eye .open,
+[data-eyes="hidden"] .eye .open { display: none; }
+[data-eyes="happy"] .eye .happy { display: inline; }
+[data-eyes="closed"] .eye .closed { display: inline; }
+[data-eyes="spiral"] .eye .spiral { display: inline; }
+[data-eyes="hidden"] #eyes { opacity: 0; }
+/* Guiño pícaro: un ojo feliz y otro abierto */
+[data-eyes="wink"] .eye-l .open { display: none; }
+[data-eyes="wink"] .eye-l .happy { display: inline; }
+
+[data-brows="sad"] .brow, [data-brows="angry"] .brow, [data-brows="up"] .brow { display: inline; }
+[data-brows="sad"] .eye-l .brow { transform: translate(0, 2px) rotate(-16deg); }
+[data-brows="sad"] .eye-r .brow { transform: translate(0, 2px) rotate(16deg); }
+[data-brows="angry"] .eye-l .brow { transform: translate(0, 3px) rotate(18deg); }
+[data-brows="angry"] .eye-r .brow { transform: translate(0, 3px) rotate(-18deg); }
+[data-brows="up"] .brow { transform: translate(0, -3px); }
+
+/* ---------- Complementos ---------- */
+#hat > g { display: none; }
+[data-hat="santa"] #hat .hat-santa,
+[data-hat="witch"] #hat .hat-witch,
+[data-hat="party"] #hat .hat-party { display: inline; }
+
+/* ---------- Bocadillo ---------- */
 #bubble {
   position: absolute;
   left: 50%;
-  bottom: 150px;
-  max-width: 190px;
+  bottom: 152px;
+  max-width: 200px;
   transform: translate(-50%, 6px) scale(.9);
   transform-origin: 50% 100%;
   padding: 7px 12px;
@@ -69,6 +98,7 @@ html, body {
   pointer-events: none;
   transition: opacity .18s ease, transform .25s cubic-bezier(.3, 1.6, .5, 1);
   white-space: nowrap;
+  z-index: 3;
 }
 #bubble::after {
   content: "";
@@ -81,12 +111,11 @@ html, body {
   transform: translateX(-50%) rotate(45deg);
   border-radius: 2px;
 }
-#bubble.show {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
-}
+#bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.has-hat #bubble { bottom: 176px; }
+.has-hat #thought { bottom: 172px; }
 
-/* Zzz al dormir */
+/* ---------- Zzz ---------- */
 #zz {
   position: absolute;
   left: 140px;
@@ -96,12 +125,8 @@ html, body {
   color: #9d8a7f;
   font-weight: 700;
 }
-.mood-sleep #zz { display: block; }
-#zz span {
-  position: absolute;
-  opacity: 0;
-  animation: zz 3s infinite ease-out;
-}
+[data-mood="sleep"] #zz { display: block; }
+#zz span { position: absolute; opacity: 0; animation: zz 3s infinite ease-out; }
 #zz span:nth-child(2) { animation-delay: 1s; font-size: 15px; }
 #zz span:nth-child(3) { animation-delay: 2s; font-size: 18px; }
 @keyframes zz {
@@ -110,7 +135,7 @@ html, body {
   100% { transform: translate(16px, -34px); opacity: 0; }
 }
 
-/* Gota de sudor (CPU/RAM al límite) */
+/* ---------- Sudor ---------- */
 #sweat {
   position: absolute;
   left: 142px;
@@ -119,7 +144,6 @@ html, body {
   height: 13px;
   background: radial-gradient(circle at 35% 35%, #fff, #9fd3f0 60%, #6bb6e0);
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  transform: rotate(-20deg);
   opacity: 0;
   pointer-events: none;
 }
@@ -129,3 +153,96 @@ html, body {
   20% { opacity: .95; }
   100% { opacity: 0; transform: translateY(16px) rotate(-20deg); }
 }
+
+/* ---------- Símbolos flotantes ---------- */
+#fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.fx {
+  position: absolute;
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(60, 40, 30, .25);
+  animation: fx 1.4s ease-out forwards;
+}
+@keyframes fx {
+  0% { opacity: 0; transform: translate(0, 6px) scale(.5); }
+  18% { opacity: 1; transform: translate(0, 0) scale(1.15); }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), -38px) scale(.9); }
+}
+
+/* ---------- Paquetitos de descargas ---------- */
+#boxes { position: absolute; left: 18px; bottom: 4px; width: 50px; height: 60px; pointer-events: none; }
+.box {
+  position: absolute;
+  width: 18px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(#d9b083, #c0905f);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .12), 0 1px 2px rgba(60, 40, 30, .3);
+  animation: boxin .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+.box::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #ecd3a8;
+}
+.box.out { animation: boxout .4s ease-in forwards; }
+@keyframes boxin { from { transform: translateY(-30px) scale(.6); opacity: 0; } }
+@keyframes boxout { to { transform: translateY(8px) scale(.4); opacity: 0; } }
+
+/* ---------- Ojo entornado (rascarse) ---------- */
+[data-eyes="squint"] .eye-l .open { display: none; }
+[data-eyes="squint"] .eye-l .closed { display: inline; }
+
+/* ---------- Nube de pensamiento ---------- */
+#thought {
+  position: absolute;
+  left: 36px;
+  bottom: 150px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #fffaf6;
+  box-shadow: 0 2px 8px rgba(60, 40, 30, .18);
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: scale(.6);
+  transform-origin: 80% 100%;
+  transition: opacity .25s ease, transform .3s cubic-bezier(.3, 1.6, .5, 1);
+  pointer-events: none;
+  z-index: 3;
+}
+#thought::before, #thought::after {
+  content: "";
+  position: absolute;
+  background: #fffaf6;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(60, 40, 30, .15);
+}
+#thought::before { width: 9px; height: 9px; right: 4px; bottom: -11px; }
+#thought::after { width: 5px; height: 5px; right: -2px; bottom: -19px; }
+#thought i { width: 6px; height: 6px; border-radius: 50%; background: #8a7468; opacity: .15; }
+.thinking #thought { opacity: 1; transform: scale(1); }
+.thinking #thought i { animation: dot 1.2s infinite; }
+.thinking #thought i:nth-child(2) { animation-delay: .3s; }
+.thinking #thought i:nth-child(3) { animation-delay: .6s; }
+@keyframes dot { 0%, 100% { opacity: .15; } 40% { opacity: 1; } }
+
+/* ---------- Disfraz de fantasma: sin brazos ---------- */
+.acc-ghost #armL, .acc-ghost #armR, .acc-ghost #legs { display: none; }
+.acc-pumpkin #eyes, .acc-pumpkin #mouth { display: none; }
+
+/* ---------- Paquetitos con el mismo dibujo que el que sostiene ---------- */
+.box { width: 22px; height: 18px; background: none; box-shadow: none; }
+.box::after { display: none; }
+.box svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1.5px rgba(60, 40, 30, .35)); }
+
+/* Equipo de vuelo: oculto salvo al volar */
+[data-fly] { display: none; }
+[data-acc] { display: none; }
+#boxes { transition: opacity .35s ease; }
+.moving #boxes { opacity: 0; }

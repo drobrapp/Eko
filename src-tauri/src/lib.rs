@@ -47,6 +47,14 @@ fn set_hitbox(state: tauri::State<AppState>, x: f64, y: f64, w: f64, h: f64) {
     *state.hitbox.lock().unwrap() = HitBox { x, y, w, h };
 }
 
+/// Casilla "Sonido" de la bandeja, para sincronizarla con la preferencia guardada en el frontend.
+struct SoundItem(CheckMenuItem<tauri::Wry>);
+
+#[tauri::command]
+fn set_sound_menu(item: tauri::State<SoundItem>, value: bool) {
+    let _ = item.0.set_checked(value);
+}
+
 #[tauri::command]
 fn set_dragging(state: tauri::State<AppState>, value: bool) {
     state.dragging.store(value, Ordering::Relaxed);
@@ -110,9 +118,12 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let sleep = MenuItem::with_id(app, "sleep", "Dormir / Despertar", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "Ocultar / Mostrar   Ctrl+Alt+E", true, None::<&str>)?;
     let auto = CheckMenuItem::with_id(app, "autostart", "Arrancar con Windows", true, autostart_on, None::<&str>)?;
+    let sound = CheckMenuItem::with_id(app, "sound", "Sonido", true, true, None::<&str>)?;
+    let hat = MenuItem::with_id(app, "hat", "Probar complemento", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&sleep, &toggle, &auto, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&sleep, &toggle, &sound, &hat, &auto, &sep, &quit])?;
+    app.manage(SoundItem(sound.clone()));
 
     let auto_item = auto.clone();
     let mut builder = TrayIconBuilder::with_id("eko")
@@ -129,6 +140,13 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
                 let on = al.is_enabled().unwrap_or(false);
                 let _ = if on { al.disable() } else { al.enable() };
                 let _ = auto_item.set_checked(al.is_enabled().unwrap_or(!on));
+            }
+            "sound" => {
+                let on = app.state::<SoundItem>().0.is_checked().unwrap_or(true);
+                let _ = app.emit_to("main", "cmd", if on { "sound-on" } else { "sound-off" });
+            }
+            "hat" => {
+                let _ = app.emit_to("main", "cmd", "hat-cycle");
             }
             "quit" => app.exit(0),
             _ => {}
@@ -204,7 +222,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

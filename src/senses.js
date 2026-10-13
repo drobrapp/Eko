@@ -93,7 +93,7 @@
   let lastCat = "", catSince = Date.now();
   let autoSlept = false, longestIdle = 0;
   let hotCount = 0, ramCount = 0, offlineCount = 0, wasOffline = false;
-  let batteryWarned = false, lastSong = "";
+  let batteryWarned = false, lastSong = "", glasses = false;
 
   function greetingByHour() {
     const h = new Date().getHours();
@@ -113,7 +113,8 @@
       E.hop(-380);
       const gone = longestIdle;
       longestIdle = 0;
-      setTimeout(() => E.say(E.pick(gone > 4 * 3600 ? greetingByHour() : T.back), 2800, true), 400);
+      if (gone > 2 * 3600) E.missYou();
+      else setTimeout(() => E.say(E.pick(gone > 4 * 3600 ? greetingByHour() : T.back), 2800, true, "wave"), 400);
       return;
     }
     if (s.idle < 5) longestIdle = 0;
@@ -125,7 +126,7 @@
     // Trasnochar (00:30–5:00), una vez por noche
     const now = new Date(), h = now.getHours(), m = now.getMinutes();
     if (((h === 0 && m >= 30) || (h >= 1 && h < 5)) && s.idle < 60 && once("late", 240)) {
-      E.say(E.pick(T.late), 3200);
+      E.say(E.pick(T.late), 3200, false, "yawn");
     }
 
     // Cambio de actividad
@@ -133,12 +134,19 @@
       lastCat = cat;
       catSince = Date.now();
       if (T[cat] && Array.isArray(T[cat]) && cat !== "social" && Math.random() < 0.5 && once("cat-" + cat, 30)) {
-        setTimeout(() => E.say(E.pick(T[cat])), 1500);
+        const g = { creative: "spark", code: "think", office: "nod", video: "note", github: "surprise" }[cat];
+        setTimeout(() => E.say(E.pick(T[cat]), 2800, false, g), 1500);
       }
     }
+    // Gafitas para "leer" cuando llevas un rato trabajando con texto o imagen
+    const reading = (cat === "code" || cat === "office" || cat === "creative") && Date.now() - catSince > 2 * 60000;
+    if (reading !== glasses) { glasses = reading; E.setGlasses(reading); }
+
+    // Si llevas horas activo sin hacerle ni caso, se enfurruña un rato
+    if (s.idle < 60 && Date.now() - E.lastInteraction() > 3 * 3600000 && once("sulk", 180)) E.sulk(2);
     // Scroll infinito: aviso cada 20 min seguidos en redes
     if (cat === "social" && Date.now() - catSince > 20 * 60000 && once("social", 20)) {
-      E.say(E.pick(T.social), 3500, true);
+      E.say(E.pick(T.social), 3500, true, "shake");
     }
 
     // CPU / RAM al límite
@@ -146,7 +154,7 @@
     ramCount = s.ram > 92 ? ramCount + 1 : 0;
     const hot = hotCount >= 3 || ramCount >= 3;
     if (hot !== E.A.hot) E.setHot(hot);
-    if (hotCount === 3 && once("hot", 10)) E.say(E.pick(T.hot));
+    if (hotCount === 3 && once("hot", 10)) E.say(E.pick(T.hot), 2800, false, "drop");
     else if (ramCount === 3 && once("ram", 15)) E.say(E.pick(T.ram));
     if (s.cpu < 70 && s.ram < 88 && E.A.hot) E.setHot(false);
 
@@ -158,12 +166,12 @@
 
     // Conexión
     offlineCount = s.online ? 0 : offlineCount + 1;
-    if (offlineCount === 2) { wasOffline = true; E.say(E.pick(T.offline), 3000, true); }
-    if (s.online && wasOffline) { wasOffline = false; E.say(E.pick(T.online)); }
+    if (offlineCount === 2) { wasOffline = true; E.say(E.pick(T.offline), 3000, true, "shrug"); }
+    if (s.online && wasOffline) { wasOffline = false; E.say(E.pick(T.online), 2800, false, "nod"); }
 
     // Disco casi lleno, una vez al día
     if (s.disk_free > 0 && s.disk_free < 10 && once("disk", 24 * 60)) {
-      E.say(T.disk(Math.round(s.disk_free)), 3500);
+      E.say(T.disk(Math.round(s.disk_free)), 3500, false, "sad");
     }
 
     // Música: baila mientras suena
@@ -171,6 +179,7 @@
     if (playing !== E.A.dance) E.setDance(playing);
     if (playing && s.music.title && s.music.title !== lastSong) {
       lastSong = s.music.title;
+      E.fx("note", 2);
       if (Math.random() < 0.35 && once("song", 10)) E.say(T.song(short(s.music.title, 26)), 3000);
     }
   });
@@ -180,7 +189,8 @@
     const d = ev.payload;
     if (E.S.sleeping) E.wakeUp(false);
     E.hop(-520);
-    E.setMood("happy", 2);
+    E.act("surprise");
+    E.fx("spark", 3);
     const looksLikeCard = d.photos > 0 || /dcim|eos|nikon|sony|fuji|canon|sd/i.test(d.name || "");
     E.say(looksLikeCard ? T.card(d.photos) : T.usb(d.name), 4000, true);
   });
@@ -188,7 +198,7 @@
   // Descarga terminada
   E.listen("download", (ev) => {
     if (E.S.sleeping) return;
-    E.hop(-300);
-    E.say(T.download(short(ev.payload.name)), 3000);
+    E.act("showBox");
+    E.say(T.download(short(ev.payload.name)), 3000, true);
   });
 })();

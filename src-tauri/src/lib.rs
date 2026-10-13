@@ -3,6 +3,7 @@
 //! - Emite la posición global del cursor al frontend (para mirarte y las caricias).
 //! - Icono en la bandeja, arranque con Windows, atajo de pánico y una sola instancia.
 
+mod actions;
 mod senses;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -222,7 +223,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

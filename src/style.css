@@ -13,6 +13,14 @@ html, body {
   position: absolute;
   left: 0;
   top: 0;
+  width: 420px;
+  height: 380px;
+}
+/* Zona de Eko: abajo en el centro de la ventana; el resto es para el menú */
+#pod {
+  position: absolute;
+  left: 100px;
+  top: 130px;
   width: 220px;
   height: 250px;
 }
@@ -246,3 +254,103 @@ html, body {
 [data-acc] { display: none; }
 #boxes { transition: opacity .35s ease; }
 .moving #boxes { opacity: 0; }
+
+/* ---------- Menú en burbujas ---------- */
+#menu { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.blob {
+  position: absolute;
+  left: 0; top: 0;
+  width: 54px; height: 54px;
+  margin: -27px 0 0 -27px;
+  padding: 0;
+  border: none;
+  border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #fff4ec 60%, #f3e2d6);
+  box-shadow: 0 3px 10px rgba(50, 30, 20, .28), inset 0 -3px 6px rgba(180, 140, 120, .25);
+  color: #6b5348;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(210px, 282px) scale(.2);
+  opacity: 0;
+  transition: transform .42s cubic-bezier(.3, 1.5, .5, 1) var(--d), opacity .2s ease var(--d), box-shadow .2s;
+  animation: wobble 3.2s ease-in-out infinite var(--r);
+}
+.blob.in { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
+.blob:hover { box-shadow: 0 5px 16px rgba(50, 30, 20, .35), inset 0 -3px 6px rgba(180, 140, 120, .25); }
+.blob.in:hover { transform: translate(var(--x), var(--y)) scale(1.12); transition-delay: 0s; }
+.blob svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.blob b { font: 700 15px "Segoe UI", system-ui, sans-serif; color: #6b5348; }
+.blob span {
+  position: absolute;
+  left: 50%; top: 100%;
+  transform: translate(-50%, 4px);
+  white-space: nowrap;
+  font: 600 11px "Segoe UI", system-ui, sans-serif;
+  color: #4a3a32;
+  background: rgba(255, 250, 246, .92);
+  padding: 1px 7px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(50, 30, 20, .2);
+}
+.blob.small { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.blob.small svg { width: 20px; height: 20px; }
+.blob.back { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: #efe3da; }
+.blob.back svg { width: 18px; height: 18px; }
+@keyframes wobble {
+  0%, 100% { border-radius: 52% 48% 55% 45% / 48% 55% 45% 52%; }
+  33% { border-radius: 45% 55% 48% 52% / 55% 45% 52% 48%; }
+  66% { border-radius: 55% 45% 52% 48% / 45% 52% 48% 55%; }
+}
+
+/* ---------- Tarjeta (formularios y listas) ---------- */
+.card {
+  position: absolute;
+  left: 50%; top: 70px;
+  width: 230px;
+  transform: translate(-50%, 10px) scale(.85);
+  opacity: 0;
+  pointer-events: none;
+  padding: 12px 14px;
+  border-radius: 18px 20px 16px 22px;
+  background: #fffaf6;
+  box-shadow: 0 4px 16px rgba(50, 30, 20, .3);
+  color: #3b2f2a;
+  font: 13px "Segoe UI", system-ui, sans-serif;
+  transition: opacity .2s ease, transform .3s cubic-bezier(.3, 1.5, .5, 1);
+  z-index: 7;
+}
+.card.in { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+.card p { margin: 0 0 8px; line-height: 1.35; }
+.card form { display: flex; gap: 6px; }
+.card input { flex: 1; min-width: 0; border: 1px solid #e3d2c7; border-radius: 10px; padding: 6px 8px; font: inherit; color: inherit; background: #fff; outline: none; }
+.card input:focus { border-color: #c9a48f; }
+.card button { border: none; border-radius: 10px; padding: 6px 10px; font: 600 12px inherit; background: #6b5348; color: #fff; cursor: pointer; }
+.card ul { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow: auto; }
+.card li { display: flex; gap: 8px; align-items: center; padding: 5px 2px; cursor: pointer; border-radius: 8px; }
+.card li:hover { background: #f7ece4; }
+.card li i { flex: 0 0 14px; height: 14px; border-radius: 50%; border: 2px solid #c9a48f; }
+.card li.done { opacity: .45; text-decoration: line-through; }
+.card li.done i { background: #8fc79a; border-color: #8fc79a; }
+
+/* ---------- Pelota ---------- */
+#ball { position: absolute; left: 0; top: 0; width: 26px; height: 26px; display: none; z-index: 5; cursor: grab; pointer-events: auto; }
+#ball.in { display: block; }
+#ball svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
+
+/* ---------- Temporizador del pomodoro ---------- */
+#badge {
+  position: absolute;
+  left: 50%; bottom: 150px;
+  transform: translateX(-50%) scale(.6);
+  opacity: 0;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: #e8584f;
+  color: #fff;
+  font: 700 11px "Segoe UI", system-ui, sans-serif;
+  pointer-events: none;
+  transition: opacity .2s, transform .3s cubic-bezier(.3, 1.5, .5, 1);
+}
+#badge.in { opacity: .92; transform: translateX(-50%) scale(1); }
+#badge.break { background: #5fa87a; }
+.menu-open #bubble, .menu-open #badge { opacity: 0; }

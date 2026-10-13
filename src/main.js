@@ -10,14 +10,14 @@
   const invoke = NATIVE ? T.core.invoke : async () => {};
   const listen = NATIVE ? T.event.listen : async () => {};
 
-  const W = 220, H = 250;
+  const W = 420, H = 380;
   const $ = (s) => document.querySelector(s);
   const stage = $("#stage"), hit = $("#hit"), bubble = $("#bubble"), fxLayer = $("#fx"), boxesEl = $("#boxes");
   const el = {
     pet: $("#pet"), upper: $("#upper"), head: $("#head"), body: $("#body"), eyes: $("#eyes"),
     legs: $("#legs"), legL: $("#legL"), legR: $("#legR"), armL: $("#armL"), armR: $("#armR"),
     shadow: $("#shadow"), hl: $("#hl"), mouth: $("#mouth"), bridge: $("#bridge"), hat: $("#hat"),
-    accFace: $("#accFace"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"), accFront: $("#accFront"), heldBox: $("#heldBox"), ghostEyes: [...document.querySelectorAll("#ghostEyes ellipse")],
+    accFace: $("#accFace"), snack: $("#snack"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"), accFront: $("#accFront"), heldBox: $("#heldBox"), ghostEyes: [...document.querySelectorAll("#ghostEyes ellipse")],
     accEls: [...document.querySelectorAll("[data-acc]")],
     flyEls: [...document.querySelectorAll("[data-fly]")], cape: $("#cape"),
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
@@ -177,8 +177,9 @@
     }
   }
   const floorY = () => world.top + world.height - H;
-  const minX = () => world.left - 40;
-  const maxX = () => world.left + world.width - W + 40;
+  // Límites para la ventana: Eko (en el centro) puede llegar hasta el borde de la pantalla
+  const minX = () => world.left - W / 2 + 70;
+  const maxX = () => world.left + world.width - W / 2 - 70;
   const centerX = () => world.left + world.width / 2 - W / 2;
 
   // ---------- Estado ----------
@@ -298,6 +299,25 @@
       P.aL = lerp(P.aL, -12, e); P.aR = lerp(P.aR, 12, e);
     } },
     showBox: { dur: 3.6, f: showBoxF },
+    eat: { dur: 3.4, f(P, k, e, o) {
+      P.aL = lerp(P.aL, -100, e); P.aR = lerp(P.aR, 100, e); P.front = true;
+      const chew = k > 0.2 && k < 0.8;
+      P.mouth = chew ? Math.abs(Math.sin(A.t * 11)) * 0.8 : 0;
+      P.eyes = k > 0.25 ? "happy" : null; P.nod += chew ? Math.sin(A.t * 11) * 1.5 : 0;
+      P.snack = k < 0.8 ? 1 - Math.floor(clamp((k - 0.2) / 0.6, 0, 0.99) * 4) / 4 : 0;
+      if (chew && Math.floor(A.t * 3.5) !== o.lastCrumb) { o.lastCrumb = Math.floor(A.t * 3.5); fx("·"); }
+      if (k > 0.82 && !o.done) { o.done = true; blush(2); fx("heart", 2); Voice.chirp(); }
+    } },
+    rps: { dur: 1.5, f(P, k, e) {
+      P.aR = lerp(P.aR, -70 + Math.sin(k * Math.PI * 6) * 35, e); P.front = true; P.brows = "angry"; P.nod += Math.sin(k * Math.PI * 6) * 2;
+    } },
+    fists: { dur: 1.8, f(P, k, e) { P.aL = lerp(P.aL, -14, e); P.aR = lerp(P.aR, 14, e); P.eyes = "wink"; P.tilt += 6 * e; } },
+    reveal: { dur: 2.2, f(P, k, e, o) {
+      const d = o.dir || 1;
+      if (d < 0) { P.aL = lerp(P.aL, 95, e); P.aR = lerp(P.aR, -30, e); } else { P.aR = lerp(P.aR, -95, e); P.aL = lerp(P.aL, 30, e); }
+      P.front = true; P.eyeX = 5 * d * e; P.turn += 0.3 * d * e;
+    } },
+    flip: { dur: 0.9, f(P, k) { P.spin = 360 * (k < 0.15 ? 0 : Math.min(1, (k - 0.15) / 0.7)); P.aL = 70; P.aR = -70; P.eyes = "closed"; } },
     hug: { dur: 2.6, eyes: "happy", f(P, k, e) {
       const open = k < 0.4 ? e : 0;
       const close = k >= 0.4 ? e : 0;
@@ -336,7 +356,7 @@
   let bubbleTimer = 0, lastSay = 0;
   function say(text, ms = 2800, force = false, gesture = null) {
     const now = performance.now();
-    if (!force && now - lastSay < 6000) return false;
+    if (!force && (now - lastSay < 6000 || window.Eko.quiet)) return false;
     lastSay = now;
     bubble.textContent = text;
     bubble.classList.add("show");
@@ -485,7 +505,7 @@
     const span = world.width;
     let x1 = clamp(S.x + (Math.random() < 0.5 ? -1 : 1) * rnd(0.35, 0.7) * span, minX() + 40, maxX() - 40);
     if (Math.abs(x1 - S.x) < 250) x1 = clamp(S.x + (S.x < world.left + span / 2 ? 1 : -1) * 0.5 * span, minX() + 40, maxX() - 40);
-    const h = clamp(rnd(180, 330), 120, world.height - H - 40);
+    const h = clamp(rnd(180, 330), 120, world.height - 280);
     S.fly = { kind, t0: A.t, prep: 1.1, dur: clamp(Math.abs(x1 - S.x) / 260, 3.5, 7), x0: S.x, x1, h, dir: Math.sign(x1 - S.x) || 1 };
     S.mode = "fly"; A.action = null;
     setFlyGear(kind); fx("spark", 3); Voice.chirp();
@@ -719,7 +739,7 @@
     const dancing = (A.dance || A.t < A.danceUntil) && !walking && !S.airborne && !S.dragging && !S.sleeping;
     const P = {
       aL: 0, aR: 0, front: false, nod: 0, tilt: 0, turn: 0, hturn: 0, sway: 0, shift: 0, sx: 1, sy: 1, lift: 0,
-      legL: 0, legR: 0, bob: 0, box: null,
+      legL: 0, legR: 0, bob: 0, box: null, spin: 0, snack: 0,
       mouth: 0, eyeX: null, eyeY: null, eyeScale: S.dragging ? 1.25 : 1, eyes: null, brows: "none",
     };
     const at = Math.abs(A.turn);
@@ -740,6 +760,9 @@
     if (shownAcc === "ghost") { P.lift += 9 + Math.sin(A.t * 2.2) * 5; P.sway += Math.sin(A.t * 1.6) * 4; }
     P.nod += A.gNod;
     if (S.fly) flyPose(P);
+    if (A.menuPose && !A.action && !S.fly && !S.dragging && !S.airborne) {
+      P.aR = 104 + Math.sin(A.t * 9) * 4; P.front = true; P.tilt -= 8;
+    }
     const a = A.action;
     if (a) {
       const def = ACTIONS[a.name];
@@ -782,7 +805,7 @@
     const t = clamp(A.turn + P.turn, -1, 1), at = Math.abs(t);
     const th = clamp(t + P.hturn, -1, 1), ath = Math.abs(th);
     const lean = (walking ? t * 3 : 0) + P.sway;
-    el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+    el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
     const lift = clamp((floorY() - S.y) / 300, 0, 1);
     const sh = (1 - lift * 0.7) * A.appear;
@@ -867,6 +890,8 @@
     } else el.heldBox.style.display = "none";
     el.mouth.setAttribute("ry", (P.mouth * 7).toFixed(2));
     el.mouth.setAttribute("rx", (4 + P.mouth * 2).toFixed(2));
+    if (P.snack > 0) { el.snack.style.display = "inline"; el.snack.setAttribute("transform", `translate(${(th * 30).toFixed(2)} 54) scale(${(P.snack * 1.7).toFixed(2)})`); }
+    else el.snack.style.display = "none";
 
     place();
   }
@@ -913,6 +938,8 @@
     if (!S.pressed) return;
     if (!S.dragging && Math.hypot(e.screenX - downX, e.screenY - downY) > 5) {
       S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null;
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; }
+      if (window.EkoMenu) window.EkoMenu.close();
       if (S.fly) { S.fly = null; setTimeout(() => setFlyGear(null), 800); }
       hit.classList.add("dragging");
       invoke("set_dragging", { value: true });
@@ -944,11 +971,19 @@
       S.airborne = true; S.mode = "idle";
       setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pick(TXT.drop)); }, 900);
     } else if (performance.now() - downT < 350) {
-      poke();
+      // Clic = menú; doble clic = saltito. Se espera un instante para distinguirlos.
+      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; poke(); }
+      else clickTimer = setTimeout(() => { clickTimer = 0; tap(); }, 260);
     }
   }
   hit.addEventListener("pointerup", release);
   hit.addEventListener("pointercancel", release);
+
+  let clickTimer = 0;
+  function tap() {
+    if (window.EkoMenu && !S.sleeping) window.EkoMenu.toggle();
+    else poke();
+  }
 
   function poke() {
     touched();
@@ -997,6 +1032,15 @@
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
     fly: (k) => startFlight(k),
+    quiet: false,
+    setMenuPose(v) { A.menuPose = !!v; },
+    setHitFull(v) {
+      if (v) invoke("set_hitbox", { x: 0, y: 0, w: W, h: H });
+      else { const r = hit.getBoundingClientRect(); invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height }); }
+    },
+    world, W, H, cursor, floorY, minX, maxX, clamp,
+    walkTo(x, speed = 46, then = null) { S.mode = "walk"; S.speed = speed; S.targetX = clamp(x - W / 2, minX(), maxX()); S.then = then; S.modeUntil = A.t + 60; },
+    hold(secs) { S.mode = "idle"; S.modeUntil = A.t + secs; },
     curious() { S.mode = "walk"; S.speed = 60; S.targetX = clamp(cursor.x - W / 2 + rnd(-40, 40), minX() + 40, maxX() - 40); S.then = "curious"; S.modeUntil = A.t + 30; },
     lastInteraction: () => lastInteraction,
     native: NATIVE, listen,

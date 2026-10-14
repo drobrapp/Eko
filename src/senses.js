@@ -123,8 +123,10 @@
   // ---------- Programas que se abren ----------
   const SKIP_APPS = new Set(["eko", "explorer", "searchhost", "startmenuexperiencehost", "shellexperiencehost", "lockapp", "textinputhost", "applicationframehost", "systemsettingsbroker", "rundll32", "dwm", ""]);
   const startedAt = {}, announced = {};
+  let propSrc = null;   // qué app sacó el accesorio actual (para guardarlo cuando se cierre)
   E.listen("procs", (ev) => {
     const now = Date.now();
+    if (propSrc && (ev.payload.stopped || []).includes(propSrc.app)) { E.dropProp(propSrc.name); propSrc = null; }
     for (const n of ev.payload.started || []) { startedAt[n] = now; announced[n] = false; }
     for (const n of ev.payload.stopped || []) { delete startedAt[n]; delete announced[n]; }
   });
@@ -206,8 +208,10 @@
         const P = { youtube: ["popcorn", 180, 20], netflix: ["popcorn", 180, 20], player: ["popcorn", 180, 20], twitch: ["popcorn", 150, 20],
           photoedit: ["camera", 90, 30], export: ["camera", 60, 30], photos: ["camera", 60, 30], camera: ["camera", 60, 30],
           design: ["brush", 90, 30], paint: ["brush", 90, 30], pdf: ["book", 150, 30], reading: ["book", 150, 30], news: ["book", 120, 30], wiki: ["book", 120, 30] }[pid];
-        if (P && Math.random() < 0.8) E.useProp(P[0], P[1], P[2]);
-        if (pid === "weather" && /lluvi|llover|rain|tormenta|chubasco/.test(tl)) E.useProp("umbrella", 60, 60);
+        if (P && Math.random() < 0.8 && E.useProp(P[0], P[1], P[2])) propSrc = { name: P[0], app, rid: pid, browser: isBrowser };
+        // Si en ese mismo navegador cambias a otra web (o cierras la pestaña), lo guarda
+        else if (propSrc && propSrc.browser && app === propSrc.app && pid !== propSrc.rid) { E.dropProp(propSrc.name); propSrc = null; }
+        if (pid === "weather" && /lluvi|llover|rain|tormenta|chubasco/.test(tl) && E.useProp("umbrella", 60, 60)) propSrc = { name: "umbrella", app, rid: pid, browser: isBrowser };
       }
       if (C && app && !ignored(app) && !SKIP_APPS.has(app) && chatty > 0) {
         // Seguro: cada vez que se abre un programa, y la primera vez en el día de cada app o web

@@ -24,7 +24,7 @@
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
-    sprout: $("#sprout"), freckles: $("#freckles"),
+    mouthShapes: $("#mouthShapes"), sprout: $("#sprout"), freckles: $("#freckles"),
     paint: $("#paint"), paintDots: [...document.querySelectorAll("#paint > g")], paintHead: $("#paintHead"),
   };
 
@@ -261,12 +261,22 @@
 
   // ---------- Cara ----------
   let faceKey = "";
-  function setFace(eyes, brows) {
-    const key = eyes + "|" + brows;
+  function setFace(eyes, brows, mouth = "none") {
+    const key = eyes + "|" + brows + "|" + mouth;
     if (key === faceKey) return;
     faceKey = key;
     stage.dataset.eyes = eyes;
     stage.dataset.brows = brows;
+    stage.dataset.mouth = mouth;
+  }
+  // Expresiones (catálogo en expr.js): se mantienen unos segundos por encima del gesto normal
+  function express(name, secs = 2.5) {
+    const ex = window.EkoExpr && window.EkoExpr.LIST[name];
+    if (!ex) return;
+    A.expr = { name, ex, t0: A.t, until: A.t + secs };
+    if (ex.fx) fx(ex.fx, ex.fx === "heart" ? 2 : 1);
+    if (ex.blush) blush(secs);
+    if (ex.sweat) { stage.classList.add("sweaty"); clearTimeout(express.st); express.st = setTimeout(() => stage.classList.remove("sweaty"), secs * 1000); }
   }
   let blushTimer = 0;
   function blush(secs = 2.5) {
@@ -428,6 +438,7 @@
     A.nextSyl = A.t;
     if (gesture) {
       if (FX[gesture]) fx(gesture, gesture === "heart" ? 3 : 1);
+      else if (window.EkoExpr && window.EkoExpr.LIST[gesture]) express(gesture, 3);
       else act(gesture);
     }
     return true;
@@ -566,15 +577,15 @@
   }
   function onWinEv(kind) {
     if (busy()) return;
-    if (kind === "closed" && cool("closed", 60) && chance(0.7)) { act("bye"); talk(TXT.winBye, 0.3); }
-    if (kind === "minimized" && cool("min", 75) && chance(0.6)) { act("lookAround"); talk(TXT.winMin, 0.35); }
+    if (kind === "closed" && cool("closed", 60) && chance(0.7)) { act("bye"); express("contento", 2.5); talk(TXT.winBye, 0.3); }
+    if (kind === "minimized" && cool("min", 75) && chance(0.6)) { act("lookAround"); express("confundido", 2.5); talk(TXT.winMin, 0.35); }
   }
   // Se queda sin suelo (cierran, minimizan o cambian de ventana): cae con su aplastón
   function fallOff(surprised) {
     S.perch = null; WIN.pendDx = 0; S.then = null; S.sneak = false;
     if (S.dragging || S.fly) return;
     S.airborne = true; S.vy = Math.min(S.vy, 0); S.mode = "idle";
-    if (surprised) { act("surprise"); if (cool("fall", 60)) talk(TXT.fall, 0.5); }
+    if (surprised) { act("surprise"); express("asustado", 1.8); if (cool("fall", 60)) talk(TXT.fall, 0.5); }
   }
   // Se baja de un saltito hacia el lado más cercano
   function hopDown(fromMax) {
@@ -604,15 +615,16 @@
     const cx = S.x + W / 2, side = Math.sign(cursor.x - cx) || 1;
     WIN.hunt = { x: cursor.x, y: cursor.y };
     S.sneak = true; S.mode = "walk"; S.speed = 24; S.then = "pounce"; S.modeUntil = A.t + 40;
+    express("canalla", 30);
     S.targetX = clamp(cursor.x - W / 2 - side * 85, loX(), hiX());
   }
   function abortHunt(talkIt) {
     if (!WIN.hunt) return;
-    WIN.hunt = null; S.sneak = false;
-    if (S.then === "pounce") { S.then = null; S.mode = "idle"; S.modeUntil = A.t + 3; act("shrug"); if (talkIt) talk(TXT.huntMiss, 0.5); }
+    WIN.hunt = null; S.sneak = false; if (A.expr && A.expr.name === "canalla") A.expr = null;
+    if (S.then === "pounce") { S.then = null; S.mode = "idle"; S.modeUntil = A.t + 3; act("shrug"); express("molesto", 2.5); if (talkIt) talk(TXT.huntMiss, 0.5); }
   }
   function pounce() {
-    S.sneak = false;
+    S.sneak = false; if (A.expr && A.expr.name === "canalla") A.expr = null;
     const h0 = WIN.hunt; WIN.hunt = null;
     if (!h0) { S.mode = "idle"; S.modeUntil = A.t + 2; return; }
     const cx = S.x + W / 2, mid = S.y + H - 120;
@@ -624,8 +636,8 @@
     bump(7); hop(-vy, clamp((cursor.x - cx) / tUp / 0.8, -700, 700), 0.22);
     const lm = cursor.lastMove;
     setTimeout(() => {
-      if (cursor.lastMove > lm + 0.15) { act("surprise"); talk(TXT.huntMiss, 0.6); }
-      else { setMood("happy", 2.5); fx("spark", 3); Voice.chirp(); talk(TXT.huntCaught, 0.7); }
+      if (cursor.lastMove > lm + 0.15) { act("surprise"); express("molesto", 2.5); talk(TXT.huntMiss, 0.6); }
+      else { express("emocionado", 2.8); fx("spark", 2); Voice.chirp(); talk(TXT.huntCaught, 0.7); }
     }, (0.3 + tUp * 2) * 1000 + 150);
   }
 
@@ -652,7 +664,7 @@
       ["stretch", sleepy ? 6 : morning ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
       ["peek", cfg.walk && !onWinTop ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0],
       ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly && !onWinTop ? 2 : 0],
-      ["climb", canClimb ? 7 : 0], ["hunt", canHunt ? 6 : 0],
+      ["climb", canClimb ? 7 : 0], ["hunt", canHunt ? 6 : 0], ["mood", 7],
       ["getdown", onWinTop ? clamp(perchedFor / 30, 1, 30) : 0],
     ];
     const last = WIN.hist[WIN.hist.length - 1], recent = WIN.hist.slice(-4);
@@ -670,6 +682,11 @@
     switch (choice) {
       case "walk":
         S.mode = "walk"; S.targetX = clamp(S.x + rnd(-450, 450), loX(), hiX()); S.modeUntil = A.t + 30; break;
+      case "mood": {
+        // un ratito con una cara según el momento del día
+        const pool = isLate() ? ["cansado", "sereno", "cansado"] : morning ? ["esperanzado", "contento", "feliz"] : ["feliz", "contento", "sereno", "curioso", "picaro", "canalla", "orgulloso", "confundido"];
+        S.mode = "idle"; S.modeUntil = A.t + rnd(3, 5); express(pick(pool), rnd(2.5, 4)); break;
+      }
       case "look":
         S.mode = "idle"; S.modeUntil = A.t + 4; act("lookAround"); break;
       case "sit":
@@ -968,6 +985,7 @@
       A.woozyUntil = A.t + 3 + lvl * 2.5; A.woozyLen = 3 + lvl * 2.5;
       S.mode = lvl > 1.8 ? "sit" : "idle"; S.modeUntil = A.t + 3 + lvl * 2.5; S.then = null;
       setTimeout(() => say(pickNew(TXT.dizzy), 2800, true), 900);
+      setTimeout(() => express("confundido", 3), (2.2 + lvl * 0.8) * 1000);
     }
     // Equilibrio: péndulo con los pies como pivote. La aceleración de la ventana le hace inclinarse al lado contrario
     // y él se recupera con un muelle amortiguado (varias oscilaciones). Si se pasa, da un pasito; si se pasa mucho, se cae.
@@ -1081,7 +1099,7 @@
     const P = {
       aL: 0, aR: 0, front: false, nod: 0, tilt: 0, turn: 0, hturn: 0, sway: 0, shift: 0, sx: 1, sy: 1, lift: 0,
       legL: 0, legR: 0, bob: 0, box: null, spin: 0, snack: 0,
-      mouth: 0, eyeX: null, eyeY: null, eyeScale: S.dragging ? 1.25 : 1, eyes: null, brows: "none",
+      mouth: 0, mouthShape: null, eyeX: null, eyeY: null, eyeScale: S.dragging ? 1.25 : 1, eyes: null, brows: "none",
     };
     const at = Math.abs(A.turn);
     if (walking) {
@@ -1144,6 +1162,20 @@
       if (def.brows && P.brows === "none") P.brows = def.brows;
     }
 
+    // Expresión activa: completa lo que el gesto actual no haya decidido
+    if (A.expr && A.t < A.expr.until && !S.sleeping) {
+      const x = A.expr.ex, k = clamp(Math.min(A.t - A.expr.t0, A.expr.until - A.t) / 0.25, 0, 1);
+      if (!P.eyes && x.eyes !== "open") P.eyes = x.eyes;
+      if (P.brows === "none" && x.brows !== "none") P.brows = x.brows;
+      if (!P.mouthShape && x.mouth !== "o" && x.mouth !== "none") P.mouthShape = x.mouth;
+      if (x.mouth === "o") P.mouth = Math.max(P.mouth, (x.o || 0.3) * k);
+      if (x.scale) P.eyeScale *= 1 + (x.scale - 1) * k;
+      if (x.eyeX && P.eyeX == null) P.eyeX = x.eyeX * S.facing * k;
+      if (x.eyeY && P.eyeY == null) P.eyeY = x.eyeY * k;
+      if (x.tilt) P.tilt += x.tilt * k;
+      if (x.nod) P.nod += x.nod * k;
+      if (x.shiver) P.shift += Math.sin(A.t * 42) * 1.3 * k;
+    } else if (A.expr) A.expr = null;
     let eyes = P.eyes;
     if (!eyes) {
       if (S.sulking) eyes = "hidden";
@@ -1152,7 +1184,7 @@
       else eyes = "open";
     }
     if (S.sulking && P.brows === "none") P.brows = "sad";
-    setFace(eyes, P.brows);
+    setFace(eyes, P.brows, P.mouth > 0.12 ? "none" : (P.mouthShape || "none"));
 
     // Brazos de plastilina: muelle con un pelín de rebote y que se quedan atrás al acelerar
     const inertia = clamp(A.ax * 0.006, -28, 28) + clamp(-A.ay * 0.003, -20, 20) * 0;
@@ -1270,6 +1302,7 @@
 
     el.mouth.setAttribute("cx", (th * 30 + ex * 0.6).toFixed(2));
     el.mouth.setAttribute("cy", (40 + ey * 0.6).toFixed(2));
+    el.mouthShapes.setAttribute("transform", `translate(${(th * 30 + ex * 0.6).toFixed(2)} ${(40 + ey * 0.6).toFixed(2)}) scale(${(1 - 0.3 * ath).toFixed(3)} 1)`);
     el.accFace.setAttribute("transform", `translate(${(th * 30 + ex * 0.6).toFixed(2)} ${(ey * 0.6).toFixed(2)}) scale(${(1 - 0.3 * ath).toFixed(3)} 1)`);
     if (shownAcc === "ghost") {
       el.ghostSheet.setAttribute("d", ghostPath(walking || S.fly ? t : 0));
@@ -1290,8 +1323,8 @@
       el.heldBox.style.display = "inline";
       el.heldBox.setAttribute("transform", `translate(${P.box.x.toFixed(2)} ${(P.box.y + sitDrop).toFixed(2)}) scale(${P.box.s.toFixed(3)})`);
     } else el.heldBox.style.display = "none";
-    el.mouth.setAttribute("ry", (P.mouth * 7).toFixed(2));
-    el.mouth.setAttribute("rx", (4 + P.mouth * 2).toFixed(2));
+    el.mouth.setAttribute("ry", (P.mouth * 10).toFixed(2));
+    el.mouth.setAttribute("rx", (5.5 + P.mouth * 3).toFixed(2));
     if (P.snack > 0) { el.snack.style.display = "inline"; el.snack.setAttribute("transform", `translate(${(th * 30).toFixed(2)} 54) scale(${(P.snack * 1.7).toFixed(2)})`); }
     else el.snack.style.display = "none";
 
@@ -1557,6 +1590,7 @@
     if (r < 0.25) setTimeout(() => act("shrug"), 350);
     else if (r < 0.45) setTimeout(() => act("wink"), 350);
     else if (r < 0.6) setTimeout(() => act("nod"), 350);
+    express(pick(["curioso", "sorprendido", "divertido", "picaro"]), 2.2);
     if (Math.random() < 0.6) say(pick(TXT.poke));
   }
 
@@ -1568,7 +1602,7 @@
     cursor.lastT = nowMs;
     // Si pasa el ratón disparado justo a su lado, se asusta (de vez en cuando)
     const ecx = S.x + W / 2, ecy = S.y + H - 120;
-    if (moved / dts > 2600 && Math.hypot(p.x - ecx, p.y - ecy) < 170 && !busy() && cool("startle", rnd(40, 90))) { act("surprise"); bump(-4); Voice.chirp(); }
+    if (moved / dts > 2600 && Math.hypot(p.x - ecx, p.y - ecy) < 170 && !busy() && cool("startle", rnd(40, 90))) { act("surprise"); express("asustado", 1.6); bump(-4); Voice.chirp(); }
     if (WIN.hunt && Math.hypot(p.x - WIN.hunt.x, p.y - WIN.hunt.y) > 70) abortHunt(true);
     if (p.over && !S.pressed && moved > 0.5 && moved < 22) {
       cursor.pet += moved;
@@ -1582,6 +1616,7 @@
         A.tiltTarget = rnd(-12, 12);
         bump(1.5);
         Voice.chirp();
+        express("enamorado", 2.8);
         if (Math.random() < 0.5) say(pick(TXT.pet));
       }
     } else {
@@ -1596,7 +1631,7 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
-    setEvo, evo: EVO, celebrateStage,
+    setEvo, evo: EVO, celebrateStage, express,
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },

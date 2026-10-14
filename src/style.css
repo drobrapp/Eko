@@ -85,6 +85,24 @@ html, body {
 [data-brows="angry"] .eye-l .brow { transform: translate(0, 3px) rotate(18deg); }
 [data-brows="angry"] .eye-r .brow { transform: translate(0, 3px) rotate(-18deg); }
 [data-brows="up"] .brow { transform: translate(0, -3px); }
+[data-brows="worried"] .brow, [data-brows="skeptic"] .brow { display: inline; }
+[data-brows="worried"] .eye-l .brow { transform: translate(0, -2px) rotate(-22deg); }
+[data-brows="worried"] .eye-r .brow { transform: translate(0, -2px) rotate(22deg); }
+[data-brows="skeptic"] .eye-l .brow { transform: translate(0, -5px) rotate(-8deg); }
+[data-brows="skeptic"] .eye-r .brow { transform: translate(0, 2px) rotate(-7deg); }
+
+/* ---------- Expresiones: ojos y bocas extra ---------- */
+.eye .half, .eye .tear { display: none; }
+.eye .tear { fill: #9ad6f2; stroke: #5fb0dd; stroke-width: .6; }
+[data-eyes="x"] .eye .open, [data-eyes="half"] .eye .open, [data-eyes="flat"] .eye .open { display: none; }
+[data-eyes="x"] .eye .xeye, [data-eyes="flat"] .eye .flat { display: inline; }
+[data-eyes="half"] .eye .half, [data-eyes="teary"] .eye .tear { display: inline; }
+#mouthShapes > g > * { display: none; }
+#mouthShapes .ms { fill: none; stroke: #3a2520; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+[data-mouth="smile"] #mouthShapes .m-smile, [data-mouth="frown"] #mouthShapes .m-frown, [data-mouth="wavy"] #mouthShapes .m-wavy,
+[data-mouth="flat"] #mouthShapes .m-flat, [data-mouth="smirk"] #mouthShapes .m-smirk, [data-mouth="cat"] #mouthShapes .m-cat,
+[data-mouth="grin"] #mouthShapes .m-grin, [data-mouth="tongue"] #mouthShapes .m-tongue { display: inline; }
+.acc-pumpkin #mouthShapes, .acc-ghost #mouthShapes { display: none; }
 
 /* ---------- Complementos ---------- */
 #hat > g { display: none; }
@@ -162,7 +180,7 @@ html, body {
   opacity: 0;
   pointer-events: none;
 }
-.mood-hot #sweat { animation: sweat 1.6s infinite ease-in; }
+.mood-hot #sweat, .sweaty #sweat { animation: sweat 1.6s infinite ease-in; }
 @keyframes sweat {
   0% { opacity: 0; transform: translateY(0) rotate(-20deg); }
   20% { opacity: .95; }

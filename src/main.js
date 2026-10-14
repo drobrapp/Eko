@@ -24,7 +24,7 @@
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
-    mouthShapes: $("#mouthShapes"), propHand: $("#propHand"), propFront: $("#propFront"), props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"), sprout: $("#sprout"), freckles: $("#freckles"),
+    mouthShapes: $("#mouthShapes"), antic: $("#antic"), propHand: $("#propHand"), propFront: $("#propFront"), props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"), sprout: $("#sprout"), freckles: $("#freckles"),
     paint: $("#paint"), paintDots: [...document.querySelectorAll("#paint > g")], paintHead: $("#paintHead"),
   };
 
@@ -664,7 +664,7 @@
       ["stretch", sleepy ? 6 : morning ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
       ["peek", cfg.walk && !onWinTop ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0],
       ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly && !onWinTop ? 2 : 0],
-      ["climb", canClimb ? 7 : 0], ["hunt", canHunt ? 6 : 0], ["mood", 7],
+      ["climb", canClimb ? 7 : 0], ["hunt", canHunt ? 6 : 0], ["mood", 7], ["antic", window.EkoAntics && !quietNow && A.t >= (WIN.nextAnticAt || 0) ? 14 : 0],
       ["getdown", onWinTop ? clamp(perchedFor / 30, 1, 30) : 0],
     ];
     const last = WIN.hist[WIN.hist.length - 1], recent = WIN.hist.slice(-4);
@@ -680,8 +680,13 @@
     S.speed = sleepy ? 34 : 46;
     S.then = null;
     switch (choice) {
-      case "walk":
-        S.mode = "walk"; S.targetX = clamp(S.x + rnd(-450, 450), loX(), hiX()); S.modeUntil = A.t + 30; break;
+      case "walk": {
+        // a veces se va lejos y corre; si no, pasea
+        const far = !onWinTop && Math.random() < 0.35;
+        S.mode = "walk"; S.targetX = clamp(S.x + (far ? (Math.random() < 0.5 ? -1 : 1) * rnd(500, 1100) : rnd(-450, 450)), loX(), hiX()); S.modeUntil = A.t + 30;
+        if (Math.abs(S.targetX - S.x) > 420 && !sleepy && (far || Math.random() < 0.3)) S.speed = rnd(150, 190);
+        break;
+      }
       case "mood": {
         // un ratito con una cara según el momento del día
         const pool = isLate() ? ["cansado", "sereno", "cansado"] : morning ? ["esperanzado", "contento", "feliz"] : ["feliz", "contento", "sereno", "curioso", "picaro", "canalla", "orgulloso", "confundido"];
@@ -702,6 +707,12 @@
         S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30;
         S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); break;
       case "hunt": startHunt(); break;
+      case "antic": {
+        const g = [[150, 300], [80, 160], [45, 100], [25, 60]][chattyLvl()] || [45, 100];
+        WIN.nextAnticAt = A.t + rnd(g[0], g[1]);
+        if (!window.EkoAntics.random()) { S.mode = "idle"; S.modeUntil = A.t + 2; }
+        break;
+      }
       case "getdown": {
         const p = S.perch, toLeft = (S.x + W / 2) - p.x < p.x + p.w - (S.x + W / 2);
         S.mode = "walk"; S.then = "hopdown"; S.modeUntil = A.t + 30;
@@ -719,9 +730,11 @@
   function startPeek() {
     const side = S.x - world.left < world.left + world.width - (S.x + W) ? -1 : 1;
     S.peekSide = side;
-    S.mode = "walk"; S.speed = 46;
+    S.mode = "walk";
     S.targetX = side < 0 ? world.left - W / 2 - 8 : world.left + world.width - W / 2 + 8;
     S.then = "peek"; S.modeUntil = A.t + 40;
+    // si el borde queda lejos, va corriendo
+    S.speed = Math.abs(S.targetX - S.x) > 450 ? rnd(140, 180) : 46;
   }
 
   // ---------- Evolución ----------
@@ -895,6 +908,7 @@
   function arrive() {
     const then = S.then;
     S.then = null;
+    if (typeof then === "function") { S.mode = "idle"; S.modeUntil = A.t + 3; then(); return; }
     if (then === "peek") { S.mode = "peeking"; S.modeUntil = A.t + rnd(4, 7); S.facing = -S.peekSide; return; }
     if (then === "curious") { S.mode = "idle"; S.modeUntil = A.t + 3.5; act("curious", { dir: Math.sign(cursor.x - (S.x + W / 2)) || 1 }); return; }
     if (then === "hug") { S.mode = "idle"; S.modeUntil = A.t + 4; hop(-380); setTimeout(() => act("hug"), 450); return; }
@@ -943,9 +957,13 @@
     if (forgiven) { setMood("happy", 2.5); blush(); fx("heart", 3); say(pick(TXT.forgiven), 2400, true); }
   }
 
+  // Ganchos para módulos de travesuras (antics.js): pose, lógica y dibujo extra en cada fotograma
+  const HOOKS = { pose: [], tick: [], draw: [] };
+
   // ---------- Física y lógica ----------
   function update(dt) {
     A.t += dt;
+    for (const f of HOOKS.tick) f(dt);
     let fy = groundY();
     S.prevX = S.x; S.prevY = S.y;
     if (S.pendingHop && A.t >= S.pendingHop.at && !S.dragging) {
@@ -1237,6 +1255,7 @@
       }
     }
     if (A.t < (WIN.stepUntil || 0) && S.mode !== "walk") { const k = WIN.stepSide > 0 ? "legR" : "legL"; P[k] = (P[k] || 0) - 7 * Math.sin((WIN.stepUntil - A.t) / 0.22 * Math.PI); }
+    for (const f of HOOKS.pose) f(P, A.t);
     const propVis = propsVisible();
     if (propVis.size) propPose(P, propVis);
     A.propVis = propVis;
@@ -1357,12 +1376,13 @@
       if (armKey === "front") { el.pet.appendChild(el.armL); el.pet.appendChild(el.armR); }
       else if (armKey === "R") el.upper.after(el.armR);
       else if (armKey === "L") el.upper.after(el.armL);
-      el.pet.appendChild(el.propFront); el.pet.appendChild(el.propHand);
+      el.pet.appendChild(el.propFront); el.pet.appendChild(el.propHand); el.pet.appendChild(el.antic);
     }
     const dxL = t > 0 ? 16 * t : -22 * t;
     const dxR = t > 0 ? -22 * t : 16 * t;
     el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
     el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
+    for (const f of HOOKS.draw) f();
     if (A.propVis) {
       renderProps(A.propVis);
       if (A.propVis.size) {
@@ -1748,6 +1768,7 @@
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
     setEvo, evo: EVO, celebrateStage, express, useProp, dropProp, prop: PROP,
+    ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },

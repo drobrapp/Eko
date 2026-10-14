@@ -208,7 +208,8 @@
         if (justOpened || firstToday) {
           announced[app] = true;
           markSeen(rid);
-          const c = C.find(app, s.title || "", isBrowser, ES, true) || (isBrowser && !justOpened ? null : C.generic(app, s.title, ES));
+          const ctx = { hour: new Date().getHours(), again: justOpened && !firstToday, name: (cfg().userName || "").trim() };
+          const c = C.find(app, s.title || "", isBrowser, ES, true, ctx) || (isBrowser && !justOpened ? null : C.generic(app, s.title, ES, ctx));
           if (c) queueSay(c);
         } else if (Math.random() < prob) {
           const c = C.find(app, s.title || "", isBrowser, ES);

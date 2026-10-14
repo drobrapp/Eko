@@ -993,6 +993,7 @@
 
   let clickTimer = 0;
   function tap() {
+    if (A.hidden) return;              // durante el bautizo Eko aún no ha nacido
     if (window.EkoMenu && !S.sleeping) window.EkoMenu.toggle();
     else poke();
   }
@@ -1074,8 +1075,8 @@
     },
     setMenuPose(v) { A.menuPose = !!v; },
     setHitFull(v) {
-      if (v) invoke("set_hitbox", { x: 0, y: 0, w: W, h: H });
-      else { const r = hit.getBoundingClientRect(); invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height }); }
+      hitFull = !!v;
+      sendHitbox();
     },
     world, W, H, cursor, floorY, minX, maxX, clamp,
     walkTo(x, speed = 46, then = null) { S.mode = "walk"; S.speed = speed; S.targetX = clamp(x - W / 2, minX(), maxX()); S.then = then; S.modeUntil = A.t + 60; },
@@ -1096,7 +1097,10 @@
 
   // ---------- Ajustes en vivo ----------
   const pod = $("#pod");
+  // Única fuente de verdad de la zona clicable: o toda la ventana (menú, tarjetas, juegos) o solo Eko
+  let hitFull = false;
   function sendHitbox() {
+    if (hitFull) { invoke("set_hitbox", { x: 0, y: 0, w: W, h: H }); return; }
     const r = hit.getBoundingClientRect();
     invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
   }
@@ -1125,8 +1129,7 @@
     render();
 
     if (NATIVE) {
-      const r = hit.getBoundingClientRect();
-      invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
+      sendHitbox();
       invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
       listen("cursor", (e) => onCursor(e.payload));
       listen("eko-reset", () => location.reload());

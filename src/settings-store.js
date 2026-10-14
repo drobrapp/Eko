@@ -13,6 +13,9 @@ window.EkoSettings = (() => {
     walk: true,
     fly: true,
     follow: true,
+    hideCall: true,          // esconderse en llamadas
+    hideRecord: true,        // esconderse al grabar la pantalla
+    hideFull: true,          // esconderse en pantalla completa
     size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande
     breaks: true,
     breakMinutes: 90,

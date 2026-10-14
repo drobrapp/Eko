@@ -52,6 +52,15 @@ fn set_hitbox(state: tauri::State<AppState>, x: f64, y: f64, w: f64, h: f64) {
 /// Casilla "Sonido" de la bandeja, para sincronizarla con la preferencia guardada en el frontend.
 struct SoundItem(CheckMenuItem<tauri::Wry>);
 
+/// Qué situaciones esconden a Eko (desde Ajustes)
+#[tauri::command]
+fn set_discretion(call: bool, record: bool, fullscreen: bool) {
+    use std::sync::atomic::Ordering;
+    senses::HIDE_CALL.store(call, Ordering::Relaxed);
+    senses::HIDE_RECORD.store(record, Ordering::Relaxed);
+    senses::HIDE_FULLSCREEN.store(fullscreen, Ordering::Relaxed);
+}
+
 #[tauri::command]
 fn set_sound_menu(item: tauri::State<SoundItem>, value: bool) {
     let _ = item.0.set_checked(value);
@@ -287,7 +296,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, open_settings, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

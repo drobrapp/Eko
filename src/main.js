@@ -1807,6 +1807,7 @@
     Voice.base = cfg.pitch || 560;
     Voice.on = !!cfg.voice;
     invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
+    invoke("set_discretion", { call: cfg.hideCall !== false, record: cfg.hideRecord !== false, fullscreen: cfg.hideFull !== false }).catch(() => {});
     if (NATIVE) setTimeout(sendHitbox, 50);
   }
   if (window.EkoSettings) window.EkoSettings.onChange(applySettings);

@@ -16,6 +16,13 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::AppState;
 
+/// Qué situaciones esconden a Eko (se cambian desde Ajustes)
+pub static HIDE_CALL: AtomicBool = AtomicBool::new(true);
+pub static HIDE_RECORD: AtomicBool = AtomicBool::new(true);
+pub static HIDE_FULLSCREEN: AtomicBool = AtomicBool::new(true);
+/// Programas de grabar pantalla (si alguno está abierto, se considera que estás grabando)
+const RECORDERS: &[&str] = &["obs64", "obs32", "obs", "bandicam", "bdcam", "camtasia", "camrec", "loom", "screenrec", "flashbackrecorder", "screencast-o-matic", "screenpresso", "action_x64"];
+
 #[derive(Serialize, Clone, Default)]
 pub struct Music {
     title: String,
@@ -30,6 +37,7 @@ pub struct Senses {
     idle: u64,
     fullscreen: bool,
     in_call: bool,
+    recording: bool,
     cpu: f32,
     ram: f32,
     battery: Option<u8>,
@@ -72,6 +80,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
         let mut sys = System::new();
         let mut known_removable: Option<HashSet<String>> = None;
         let mut known_procs: Option<HashSet<String>> = None;
+        let mut recording = false;
         let mut disk_free = 100.0_f32;
         let mut tick: u64 = 0;
         #[cfg(windows)]
@@ -123,6 +132,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
                         let _ = app.emit_to("main", "procs", ProcsPayload { started, stopped });
                     }
                 }
+                recording = now.iter().any(|n| RECORDERS.contains(&n.as_str()));
                 known_procs = Some(now);
             }
 
@@ -155,7 +165,12 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
             #[cfg(not(windows))]
             let music: Option<Music> = None;
 
-            apply_discretion(&app, fullscreen || in_call);
+            apply_discretion(
+                &app,
+                (fullscreen && HIDE_FULLSCREEN.load(Ordering::Relaxed))
+                    || (in_call && HIDE_CALL.load(Ordering::Relaxed))
+                    || (recording && HIDE_RECORD.load(Ordering::Relaxed)),
+            );
 
             let senses = Senses {
                 app: exe,
@@ -163,6 +178,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
                 idle: idle_secs(),
                 fullscreen,
                 in_call,
+                recording,
                 cpu,
                 ram,
                 battery,
@@ -176,7 +192,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
     });
 }
 
-/// Oculta a Eko con pantalla completa o en llamada, y lo devuelve al terminar.
+/// Oculta a Eko con pantalla completa, en llamada o grabando (según Ajustes), y lo devuelve al terminar.
 fn apply_discretion(app: &AppHandle, should_hide: bool) {
     let Some(win) = app.get_webview_window("main") else { return };
     let state = app.state::<AppState>();

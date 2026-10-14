@@ -24,7 +24,7 @@
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
-    mouthShapes: $("#mouthShapes"), sprout: $("#sprout"), freckles: $("#freckles"),
+    mouthShapes: $("#mouthShapes"), propHand: $("#propHand"), propFront: $("#propFront"), props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"), sprout: $("#sprout"), freckles: $("#freckles"),
     paint: $("#paint"), paintDots: [...document.querySelectorAll("#paint > g")], paintHead: $("#paintHead"),
   };
 
@@ -768,6 +768,97 @@
     setTimeout(() => say(TXT.evolve[st - 1], 3200, true), 1400);
   }
 
+  // ---------- Accesorios de un rato (según contexto) ----------
+  // wear: se lleva puesto (cabeza/cara/cuello) · hand: en la mano derecha · two: con las dos manos delante
+  const PROP_DEF = {
+    headphones: { wear: "head" }, nightcap: { wear: "head" }, readglasses: { wear: "face" },
+    mug: { hand: true }, camera: { two: true }, brush: { hand: true }, umbrella: { hand: true, walk: true },
+    popcorn: { two: true, sit: true }, book: { two: true, glasses: true },
+  };
+  const PROP = { cur: null, until: 0, t0: 0, cd: {}, shown: null };
+  function useProp(name, secs = 120, cooldownMin = 20) {
+    const d = PROP_DEF[name];
+    if (!d || S.sleeping && name !== "nightcap") return false;
+    if (PROP.cur === name && A.t < PROP.until) { PROP.until = Math.max(PROP.until, A.t + secs); return true; }
+    if (PROP.extra === name && A.t < PROP.extraUntil) { PROP.extraUntil = Math.max(PROP.extraUntil, A.t + secs); return true; }
+    if ((PROP.cd[name] || 0) > A.t && PROP.cur !== name) return false;
+    if (d.wear === "head" && TALL.has(currentAcc())) return false;
+    if (d.wear === "neck" && currentAcc() === "scarf") return false;
+    if (currentAcc() === "ghost") return false;
+    if (PROP.cur && PROP.cur !== name && PROP.until - A.t > 10 && !(PROP_DEF[PROP.cur].wear && !d.wear)) {
+      // ya tiene algo en las manos: solo se pone una cosa de vestir a la vez que otra de mano
+      if (PROP_DEF[PROP.cur].wear || d.wear) { PROP.extra = name; PROP.extraUntil = A.t + secs; PROP.cd[name] = A.t + secs + cooldownMin * 60; return true; }
+      return false;
+    }
+    PROP.cur = name; PROP.t0 = A.t; PROP.until = A.t + secs; PROP.cd[name] = A.t + secs + cooldownMin * 60;
+    if (d.sit && !busy()) { S.mode = "sit"; S.modeUntil = A.t + Math.min(secs, 90); }
+    return true;
+  }
+  function dropProp(name) { if (!name || PROP.cur === name) PROP.until = 0; if (!name || PROP.extra === name) PROP.extraUntil = 0; }
+  // Qué se ve ahora mismo (se guardan las cosas de la mano al andar, volar o si lo coges)
+  function propsVisible() {
+    const out = new Set();
+    for (const [n, until] of [[PROP.cur, PROP.until], [PROP.extra, PROP.extraUntil]]) {
+      if (!n || A.t > until) continue;
+      const d = PROP_DEF[n];
+      const handsBusy = S.dragging || S.fly || S.airborne || (A.action && !["nod", "lookAround", "think", "wink", "yawn"].includes(A.action.name));
+      if ((d.hand || d.two) && (handsBusy || (S.mode === "walk" && !d.walk) || S.sleeping)) continue;
+      if (d.wear === "head" && TALL.has(currentAcc())) continue;
+      out.add(n);
+      if (d.glasses) out.add("readglasses");
+    }
+    if (PROP.cur && A.t > PROP.until) PROP.cur = null;
+    if (PROP.extra && A.t > PROP.extraUntil) PROP.extra = null;
+    return out;
+  }
+  function propPose(P, vis) {
+    const t = A.t;
+    // al llevarse algo a la boca gira la cara hacia la mano (la mano derecha llega a x≈-11 → giro ≈ -0.37)
+    const toHand = (e) => { P.hturn += (-0.37 - A.turn - P.turn) * e; P.eyeX = -3 * e; };
+    if (vis.has("popcorn")) {
+      // una mano sujeta el cubo; la otra entra a por palomitas y se las lleva a la boca
+      P.aL = -26; P.aR = 34; P.front = true;
+      const k = (t % 4.6) / 4.6;
+      if (k > 0.5 && k <= 0.66) P.aR = lerp(34, 56, Math.sin((k - 0.5) / 0.16 * Math.PI / 2));
+      else if (k > 0.66 && k <= 0.86) { const e = Math.sin((k - 0.66) / 0.2 * Math.PI / 2); P.aR = lerp(56, 118, e); P.mouth = Math.max(P.mouth, 0.45 * e); toHand(e); }
+      else if (k > 0.86) { const e = 1 - (k - 0.86) / 0.14; P.aR = lerp(34, 118, e); toHand(e); if (!P.eyes) P.eyes = "happy"; }
+    }
+    if (vis.has("book")) {
+      P.aL = -24; P.aR = 24; P.front = true; P.nod += 4; P.eyeY = 3; P.eyeX = Math.sin(t * 0.9) * 3;
+    }
+    if (vis.has("mug")) {
+      const k = (t % 6) / 6; P.aR = 62; P.front = true;
+      if (k > 0.72) { const e = Math.sin((k - 0.72) / 0.28 * Math.PI); P.aR = lerp(62, 114, e); toHand(e); if (e > 0.5 && !P.eyes) P.eyes = "closed"; }
+    }
+    if (vis.has("camera")) {
+      // cámara delante de la cara con las dos manos; un ojo cerrado y el otro mirando por el visor
+      // la lleva a la altura del pecho y de vez en cuando la sube a la cara para hacer una foto
+      const u = PROP.camUp || 0;
+      P.aR = lerp(36, 162, u); P.aL = lerp(-36, -150, u); P.front = true;
+      if (u > 0.6) { P.eyeX = -2; if (!P.eyes) P.eyes = "wink"; }
+    }
+    if (vis.has("brush")) {
+      // quieto con el pincel; de vez en cuando da una pincelada
+      const k = (t % 7) / 7; P.aR = -38; P.front = true;
+      if (k > 0.86) P.aR += Math.sin((k - 0.86) / 0.14 * Math.PI) * -18;
+    }
+    if (vis.has("umbrella")) { P.aR = -132; P.front = true; }
+    if (vis.has("headphones")) { P.nod += Math.sin(t * 7.5) * 2.2; P.tilt += Math.sin(t * 3.75) * 3; }
+    if (vis.has("nightcap") && !S.sleeping && Math.sin(t * 0.4) > 0.97) P.mouth = Math.max(P.mouth, 0.5);
+  }
+  function renderProps(vis) {
+    const key = [...vis].sort().join(",");
+    if (key !== PROP.shown) {
+      PROP.shown = key;
+      for (const [n, list] of Object.entries(el.props)) for (const e of list) {
+        const on = vis.has(n);
+        if (on && e.style.display !== "inline") { e.style.display = "inline"; e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); fx("spark", 1); }
+        if (!on) e.style.display = "none";
+      }
+      stage.classList.toggle("has-readglasses", vis.has("readglasses"));
+    }
+  }
+
   // ---------- Volar ----------
   function setFlyGear(kind) {
     for (const e of el.flyEls) { if (e === el.cape) setCape(kind === "cape"); else e.style.display = e.dataset.fly === kind ? "inline" : "none"; }
@@ -1146,6 +1237,9 @@
       }
     }
     if (A.t < (WIN.stepUntil || 0) && S.mode !== "walk") { const k = WIN.stepSide > 0 ? "legR" : "legL"; P[k] = (P[k] || 0) - 7 * Math.sin((WIN.stepUntil - A.t) / 0.22 * Math.PI); }
+    const propVis = propsVisible();
+    if (propVis.size) propPose(P, propVis);
+    A.propVis = propVis;
     // Al acecho del ratón: agachado, ojos entornados, brazos preparados
     if (S.sneak && S.mode === "walk" && !A.action) { P.sy *= 0.9; P.sx *= 1.05; if (!P.eyes) P.eyes = "squint"; P.tilt += 5 * S.facing; P.aL = lerp(P.aL, 34, 0.7); P.aR = lerp(P.aR, -34, 0.7); }
     // Abalanzándose: brazos arriba hacia delante
@@ -1263,11 +1357,33 @@
       if (armKey === "front") { el.pet.appendChild(el.armL); el.pet.appendChild(el.armR); }
       else if (armKey === "R") el.upper.after(el.armR);
       else if (armKey === "L") el.upper.after(el.armL);
+      el.pet.appendChild(el.propFront); el.pet.appendChild(el.propHand);
     }
     const dxL = t > 0 ? 16 * t : -22 * t;
     const dxR = t > 0 ? -22 * t : 16 * t;
     el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
     el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
+    if (A.propVis) {
+      renderProps(A.propVis);
+      if (A.propVis.size) {
+        // la mano derecha: punta del brazo girada con él; el objeto se mantiene derecho
+        const r = A.pose.aR * Math.PI / 180, hx = dxR + 50 + 15 * Math.cos(r) - 60 * Math.sin(r), hy = sitDrop + 58 + 15 * Math.sin(r) + 60 * Math.cos(r);
+        el.propHand.setAttribute("transform", `translate(${hx.toFixed(1)} ${hy.toFixed(1)})`);
+        el.propFront.setAttribute("transform", `translate(0 ${sitDrop.toFixed(1)})`);
+        if (A.propVis.has("camera")) {
+          // ciclo de 10 s: 6 s con la cámara en el pecho, sube, ¡clic! y baja
+          const k = ((A.t - PROP.t0) % 10) / 10;
+          const up = k < 0.55 ? 0 : k < 0.65 ? (k - 0.55) / 0.1 : k < 0.88 ? 1 : 1 - (k - 0.88) / 0.12;
+          PROP.camUp = up * up * (3 - 2 * up);
+          const shot = k > 0.74 && k < 0.8 ? 1 - (k - 0.74) / 0.06 : 0;
+          el.flash.setAttribute("opacity", shot.toFixed(2));
+          el.flash.setAttribute("transform", `translate(38 -4) scale(${(0.6 + (1 - shot) * 0.6).toFixed(2)}) translate(-38 4)`);
+          const cu = PROP.camUp, cx = lerp(-14, 0, cu), cy = lerp(82, 0, cu), sc = lerp(0.72, 1, cu);
+          el.props.camera[0].setAttribute("transform", `translate(${cx.toFixed(1)} ${(cy - (shot > 0.8 ? 2 : 0)).toFixed(1)}) scale(${sc.toFixed(3)})`);
+          if (shot > 0.9 && !PROP.flashed) { PROP.flashed = true; bump(-1.5); } else if (shot === 0) PROP.flashed = false;
+        }
+      }
+    }
     el.body.setAttribute("transform", `translate(${(3 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
     el.bodyHl.setAttribute("transform", `translate(${(4 * t).toFixed(2)} 0)`);
     // Los complementos del cuerpo siguen al cuerpo; el cuello del vampiro y la capa, también a la cabeza y al sentarse
@@ -1631,7 +1747,7 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
-    setEvo, evo: EVO, celebrateStage, express,
+    setEvo, evo: EVO, celebrateStage, express, useProp, dropProp, prop: PROP,
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },

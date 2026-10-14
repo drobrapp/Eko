@@ -58,6 +58,7 @@ html, body {
 .eye .rim { fill: rgba(255, 255, 255, .12); stroke: #3b2f2a; stroke-width: 2.6; display: none; }
 #bridge { stroke: #3b2f2a; stroke-width: 2.6; stroke-linecap: round; display: none; }
 .has-glasses .eye .rim, .has-glasses #bridge { display: inline; }
+.has-readglasses #readGlasses { display: inline !important; }
 .eye .blush { opacity: var(--blush0, 0); transition: opacity .4s ease; }
 /* Evolución: ojeras (noctámbulo) y corazoncito (cariño) */
 .eye .owl { fill: #8f79b8; opacity: var(--owl, 0); }
@@ -408,3 +409,9 @@ html, body {
 .card .picker button:hover { background: #fffaf6; }
 .card .pk-val { font: 700 14px "Segoe UI", system-ui, sans-serif; color: #3b2f2a; min-width: 36px; text-align: center; }
 .card .chips .link { padding: 5px 4px; }
+
+/* ---------- Accesorios de un rato (según contexto) ---------- */
+[data-prop] { display: none; }
+#propHand .steam path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; opacity: 0; animation: steam 2.4s infinite ease-out; }
+#propHand .steam path:nth-child(2) { animation-delay: 1.2s; }
+@keyframes steam { 0% { opacity: 0; transform: translateY(4px); } 30% { opacity: .55; } 100% { opacity: 0; transform: translateY(-8px); } }

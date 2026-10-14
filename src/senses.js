@@ -200,6 +200,15 @@
       const isBrowser = CATS.browser.some((k) => app.startsWith(k));
       const chatty = cfg().chatty, prob = [0, 0.3, 0.6, 0.85][chatty] ?? 0.6;
       if (C) C.setGap([99, 6, 3, 1.5][chatty] ?? 3);
+      // Accesorios de un rato según lo que abres (no depende de lo charlatán que sea)
+      if (C && app && !ignored(app) && !SKIP_APPS.has(app)) {
+        const pid = C.ruleId(app, s.title, isBrowser), tl = (s.title || "").toLowerCase();
+        const P = { youtube: ["popcorn", 180, 20], netflix: ["popcorn", 180, 20], player: ["popcorn", 180, 20], twitch: ["popcorn", 150, 20],
+          photoedit: ["camera", 90, 30], export: ["camera", 60, 30], photos: ["camera", 60, 30], camera: ["camera", 60, 30],
+          design: ["brush", 90, 30], paint: ["brush", 90, 30], pdf: ["book", 150, 30], reading: ["book", 150, 30], news: ["book", 120, 30], wiki: ["book", 120, 30] }[pid];
+        if (P && Math.random() < 0.8) E.useProp(P[0], P[1], P[2]);
+        if (pid === "weather" && /lluvi|llover|rain|tormenta|chubasco/.test(tl)) E.useProp("umbrella", 60, 60);
+      }
       if (C && app && !ignored(app) && !SKIP_APPS.has(app) && chatty > 0) {
         // Seguro: cada vez que se abre un programa, y la primera vez en el día de cada app o web
         const rid = C.ruleId(app, s.title, isBrowser) || "app:" + app;
@@ -263,8 +272,20 @@
       E.say(T.disk(Math.round(s.disk_free)), 3500, false, "sad");
     }
 
-    // Música: baila mientras suena
+    // Accesorios por el momento: café por la mañana y gorro de dormir
+    {
+      const now = new Date(), h = now.getHours();
+      if (h >= 6 && h < 11 && s.idle < 60 && once("coffee-" + now.toDateString(), 24 * 60)) E.useProp("mug", 150, 180);
+      const bt = cfg().bedtime;
+      if (bt) {
+        const [bh, bm] = bt.split(":").map(Number), mins = h * 60 + now.getMinutes(), bed = bh * 60 + bm;
+        const near = pastBedtime(now) || ((bed - mins + 1440) % 1440) <= 30;
+        if (near) E.useProp("nightcap", 60, 0);
+      }
+    }
+    // Música: baila mientras suena (y se pone los auriculares)
     const playing = !!(s.music && s.music.playing);
+    if (playing) E.useProp("headphones", 20, 0); else if (E.prop.cur === "headphones" || E.prop.extra === "headphones") E.dropProp("headphones");
     if (playing !== E.A.dance) E.setDance(playing);
     if (playing && s.music.title && s.music.title !== lastSong) {
       lastSong = s.music.title;

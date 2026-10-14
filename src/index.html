@@ -19,6 +19,7 @@
 
     <svg id="mochi" viewBox="-120 -125 240 310" aria-label="Eko">
       <defs>
+        <radialGradient id="flashGlow"><stop offset="0" stop-color="#fff" stop-opacity="1" /><stop offset=".35" stop-color="#fffbe6" stop-opacity=".85" /><stop offset="1" stop-color="#fff6c8" stop-opacity="0" /></radialGradient>
         <radialGradient id="clay" cx="35%" cy="28%" r="85%">
           <stop offset="0" stop-color="#fffaf5" />
           <stop offset=".55" stop-color="#efe2d8" />
@@ -94,6 +95,7 @@
       <g id="pet">
         <!-- Complementos detrás del cuerpo -->
         <g id="accBack">
+          <g data-prop="umbrella" transform="translate(86 8) rotate(-10)"><image href="art/umbrella.webp" x="-104" y="-176" width="200" height="182" preserveAspectRatio="none" /></g>
           <g id="cape" data-fly="cape">
             <path id="capeShape" d="" fill="#7a1420" />
             <g id="capeStrips"><path /><path /><path /><path /></g>
@@ -123,6 +125,13 @@
             <g clip-path="url(#bodyClip)"><ellipse id="bodyHl" cx="-22" cy="88" rx="14" ry="26" fill="#fff" opacity=".35" filter="url(#blur4)" /><ellipse cx="0" cy="50" rx="62" ry="15" fill="#6b4f43" opacity=".35" filter="url(#blur4)" /></g>
           </g>
           <!-- Complementos sobre el cuerpo -->
+          <!-- Accesorios de un rato: delante del cuerpo (con los brazos por encima) -->
+          <g id="propBody">
+            
+            
+            
+            
+          </g>
           <g id="accBody">
             <g data-fly="cape"><path d="M-48,56 Q0,76 48,56 L46,67 Q0,88 -46,67Z" fill="#b82835" /><path d="M-46,67 Q0,88 46,67" fill="none" stroke="#e2505b" stroke-width="2" opacity=".6" /><circle cx="0" cy="72" r="6.5" fill="url(#gold)" /><circle cx="-1.8" cy="70" r="1.8" fill="#fff" opacity=".6" /></g>
             <g data-acc="vampire">
@@ -139,6 +148,7 @@
             </g>
           </g>
           <g id="head">
+            <g data-prop="headphones"><image href="art/hp-band.webp" x="-134.3" y="-126" width="268.8" height="112" preserveAspectRatio="none" /></g>
             <path d="M-100,8 C-100,-80 -50,-104 0,-104 C50,-104 100,-80 100,8 C100,44 70,58 0,58 C-70,58 -100,44 -100,8Z" fill="url(#clay)" />
             <g clip-path="url(#headClip)"><ellipse id="hl" cx="-42" cy="-68" rx="34" ry="13" fill="#fff" opacity=".45" filter="url(#blur4)" /></g>
             <ellipse id="mouth" cx="0" cy="40" rx="5" ry="0" fill="#3a2520" />
@@ -191,6 +201,17 @@
             </g>
             <!-- Complementos de la cara (siguen el giro de los ojos) -->
             <g id="accFace">
+              <g id="propFace">
+                <g id="readGlasses" style="display:none">
+                  <path d="M-52,14 L-70,8 M52,14 L70,8" stroke="#3a2c26" stroke-width="2.6" stroke-linecap="round" />
+                  <rect x="-48" y="8" width="32" height="24" rx="10" fill="#dff1fb" fill-opacity=".28" stroke="#3a2c26" stroke-width="2.6" />
+                  <rect x="16" y="8" width="32" height="24" rx="10" fill="#dff1fb" fill-opacity=".28" stroke="#3a2c26" stroke-width="2.6" />
+                  <path d="M-16,15 Q0,9 16,15" fill="none" stroke="#3a2c26" stroke-width="2.4" />
+                  <path d="M-42,13 l8,-3 M22,13 l8,-3" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7" />
+                  <path d="M-38,27 l12,-12 M26,27 l12,-12" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".35" />
+                </g>
+                
+              </g>
               <g data-acc="vampire"><path d="M-9,36 L-5,46 L-1,36Z M1,36 L5,46 L9,36Z" fill="#fff" stroke="#e5ddd6" stroke-width=".8" /></g>
               <g data-acc="reindeer">
                 <ellipse cx="0" cy="36" rx="10" ry="8.5" fill="#d8323a" />
@@ -236,6 +257,11 @@
               <ellipse class="gloss" cx="-2" cy="-2.8" rx="3" ry=".9" fill="#fff" opacity=".7" />
             </g>
             <!-- Complementos de la cabeza -->
+            <!-- Accesorios de un rato (según contexto): cabeza -->
+            <g id="propHead">
+              <g data-prop="headphones"><image href="art/hp-cupL.webp" x="-130.4" y="-22" width="85.8" height="73.2" preserveAspectRatio="none" /><image href="art/hp-cupR.webp" x="45.2" y="-22" width="85.8" height="73.2" preserveAspectRatio="none" /></g>
+              <g data-prop="nightcap"><image href="art/nightcap.webp" x="-104" y="-216" width="272" height="195" preserveAspectRatio="none" /></g>
+            </g>
             <g id="hat">
               <g data-acc="santa">
                 <path d="M40,-108 C72,-118 104,-100 110,-70 C112,-60 106,-54 100,-57 C98,-80 82,-94 56,-96Z" fill="#c93232" />
@@ -292,6 +318,26 @@
           </g>
         </g>
         <!-- Paquete que sostiene -->
+        <!-- Accesorios de un rato: con las dos manos, por delante de los brazos -->
+        <g id="propFront">
+          <g data-prop="popcorn"><image href="art/popcorn.webp" x="-31" y="70" width="62" height="73.8" preserveAspectRatio="none" /></g>
+          
+          <g data-prop="camera">
+            <image href="art/camera.webp" x="-24" y="-12" width="76" height="53" preserveAspectRatio="none" />
+            <g class="flash" opacity="0">
+              <circle cx="38" cy="-4" r="26" fill="url(#flashGlow)" />
+              <path d="M38,-26 L41,-7 L60,-4 L41,-1 L38,18 L35,-1 L16,-4 L35,-7Z" fill="#fff" />
+            </g>
+          </g>
+          <g data-prop="book"><image href="art/book.webp" x="-46" y="78" width="92" height="48.6" preserveAspectRatio="none" /></g>
+        </g>
+        <!-- Accesorios de un rato: en la mano derecha (se mueven con el brazo, siempre derechos) -->
+        <g id="propHand">
+          <g data-prop="mug"><image href="art/mug.webp" x="-40" y="-48" width="56" height="65" preserveAspectRatio="none" /></g>
+          
+          <g data-prop="brush" transform="rotate(-25)"><image href="art/brush.webp" x="-12" y="-64" width="24" height="92" preserveAspectRatio="none" /></g>
+          
+        </g>
         <g id="heldBox" style="display:none"><use href="#boxArt" /></g>
         <!-- Disfraz de fantasma: cubre todo -->
         <g id="accFront">

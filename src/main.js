@@ -20,6 +20,7 @@
     accFace: $("#accFace"), snack: $("#snack"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"), accFront: $("#accFront"), heldBox: $("#heldBox"), ghostEyes: [...document.querySelectorAll("#ghostEyes ellipse")],
     accEls: [...document.querySelectorAll("[data-acc]")],
     flyEls: [...document.querySelectorAll("[data-fly]")], cape: $("#cape"),
+    capeShape: $("#capeShape"), capeStrips: [...document.querySelectorAll("#capeStrips path")], capeFold: $("#capeFold"), capeEdge: $("#capeEdge"),
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
@@ -189,7 +190,7 @@
     x: 0, y: 0, vx: 0, vy: 0, prevX: 0,
     airborne: false, dragging: false, pressed: false,
     mode: "idle", modeUntil: 0, targetX: 0, facing: 1, speed: 46, then: null, peekSide: 0,
-    sleeping: false, sulking: false, fly: null,
+    sleeping: false, sulking: false, fly: null, prevY: 0, pendingHop: null,
   };
   const A = {
     t: 0, squash: 0, squashV: 0, appear: 0,
@@ -201,6 +202,10 @@
     dance: false, danceUntil: 0, hot: false,
     action: null, armsFront: false,
     talkUntil: 0, nextSyl: 0, gNod: 0,
+    // física "plastilina": velocidades suavizadas de la ventana, cabeza con muelle vertical,
+    // aplastamiento lateral (paredes), "splat" al aterrizar y muelles en brazos y piernas
+    vx: 0, vy: 0, ax: 0, ay: 0, hy: 0, hyV: 0, sqx: 0, sqxV: 0, splat: 0, legSwing: 0, legSwingV: 0,
+    aLv: 0, aRv: 0,
     pose: { aL: 0, aR: 0 },
   };
   const cursor = { x: -1e4, y: -1e4, over: false, lastX: 0, lastY: 0, pet: 0, lastMove: -10 };
@@ -502,7 +507,9 @@
   }
 
   // ---------- Volar ----------
-  function setFlyGear(kind) { for (const e of el.flyEls) e.style.display = e.dataset.fly === kind ? "inline" : "none"; }
+  function setFlyGear(kind) {
+    for (const e of el.flyEls) { if (e === el.cape) setCape(kind === "cape"); else e.style.display = e.dataset.fly === kind ? "inline" : "none"; }
+  }
   function startFlight(kind) {
     if (S.sleeping || S.sulking || S.dragging || S.airborne || S.fly) return;
     kind = "cape";
@@ -528,7 +535,7 @@
     if (u >= 1) {
       S.y = fy; S.fly = null; S.mode = "idle"; S.modeUntil = A.t + 3;
       bump(7); Voice.thump(1);
-      setTimeout(() => { if (!S.fly) { setFlyGear(null); fx("spark", 2); } }, 1300);
+      setTimeout(() => { if (!S.fly) setFlyGear(null); }, 2800);
     }
   }
 
@@ -541,9 +548,12 @@
     S.mode = "idle"; S.modeUntil = A.t + rnd(2, 6); A.tiltTarget = 0;
   }
 
+  // Salto con anticipación: primero se aplasta un instante y luego sale estirado
   function hop(v = -420) {
-    if (S.dragging || S.sleeping) return;
-    S.airborne = true; S.vy = v; S.vx = 0; bump(-3); Voice.hop();
+    if (S.dragging || S.sleeping || S.pendingHop) return;
+    if (S.airborne) { S.vy = Math.min(S.vy, v * 0.6); return; }
+    S.pendingHop = { v, at: A.t + 0.1 };
+    bump(Math.min(5, -v / 110));
   }
 
   function goToSleep(talk = true) {
@@ -581,7 +591,11 @@
   function update(dt) {
     A.t += dt;
     const fy = floorY();
-    S.prevX = S.x;
+    S.prevX = S.x; S.prevY = S.y;
+    if (S.pendingHop && A.t >= S.pendingHop.at && !S.dragging) {
+      S.airborne = true; S.vy = S.pendingHop.v; S.vx = 0; S.pendingHop = null;
+      bump(-7); Voice.hop();
+    }
 
     if (S.dragging) {
       A.kick += dt * 18;
@@ -592,13 +606,14 @@
       S.y += S.vy * dt;
       S.x += S.vx * dt;
       S.vx *= Math.pow(0.4, dt);
-      if (S.x < minX()) { S.x = minX(); S.vx = Math.abs(S.vx) * 0.4; }
-      if (S.x > maxX()) { S.x = maxX(); S.vx = -Math.abs(S.vx) * 0.4; }
+      if (S.x < minX()) { A.sqxV += Math.min(9, Math.abs(S.vx) / 160); S.x = minX(); S.vx = Math.abs(S.vx) * 0.4; if (Math.abs(S.vx) > 120) Voice.thump(0.6); }
+      if (S.x > maxX()) { A.sqxV += Math.min(9, Math.abs(S.vx) / 160); S.x = maxX(); S.vx = -Math.abs(S.vx) * 0.4; if (Math.abs(S.vx) > 120) Voice.thump(0.6); }
       if (S.y >= fy) {
         S.y = fy;
         const impact = S.vy;
+        A.splat = Math.max(A.splat, Math.min(1, impact / 1400));
         if (impact > 420) {
-          bump(Math.min(11, impact / 220));
+          bump(Math.min(13, impact / 190));
           Voice.thump(Math.min(1.5, impact / 900));
           S.vy = -impact * 0.28;
           if (impact > 1350 && !(A.action && A.action.name === "dizzy")) {
@@ -648,9 +663,27 @@
     A.squash += A.squashV * dt;
     A.appear += ((A.hidden ? 0 : 1) - A.appear) * Math.min(1, dt * 7);
     const velX = (S.x - S.prevX) / Math.max(dt, 1e-3);
-    const lagTarget = clamp(-velX * 0.012, -7, 7);
+    const velY = (S.y - S.prevY) / Math.max(dt, 1e-3);
+    const pvx = A.vx, pvy = A.vy;
+    A.vx += (velX - A.vx) * Math.min(1, dt * 18);
+    A.vy += (velY - A.vy) * Math.min(1, dt * 18);
+    A.ax += (((A.vx - pvx) / Math.max(dt, 1e-3)) - A.ax) * Math.min(1, dt * 10);
+    A.ay += (((A.vy - pvy) / Math.max(dt, 1e-3)) - A.ay) * Math.min(1, dt * 10);
+    // Cabeza: se queda atrás al moverse (horizontal) y se hunde y rebota al frenar en vertical
+    const lagTarget = clamp(-velX * 0.012, -8, 8);
     A.lagV += ((lagTarget - A.lag) * 120 - A.lagV * 9) * dt;
     A.lag += A.lagV * dt;
+    A.hyV += (-A.hy * 220 - A.hyV * 11 + clamp(-A.ay * 0.004, -60, 60)) * dt;
+    A.hy = clamp(A.hy + A.hyV * dt, -10, 12);
+    // Aplastado lateral (choques con los bordes) y "splat" del aterrizaje
+    A.sqxV += (-A.sqx * 170 - A.sqxV * 10) * dt;
+    A.sqx += A.sqxV * dt;
+    A.splat *= Math.pow(0.02, dt);
+    // Piernas colgando como péndulo cuando está en el aire
+    const legTarget = S.airborne || S.dragging || (S.fly && A.t - S.fly.t0 > S.fly.prep) ? clamp(-A.vx * 0.02, -35, 35) : 0;
+    A.legSwingV += ((legTarget - A.legSwing) * 60 - A.legSwingV * 6) * dt;
+    A.legSwing += A.legSwingV * dt;
+    stepCape(dt);
 
     // Sentarse
     const sitGoal = (S.mode === "sit" || S.sleeping || S.sulking) && !S.airborne && !S.dragging ? 1 : 0;
@@ -748,13 +781,19 @@
     };
     const at = Math.abs(A.turn);
     if (walking) {
-      P.aL = Math.sin(A.walkPhase + Math.PI) * 18 * at;
-      P.aR = Math.sin(A.walkPhase) * 18 * at;
+      // Brazos contrarios a las piernas y hacia delante en la dirección en la que anda
+      const tw = clamp(A.turn, -1, 1), run = S.speed > 100 ? 1.6 : 1;
+      P.aL = -Math.sin(A.walkPhase) * 22 * tw * run;
+      P.aR = -Math.sin(A.walkPhase + Math.PI) * 22 * tw * run;
     } else if (S.dragging) {
+      // Cuelga de donde lo coges: los brazos se agitan y todo el cuerpo se estira en la dirección del tirón
       P.aL = 70 + Math.sin(A.kick * 0.7) * 12; P.aR = -70 - Math.sin(A.kick * 0.7) * 12;
-      P.sy = 1.09; P.sx = 0.93; P.sway = clamp(S.vx * 0.008, -14, 14);
+      const sp = Math.min(1, Math.hypot(A.vx, A.vy) / 1500);
+      P.sy = 1.08 + 0.08 * sp; P.sx = 0.94 - 0.05 * sp; P.sway = clamp(S.vx * 0.012, -22, 22);
     } else if (S.airborne) {
-      P.aL = 40; P.aR = -40;
+      // En el aire: brazos arriba al caer, pegados al subir
+      const fall = clamp(A.vy / 900, -1, 1);
+      P.aL = 30 + 45 * Math.max(0, fall); P.aR = -P.aL;
     } else if (dancing) {
       dancePose(P);
     } else {
@@ -786,9 +825,13 @@
     if (S.sulking && P.brows === "none") P.brows = "sad";
     setFace(eyes, P.brows);
 
-    const sm = Math.min(1, dt * 14);
-    A.pose.aL += (P.aL - A.pose.aL) * sm;
-    A.pose.aR += (P.aR - A.pose.aR) * sm;
+    // Brazos de plastilina: muelle con un pelín de rebote y que se quedan atrás al acelerar
+    const inertia = clamp(A.ax * 0.006, -28, 28) + clamp(-A.ay * 0.003, -20, 20) * 0;
+    const tL = P.aL + inertia, tR = P.aR + inertia;
+    A.aLv += ((tL - A.pose.aL) * 260 - A.aLv * 20) * dt;
+    A.aRv += ((tR - A.pose.aR) * 260 - A.aRv * 20) * dt;
+    A.pose.aL += A.aLv * dt;
+    A.pose.aR += A.aRv * dt;
     A.pose.P = P;
   }
 
@@ -799,16 +842,23 @@
     const walking = S.mode === "walk" && !S.airborne && !S.dragging;
     const dancing = (A.dance || A.t < A.danceUntil) && !walking && !S.airborne && !S.dragging && !S.sleeping;
     const breathe = Math.sin(A.t * (S.sleeping ? 1.3 : 2.2)) * (S.sleeping ? 0.022 : 0.012);
-    const step = walking ? Math.abs(Math.sin(A.walkPhase)) : 0;
-    const bob = walking ? -step * 5 : dancing ? -P.bob : 0;
+    // Paso: abajo y aplastado cuando el pie toca el suelo, arriba y estirado al pasar la pierna
+    const contact = walking ? Math.abs(Math.sin(A.walkPhase)) : 0;
+    const bob = walking ? -(1 - contact) * 5 : dancing ? -P.bob : 0;
     const shiver = A.hot && !S.sleeping ? Math.sin(A.t * 55) * 0.9 : 0;
-    const sq = clamp(A.squash * 0.075, -0.32, 0.4);
-    const sy = (1 - sq + breathe - step * 0.035) * P.sy * A.appear;
-    const sx = (1 + sq * 0.8 - breathe * 0.5 + step * 0.02) * P.sx * A.appear;
+    const sq = clamp(A.squash * 0.075, -0.32, 0.42);
+    // En caída rápida se estira en vertical
+    const fallStretch = S.airborne && !S.fly ? clamp(Math.abs(A.vy) / 3200, 0, 0.16) : 0;
+    let sy = (1 - sq + breathe - contact * 0.04 + fallStretch) * P.sy;
+    // Volumen constante (plastilina): si se aplasta en vertical, se ensancha en horizontal y viceversa
+    let sx = Math.pow(Math.max(0.5, sy / P.sy), -0.65) * P.sx;
+    const sqx = clamp(A.sqx * 0.06, -0.3, 0.3);
+    sx *= 1 - sqx; sy *= 1 + sqx * 0.6;
+    sx *= A.appear; sy *= A.appear;
 
     const t = clamp(A.turn + P.turn, -1, 1), at = Math.abs(t);
     const th = clamp(t + P.hturn, -1, 1), ath = Math.abs(th);
-    const lean = (walking ? t * 3 : 0) + P.sway;
+    const lean = (walking ? t * (S.speed > 100 ? 9 : 5) : 0) + P.sway;
     el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
     const lift = clamp((floorY() - S.y) / 300, 0, 1);
@@ -816,26 +866,45 @@
     el.shadow.setAttribute("transform", `translate(0 ${floorY() - S.y}) translate(0 176) scale(${sh} ${sh}) translate(0 -176)`);
     el.shadow.style.opacity = String(0.28 * (1 - lift * 0.6));
 
-    let lL = 0, lR = 0;
-    if (walking) { lL = -Math.max(0, Math.sin(A.walkPhase)) * 7; lR = -Math.max(0, Math.sin(A.walkPhase + Math.PI)) * 7; }
-    else if (S.dragging) { lL = Math.sin(A.kick) * 8; lR = Math.sin(A.kick + Math.PI) * 8; }
-    else { lL = P.legL; lR = P.legR; }
-    const stride = walking ? 10 * t : 0;
-    const xL = 10 * at + Math.sin(A.walkPhase) * stride;
-    const xR = -10 * at + Math.sin(A.walkPhase + Math.PI) * stride;
+    // Piernas: pivotan en la cadera hacia donde camina; la que avanza se levanta
+    let lL = 0, lR = 0, rL = 0, rR = 0;
+    if (walking) {
+      const run = S.speed > 100 ? 1.5 : 1;
+      const phL = A.walkPhase, phR = A.walkPhase + Math.PI;
+      rL = -Math.sin(phL) * 24 * t * run; rR = -Math.sin(phR) * 24 * t * run;
+      lL = -Math.max(0, Math.cos(phL)) * 7 * run; lR = -Math.max(0, Math.cos(phR)) * 7 * run;
+    } else if (S.dragging) { lL = Math.sin(A.kick) * 8; lR = Math.sin(A.kick + Math.PI) * 8; rL = rR = A.legSwing; }
+    else { lL = P.legL; lR = P.legR; rL = rR = A.legSwing; }
+    // Al aterrizar fuerte, los pies se abren un momento ("splat")
+    const spread = A.splat * 9;
+    const xL = 10 * at - spread, xR = -10 * at + spread;
     const sitDrop = 29 * A.sit;
     el.legs.setAttribute("transform", `translate(0 176) scale(1 ${(1 - 0.5 * A.sit).toFixed(3)}) translate(0 -176)`);
-    el.legL.setAttribute("transform", `translate(${xL.toFixed(2)} ${lL})`);
-    el.legR.setAttribute("transform", `translate(${xR.toFixed(2)} ${lR})`);
+    el.legL.setAttribute("transform", `translate(${xL.toFixed(2)} ${lL.toFixed(2)}) rotate(${rL.toFixed(2)} -21 122)`);
+    el.legR.setAttribute("transform", `translate(${xR.toFixed(2)} ${lR.toFixed(2)}) rotate(${rR.toFixed(2)} 21 122)`);
+    // Profundidad: la pierna y el brazo del lado lejano, detrás y algo más oscuros
+    const farLeft = t > 0.15, farRight = t < -0.15;
+    if (farLeft !== A.farLeft || farRight !== A.farRight) {
+      A.farLeft = farLeft; A.farRight = farRight;
+      if (farLeft) el.legs.appendChild(el.legR); else el.legs.appendChild(el.legL);
+      el.legL.style.filter = farLeft ? "brightness(.9)" : "";
+      el.legR.style.filter = farRight ? "brightness(.9)" : "";
+      el.armL.style.filter = farLeft ? "brightness(.9)" : "";
+      el.armR.style.filter = farRight ? "brightness(.9)" : "";
+    }
     el.upper.setAttribute("transform", `translate(0 ${sitDrop.toFixed(2)})`);
 
-    if (P.front !== A.armsFront) {
-      A.armsFront = P.front;
-      if (P.front) { el.pet.appendChild(el.armL); el.pet.appendChild(el.armR); }
-      else { el.pet.insertBefore(el.armL, el.upper); el.pet.insertBefore(el.armR, el.upper); }
+    // Orden de brazos: de frente, detrás del cuerpo; de lado, el brazo cercano por delante y el lejano por detrás
+    const armKey = P.front ? "front" : farLeft ? "R" : farRight ? "L" : "back";
+    if (armKey !== A.armsFront) {
+      A.armsFront = armKey;
+      el.pet.insertBefore(el.armL, el.upper); el.pet.insertBefore(el.armR, el.upper);
+      if (armKey === "front") { el.pet.appendChild(el.armL); el.pet.appendChild(el.armR); }
+      else if (armKey === "R") el.upper.after(el.armR);
+      else if (armKey === "L") el.upper.after(el.armL);
     }
-    const dxL = t > 0 ? 22 * t : -8 * t;
-    const dxR = t > 0 ? -8 * t : 22 * t;
+    const dxL = t > 0 ? 22 * t : -16 * t;
+    const dxR = t > 0 ? -16 * t : 22 * t;
     el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
     el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
     el.body.setAttribute("transform", `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
@@ -844,7 +913,7 @@
     const bodyT = `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`;
     el.accBody.setAttribute("transform", bodyT);
 
-    const headDrop = (S.sleeping ? 4 : 0) + P.nod;
+    const headDrop = (S.sleeping ? 4 : 0) + P.nod + A.hy;
     el.accBack.setAttribute("transform", `translate(${(2 * th + A.lag * 0.6).toFixed(2)} ${(sitDrop + Math.min(0, headDrop) * 0.3).toFixed(2)}) scale(${(1 - 0.1 * at).toFixed(4)} 1)`);
     el.head.setAttribute("transform", `translate(${(4 * th + A.lag).toFixed(2)} ${headDrop.toFixed(2)}) rotate(${(A.tilt + P.tilt).toFixed(2)} 0 40) scale(${(1 - 0.05 * ath).toFixed(4)} 1)`);
     el.hl.setAttribute("transform", `translate(${(-14 * th).toFixed(2)} ${(P.nod * 0.5).toFixed(2)})`);
@@ -884,10 +953,7 @@
       g.setAttribute("rx", (11 * pos[i][1]).toFixed(2));
       g.setAttribute("ry", (15 * (A.blink < 1 ? 0.15 : 1)).toFixed(2));
     });
-    if (S.fly) {
-      const d = S.fly.dir, airborne = A.t - S.fly.t0 > S.fly.prep;
-      el.cape.setAttribute("transform", airborne ? `rotate(${(-d * 32 + Math.sin(A.t * 14) * 4).toFixed(2)} 0 50) skewX(${(Math.sin(A.t * 11) * 6).toFixed(2)})` : "");
-    } else el.cape.setAttribute("transform", "");
+    drawCape();
     if (P.box && P.box.vis) {
       el.heldBox.style.display = "inline";
       el.heldBox.setAttribute("transform", `translate(${P.box.x.toFixed(2)} ${(P.box.y + sitDrop).toFixed(2)}) scale(${P.box.s.toFixed(3)})`);
@@ -921,6 +987,129 @@
     }
     d += ` C${(-112 + sw * 0.6).toFixed(1)},118 -112,62 -106,10Z`;
     return d;
+  }
+
+  // ---------- Capa: tela simulada (5 tiras de puntos con verlet) ----------
+  // Se simula en el sistema de Eko: la gravedad tira hacia abajo y el "viento" es su propia velocidad al revés.
+  // grow: 0 = recogida en el broche, 1 = desplegada. Se despliega al ponérsela y se recoge un rato después de aterrizar.
+  const CAPE = { cols: [-40, -20, 0, 20, 40], seg: 6, len: 21, flare: 0.2, pts: null, grow: 0, target: 0 };
+  const capeAnchor = (c) => ({ x: CAPE.cols[c], y: 52 - Math.pow(CAPE.cols[c] / 40, 2) * 5 });
+  function capeReset() {
+    CAPE.pts = CAPE.cols.map((x0, c) => Array.from({ length: CAPE.seg + 1 }, (_, i) => {
+      const a = capeAnchor(c), x = x0 * (1 + i * CAPE.flare), y = a.y + i * CAPE.len * 0.97;
+      return { x, y, px: x, py: y };
+    }));
+  }
+  function setCape(on) {
+    CAPE.target = on ? 1 : 0;
+    if (on) { el.cape.style.display = "inline"; if (!CAPE.pts) { capeReset(); CAPE.grow = 0; } }
+  }
+  function stepCape(dt) {
+    if (!el.cape || el.cape.style.display !== "inline") { CAPE.pts = null; CAPE.grow = 0; return; }
+    if (!CAPE.pts) capeReset();
+    CAPE.grow += (CAPE.target - CAPE.grow) * Math.min(1, dt * (CAPE.target ? 5 : 4));
+    if (!CAPE.target && CAPE.grow < 0.04) { el.cape.style.display = "none"; CAPE.pts = null; CAPE.grow = 0; return; }
+    const segLen = CAPE.len, n = CAPE.cols.length;
+    const h = Math.min(dt, 1 / 30);
+    const k = 2.18;                                    // px de pantalla → unidades del dibujo
+    const lean = ((S.fly ? S.fly.dir * 22 : 0) + (A.pose.P ? A.pose.P.sway : 0)) * Math.PI / 180;
+    const gx = Math.sin(-lean) * 900, gy = Math.cos(lean) * 900;
+    const wx = -A.vx * k * 3.2, wy = -A.vy * k * 1.4;
+    const sp = Math.min(1, Math.hypot(A.vx, A.vy) / 300);
+    // brisa suave aunque esté quieto, para que la tela no parezca de cartón
+    const breeze = Math.sin(A.t * 1.7) * 60 + Math.sin(A.t * 3.1) * 30;
+    for (let c = 0; c < n; c++) {
+      const col = CAPE.pts[c], side = (c - (n - 1) / 2) / ((n - 1) / 2);
+      for (let i = 1; i < col.length; i++) {
+        const p = col[i], u = i / CAPE.seg;
+        // ondas que viajan hacia la punta (más fuertes al final) y bordes que se separan para que se vea ancha de lado
+        const flutter = Math.sin(A.t * 14 - i * 1.15 + c * 1.3) * sp * 1000 * u;
+        const spread = side * sp * 1900 * u;
+        const fx = gx + wx * u + flutter * 0.25 + breeze * u;
+        const fy = gy + wy * u + flutter + spread;
+        const vx = (p.x - p.px) * 0.982, vy = (p.y - p.py) * 0.982;
+        p.px = p.x; p.py = p.y;
+        p.x += vx + fx * h * h; p.y += vy + fy * h * h;
+      }
+      const a = capeAnchor(c);
+      col[0].x = col[0].px = a.x; col[0].y = col[0].py = a.y;
+    }
+    for (let it = 0; it < 5; it++) {
+      // largo de cada tramo (la tela no se estira)
+      for (let c = 0; c < n; c++) {
+        const col = CAPE.pts[c];
+        for (let i = 1; i < col.length; i++) {
+          const a = col[i - 1], b = col[i];
+          const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, diff = (d - segLen) / d;
+          if (i === 1) { b.x -= dx * diff; b.y -= dy * diff; }
+          else { a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5; }
+        }
+      }
+      // anchura: puede fruncirse (pliegues) pero no abrirse más que la tela
+      for (let i = 1; i <= CAPE.seg; i++) {
+        const want = 20 * (1 + i * CAPE.flare);
+        for (let c = 0; c < n - 1; c++) {
+          const a = CAPE.pts[c][i], b = CAPE.pts[c + 1][i];
+          let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+          if (d < 0.01) { dx = 0.01; dy = 0; d = 0.01; }
+          const lo = want * 0.3, hi = want * 1.05;
+          if (d > hi || d < lo) {
+            const diff = (d - (d > hi ? hi : lo)) / d;
+            a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5;
+          }
+        }
+      }
+    }
+  }
+  const CAPE_RGB = [[200, 48, 60], [122, 20, 32]];
+  function capeColor(dark) {
+    const m = clamp(dark, 0, 1), [a, b] = CAPE_RGB;
+    return `rgb(${Math.round(a[0] + (b[0] - a[0]) * m)},${Math.round(a[1] + (b[1] - a[1]) * m)},${Math.round(a[2] + (b[2] - a[2]) * m)})`;
+  }
+  function drawCape() {
+    if (!CAPE.pts) return;
+    const P = CAPE.pts, n = P.length, last = CAPE.seg;
+    const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    // curva suave por los puntos medios (las tiras vecinas comparten el mismo borde: sin huecos)
+    const side = (pts) => {
+      let d = ` L${f(pts[0])}`;
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
+        d += ` Q${f(pts[i])} ${mx.toFixed(1)},${my.toFixed(1)}`;
+      }
+      return d + ` L${f(pts[pts.length - 1])}`;
+    };
+    // bajo ondulado: cada tramo del borde se curva un poco hacia fuera
+    const hemSeg = (a, b, k) => {
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
+      return ` Q${(mx - dy * 0.18 * k).toFixed(1)},${(my + dx * 0.18 * k).toFixed(1)} ${f(b)}`;
+    };
+    // silueta completa = cara interior (más oscura), por si la tela se da la vuelta
+    let out = `M${f(P[0][0])}` + side(P[0]).slice(2 + f(P[0][0]).length);
+    for (let c = 0; c < n - 1; c++) out += hemSeg(P[c][last], P[c + 1][last], 1);
+    out += side([...P[n - 1]].reverse()) + "Z";
+    el.capeShape.setAttribute("d", out);
+    // tiras sombreadas: si una tira se frunce (gira) se oscurece; alternas para marcar pliegues
+    for (let c = 0; c < n - 1; c++) {
+      const L = P[c], R = P[c + 1];
+      let w = 0, want = 0;
+      for (let i = 1; i <= last; i++) { w += Math.hypot(R[i].x - L[i].x, R[i].y - L[i].y); want += 20 * (1 + i * CAPE.flare); }
+      const squeeze = 1 - clamp(w / want, 0, 1);
+      const dark = squeeze * 0.9 + (c % 2 ? 0.12 : 0) + (c === 0 || c === n - 2 ? 0.06 : 0);
+      let d = `M${f(L[0])}` + side(L).slice(2 + f(L[0]).length) + hemSeg(L[last], R[last], 1) + side([...R].reverse()) + "Z";
+      const s = el.capeStrips[c];
+      s.setAttribute("d", d); s.setAttribute("fill", capeColor(dark)); s.setAttribute("stroke", capeColor(dark)); s.setAttribute("stroke-width", "0.8");
+    }
+    // pliegues finos sobre las costuras interiores y brillo en el bajo
+    let folds = "";
+    for (let c = 1; c < n - 1; c += 2) folds += `M${f(P[c][1])}` + side(P[c].slice(1)).slice(2 + f(P[c][1]).length);
+    el.capeFold.setAttribute("d", folds);
+    let hem = `M${f(P[0][last])}`;
+    for (let c = 0; c < n - 1; c++) hem += hemSeg(P[c][last], P[c + 1][last], 1);
+    el.capeEdge.setAttribute("d", hem);
+    // desplegar / recoger: la tela sale del broche (se estira hacia abajo y se abre)
+    const gr = CAPE.grow, e = 1 - Math.pow(1 - gr, 3);
+    el.cape.setAttribute("transform", gr > 0.995 ? "" : `translate(0 50) scale(${(0.35 + 0.65 * e).toFixed(3)} ${Math.max(0.02, e).toFixed(3)}) translate(0 -50)`);
   }
 
   // ---------- Bucle ----------

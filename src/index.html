@@ -59,8 +59,10 @@
         <!-- Complementos detrás del cuerpo -->
         <g id="accBack">
           <g id="cape" data-fly="cape">
-            <path d="M-46,48 Q0,60 46,48 C66,92 74,132 84,166 Q42,154 0,174 Q-42,154 -84,166 C-74,132 -66,92 -46,48Z" fill="#c8303c" />
-            <path d="M-30,56 C-40,100 -44,140 -40,160 M0,62 L0,170 M30,56 C40,100 44,140 40,160" fill="none" stroke="#a1222e" stroke-width="4" opacity=".6" />
+            <path id="capeShape" d="" fill="#7a1420" />
+            <g id="capeStrips"><path /><path /><path /><path /></g>
+            <path id="capeFold" d="" fill="none" stroke="#5e0f19" stroke-width="2" stroke-linecap="round" opacity=".35" />
+            <path id="capeEdge" d="" fill="none" stroke="#ef6b74" stroke-width="2.5" stroke-linecap="round" opacity=".55" />
           </g>
           <g data-acc="vampire">
             <path d="M-46,52 C-104,40 -128,-20 -118,-74 C-96,-36 -72,-6 -30,30Z" fill="#1e1a26" />
@@ -82,7 +84,7 @@
           </g>
           <!-- Complementos sobre el cuerpo -->
           <g id="accBody">
-            <g data-fly="cape"><path d="M-30,50 Q0,62 30,50" fill="none" stroke="#a1222e" stroke-width="7" stroke-linecap="round" /><circle cx="0" cy="58" r="7" fill="url(#gold)" /></g>
+            <g data-fly="cape"><path d="M-48,56 Q0,76 48,56 L46,67 Q0,88 -46,67Z" fill="#b82835" /><path d="M-46,67 Q0,88 46,67" fill="none" stroke="#e2505b" stroke-width="2" opacity=".6" /><circle cx="0" cy="72" r="6.5" fill="url(#gold)" /><circle cx="-1.8" cy="70" r="1.8" fill="#fff" opacity=".6" /></g>
             <g data-acc="vampire">
               <path d="M-50,50 C-72,86 -72,130 -60,150 L-44,146 C-50,112 -46,80 -28,56Z" fill="#1e1a26" />
               <path d="M50,50 C72,86 72,130 60,150 L44,146 C50,112 46,80 28,56Z" fill="#1e1a26" />

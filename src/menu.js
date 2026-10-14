@@ -49,7 +49,7 @@
   const svg = (k, color) => `<svg viewBox="0 0 24 24" ${color ? `style="color:${color}"` : ""}>${I[k] || ""}</svg>`;
 
   const L = ES ? {
-    play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
+    letsPlay: "¿Jugamos?", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
     ball: "Pelota", snack: "Snack", games: "Juegos", trick: "Truco",
     rps: "Piedra, papel…", hand: "¿Qué mano?", hide: "Escondite",
     rock: "Piedra", paper: "Papel", scissors: "Tijera", lefth: "Izquierda", righth: "Derecha",
@@ -62,7 +62,7 @@
     soon: "Ajustes: nombre, cumpleaños, sonido, apps por categoría… ¡muy pronto!",
     onlyApp: "Eso solo funciona en la app",
   } : {
-    play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
+    letsPlay: "Let's play?", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
     ball: "Ball", snack: "Snack", games: "Games", trick: "Trick",
     rps: "Rock, paper…", hand: "Which hand?", hide: "Hide & seek",
     rock: "Rock", paper: "Paper", scissors: "Scissors", lefth: "Left", righth: "Right",
@@ -98,31 +98,21 @@
   ];
   const TREE = {
     root: [
-      { id: "play", icon: "play", label: L.play, go: "play" },
+      { id: "letsplay", icon: "play", label: L.letsPlay, run: () => propose(true) },
+      { id: "treats", icon: "cookie", label: L.treats, go: "treats" },
       { id: "util", icon: "util", label: L.util, go: "util" },
       { id: "wardrobe", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
       { id: "rest", icon: "moon", label: L.rest, go: "rest" },
       { id: "settings", icon: "sliders", label: L.settings, run: openSettings },
     ],
-    play: [
-      { icon: "ball", label: L.ball, run: startBall },
+    treats: [
       { icon: "cookie", label: L.snack, run: giveSnack },
-      { icon: "dice", label: L.games, go: "games" },
       { icon: "star", label: L.trick, run: trick },
-    ],
-    games: [
-      { icon: "rock", label: L.rps, go: "rps", enter: () => { E.say(pick(SAY.rpsPick), 2000, true); } },
-      { text: "?", label: L.hand, go: "hand", enter: startHand },
-      { icon: "hide", label: L.hide, run: startHide },
     ],
     rps: [
       { icon: "rock", label: L.rock, run: () => playRps(0) },
       { icon: "paper", label: L.paper, run: () => playRps(1) },
       { icon: "scissors", label: L.scissors, run: () => playRps(2) },
-    ],
-    hand: [
-      { icon: "left", label: L.lefth, run: () => guessHand(-1) },
-      { icon: "right", label: L.righth, run: () => guessHand(1) },
     ],
     util: [
       { icon: "bell", label: L.remind, go: "remind" },
@@ -161,7 +151,7 @@
       }
       return out;
     }
-    const radius = n <= 4 ? 122 : 138;  // arco por encima de la cabeza
+    const radius = n <= 4 ? 122 : n <= 5 ? 138 : 150;  // arco por encima de la cabeza
     for (let i = 0; i < n; i++) {
       const a = (n === 1 ? 270 : 200 + 140 * (i / (n - 1))) * Math.PI / 180;
       out.push({ x: HEAD.x + Math.cos(a) * radius, y: HEAD.y + Math.sin(a) * radius });
@@ -216,6 +206,15 @@
     E.setHitFull(true);
     E.Voice.tone && E.Voice.tone("sine", 520, 780, 0.12, 0.03);
     E.keepInside(() => { if (open) render("root"); });
+  }
+  function openAt(levelId) {
+    if (!open) {
+      open = true;
+      stage.classList.add("menu-open");
+      E.setMenuPose(true); E.hold(1e6); E.setHitFull(true);
+      lastUse = performance.now();
+    }
+    E.keepInside(() => { if (open) render(levelId); });
   }
   function close() {
     if (!open) return;
@@ -291,22 +290,6 @@
     }, 1500);
   }
 
-  // ---------- ¿En qué mano está? ----------
-  let handSecret = 1;
-  function startHand() {
-    handSecret = Math.random() < 0.5 ? -1 : 1;
-    E.act("fists", { dur: 30 });
-    E.say(pick(SAY.handAsk), 2400, true);
-  }
-  function guessHand(dir) {
-    E.act("reveal", { dir: handSecret });
-    E.fx("spark", 2);
-    setTimeout(() => {
-      if (dir === handSecret) { E.say(pick(SAY.handYes), 2400, true); E.hop(-360); }
-      else E.say(pick(SAY.handNo), 2400, true, "wink");
-    }, 600);
-  }
-
   // ---------- Escondite ----------
   let hideGame = false;
   function startHide() {
@@ -324,6 +307,85 @@
     document.addEventListener("eko-tap", onFound);
     setTimeout(() => { hideGame = false; document.removeEventListener("eko-tap", onFound); }, 40000);
   }
+
+  // ---------- Eko propone jugar ----------
+  const P_TX = ES ? {
+    ball: ["¿Me lanzas la pelota?", "¡Tengo una pelota! ¿Jugamos?"],
+    rps: ["¿Echamos un piedra, papel o tijera?", "Te reto a piedra, papel o tijera"],
+    hide: ["¿Jugamos al escondite? ¡Yo me escondo!", "¿Me buscas? ¡Escondite!"],
+    bored: ["Me aburro… ", "Oye… "],
+    yes: "¡Vamos!", no: "Ahora no",
+    accepted: ["¡Bieeen!", "¡Sí!"], declined: ["Vale… otro día", "Jo. Bueno"], timeout: ["Otra vez será"],
+    rpsGo: ["¡Elige!"],
+  } : {
+    ball: ["Throw me the ball?", "I've got a ball! Play?"],
+    rps: ["Rock, paper, scissors?", "I challenge you: rock, paper, scissors"],
+    hide: ["Hide and seek? I'll hide!", "Come find me? Hide and seek!"],
+    bored: ["I'm bored… ", "Hey… "],
+    yes: "Let's go!", no: "Not now",
+    accepted: ["Yay!", "Yes!"], declined: ["OK… another day", "Aw. Fine"], timeout: ["Maybe later"],
+    rpsGo: ["Pick one!"],
+  };
+  const GAMES = ["ball", "rps", "hide"];
+  const today = () => new Date().toDateString();
+  let gs = store.get("eko-games", {});
+  if (gs.day !== today()) gs = { day: today(), count: 0, last: 0, declines: 0, snooze: 0 };
+  let proposing = false, proposeTimer = 0;
+
+  function canPropose() {
+    const S = E.S, s = E.lastSenses || {};
+    if (gs.day !== today()) gs = { day: today(), count: 0, last: 0, declines: 0, snooze: 0 };
+    if (proposing || open || ball || hideGame || E.quiet) return false;
+    if (S.sleeping || S.sulking || S.fly || S.dragging || S.airborne || E.A.hidden) return false;
+    if (s.fullscreen || s.in_call) return false;
+    if (pomo && pomo.phase === "focus") return false;
+    if (s.idle !== undefined && (s.idle < 3 || s.idle > 120)) return false;   // ni tecleando a tope ni ausente
+    if (gs.count >= 3 || gs.declines >= 2) return false;
+    if (Date.now() - gs.last < 2 * 3600000 || Date.now() < gs.snooze) return false;
+    return true;
+  }
+
+  function propose(force = false, reason = "") {
+    if (!force && !canPropose()) return;
+    if (force && (open || ball || hideGame)) close();
+    const game = GAMES[Math.floor(Math.random() * GAMES.length)];
+    proposing = true;
+    if (!force) { gs.count++; gs.last = Date.now(); store.set("eko-games", gs); }
+    E.keepInside(() => {
+      E.hop(-380);
+      E.act(game === "rps" ? "rps" : game === "ball" ? "wave" : "wink");
+      const q = (reason === "bored" ? pick(P_TX.bored) : "") + pick(P_TX[game]);
+      const c = card(`<p>${q}</p><div class="chips"><button type="button" class="chip main yes">${P_TX.yes}</button><button type="button" class="chip no">${P_TX.no}</button></div>`);
+      E.Voice.syllable && [0, 1, 2].forEach((i) => setTimeout(() => E.Voice.syllable(), i * 140));
+      const finish = () => { proposing = false; clearTimeout(proposeTimer); closeCard(); };
+      c.querySelector(".yes").addEventListener("click", () => {
+        finish();
+        E.say(pick(P_TX.accepted), 1600, true, "heart");
+        setTimeout(() => startGame(game), 700);
+      });
+      c.querySelector(".no").addEventListener("click", () => {
+        finish();
+        if (!force) { gs.declines++; gs.snooze = Date.now() + 3600000; store.set("eko-games", gs); }
+        E.say(pick(P_TX.declined), 2200, true, "sad");
+      });
+      proposeTimer = setTimeout(() => { if (proposing) { finish(); E.say(pick(P_TX.timeout), 2000, true, "shrug"); } }, 20000);
+    });
+  }
+
+  function startGame(game) {
+    if (game === "ball") startBall();
+    else if (game === "hide") startHide();
+    else { openAt("rps"); E.say(pick(P_TX.rpsGo), 1800, true); }
+  }
+
+  // Comprueba cada medio minuto si es buen momento para proponer algo
+  setInterval(() => {
+    if (!canPropose()) return;
+    const ignoredMin = (Date.now() - E.lastInteraction()) / 60000;
+    const h = new Date().getHours(), friday = new Date().getDay() === 5 && h >= 16;
+    if (ignoredMin > 120) propose(false, "bored");
+    else if (ignoredMin > 45 && Math.random() < (friday ? 0.12 : 0.04)) propose(false);
+  }, 30000);
 
   // ---------- Pelota ----------
   let ball = null;
@@ -450,6 +512,7 @@
       pomo = { phase: "break", end: Date.now() + 5 * 60000 };
       E.setDance(true); setTimeout(() => E.setDance(false), 4500);
       E.say(pick(SAY.pomoBreak), 4000, true);
+      setTimeout(() => { if (Math.random() < 0.5) propose(false); }, 9000);
       setTimeout(() => E.act("stretch"), 4800);
     } else {
       stopPomo();
@@ -536,6 +599,7 @@
       open ? close() : openMenu();
     },
     close,
+    propose: (force) => propose(force),
     isOpen: () => open,
   };
 })();

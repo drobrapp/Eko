@@ -74,9 +74,9 @@ window.EkoComments = (() => {
   }
 
   /** Devuelve {text, gesture} si toca comentar algo, o null. */
-  function find(app, title, isBrowser, es) {
+  function find(app, title, isBrowser, es, force = false) {
     const now = Date.now();
-    if (now - lastAny < GAP) return null;
+    if (!force && now - lastAny < GAP) return null;
     const t = (title || "").toLowerCase();
     for (const [id, apps, words, esL, enL, gesture] of R) {
       const appHit = apps.some((a) => app === a || app.startsWith(a));
@@ -84,7 +84,7 @@ window.EkoComments = (() => {
       // reglas con apps y palabras (p. ej. exportar en Lightroom) necesitan ambas
       const hit = apps.length && words.length ? appHit && titleHit : appHit || (titleHit && (isBrowser || !apps.length));
       if (!hit) continue;
-      if (cooldown[id] && now - cooldown[id] < COOLDOWN) return null;
+      if (!force && cooldown[id] && now - cooldown[id] < COOLDOWN) return null;
       cooldown[id] = now;
       lastAny = now;
       const list = es ? esL : enL;
@@ -94,10 +94,39 @@ window.EkoComments = (() => {
         if (!d) text = list.find((x) => !x.includes("{doc}")) || text.replace("«{doc}»", "");
         else text = text.replace("{doc}", d);
       }
-      return { text, gesture };
+      return { text, gesture, id };
     }
     return null;
   }
 
-  return { find, setGap(min) { GAP = min * 60000; } };
+  /** ¿Qué regla corresponde a esta app/web? (sin consumir nada) */
+  function ruleId(app, title, isBrowser) {
+    const t = (title || "").toLowerCase();
+    for (const [id, apps, words] of R) {
+      const appHit = apps.some((a) => app === a || app.startsWith(a));
+      const titleHit = words.length && words.some((w) => t.includes(w));
+      const hit = apps.length && words.length ? appHit && titleHit : appHit || (titleHit && (isBrowser || !apps.length));
+      if (hit) return id;
+    }
+    return null;
+  }
+
+  // Nombres bonitos para apps sin comentario propio
+  const NICE = { notepad: "el Bloc de notas", explorer: "el Explorador", msedge: "Edge", chrome: "Chrome", firefox: "Firefox", vlc: "VLC", spotify: "Spotify", winrar: "WinRAR", "7zfm": "7-Zip", acrobat: "Acrobat", zoom: "Zoom" };
+  function niceName(app, title) {
+    if (NICE[app]) return NICE[app];
+    const parts = (title || "").split(/\s[-–—|]\s/);
+    const last = parts[parts.length - 1].trim();
+    if (last && last.length <= 24) return last;
+    return app.charAt(0).toUpperCase() + app.slice(1);
+  }
+  /** Comentario genérico al abrir algo que no tiene frase propia */
+  function generic(app, title, es) {
+    const n = niceName(app, title);
+    const list = es ? [`¡Anda, ${n}!`, `Abriendo ${n}… vamos allá`, `¿${n}? A ver qué hacemos`, `¡Hola, ${n}!`] : [`Oh, ${n}!`, `Opening ${n}… here we go`, `${n}? Let's see`, `Hi, ${n}!`];
+    lastAny = Date.now();
+    return { text: list[Math.floor(Math.random() * list.length)], gesture: "surprise", id: "app:" + app };
+  }
+
+  return { find, ruleId, generic, setGap(min) { GAP = min * 60000; } };
 })();

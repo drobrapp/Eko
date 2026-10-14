@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
-use sysinfo::{Disks, System};
+use sysinfo::{Disks, ProcessRefreshKind, ProcessesToUpdate, System};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::AppState;
@@ -46,6 +46,13 @@ struct DrivePayload {
     photos: u32,
 }
 
+/// Programas que se han abierto o cerrado desde la última comprobación.
+#[derive(Serialize, Clone)]
+struct ProcsPayload {
+    started: Vec<String>,
+    stopped: Vec<String>,
+}
+
 #[derive(Serialize, Clone)]
 struct DownloadPayload {
     name: String,
@@ -64,6 +71,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
     std::thread::spawn(move || {
         let mut sys = System::new();
         let mut known_removable: Option<HashSet<String>> = None;
+        let mut known_procs: Option<HashSet<String>> = None;
         let mut disk_free = 100.0_f32;
         let mut tick: u64 = 0;
         #[cfg(windows)]
@@ -96,6 +104,27 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
             } else {
                 0.0
             };
+
+            // Programas abiertos/cerrados cada ~4 s (solo nombres, sin leer nada más del proceso)
+            if tick % 2 == 1 {
+                sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::nothing());
+                let now: HashSet<String> = sys
+                    .processes()
+                    .values()
+                    .map(|p| {
+                        let n = p.name().to_string_lossy().to_lowercase();
+                        n.strip_suffix(".exe").unwrap_or(&n).to_string()
+                    })
+                    .collect();
+                if let Some(prev) = &known_procs {
+                    let started: Vec<String> = now.difference(prev).cloned().collect();
+                    let stopped: Vec<String> = prev.difference(&now).cloned().collect();
+                    if !started.is_empty() || !stopped.is_empty() {
+                        let _ = app.emit_to("main", "procs", ProcsPayload { started, stopped });
+                    }
+                }
+                known_procs = Some(now);
+            }
 
             // Discos cada ~4 s: tarjetas/USB nuevos y espacio libre
             if tick % 2 == 0 {

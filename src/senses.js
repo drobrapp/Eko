@@ -120,6 +120,41 @@
   let batteryWarned = false, lastSong = "", glasses = false;
   let lastKey = "", lastApp = "", appSince = Date.now();
 
+  // ---------- Programas que se abren ----------
+  const SKIP_APPS = new Set(["eko", "explorer", "searchhost", "startmenuexperiencehost", "shellexperiencehost", "lockapp", "textinputhost", "applicationframehost", "systemsettingsbroker", "rundll32", "dwm", ""]);
+  const startedAt = {}, announced = {};
+  E.listen("procs", (ev) => {
+    const now = Date.now();
+    for (const n of ev.payload.started || []) { startedAt[n] = now; announced[n] = false; }
+    for (const n of ev.payload.stopped || []) { delete startedAt[n]; delete announced[n]; }
+  });
+  // Lo que ya ha comentado hoy (se guarda, así sobrevive a reinicios de Eko)
+  function seenToday() {
+    try {
+      const v = JSON.parse(localStorage.getItem("eko-seen-today") || "{}");
+      return v.day === new Date().toDateString() ? v.ids : [];
+    } catch (_) { return []; }
+  }
+  function markSeen(id) {
+    const ids = seenToday();
+    if (!ids.includes(id)) ids.push(id);
+    try { localStorage.setItem("eko-seen-today", JSON.stringify({ day: new Date().toDateString(), ids })); } catch (_) {}
+  }
+  // Si se abren varias cosas seguidas, los comentarios salen uno detrás de otro
+  const sayQueue = [];
+  let sayBusy = false;
+  function queueSay(c) {
+    sayQueue.push(c);
+    if (sayQueue.length > 4) sayQueue.shift();
+    if (!sayBusy) nextSay();
+  }
+  function nextSay() {
+    const c = sayQueue.shift();
+    if (!c) { sayBusy = false; return; }
+    sayBusy = true;
+    setTimeout(() => { if (!E.quiet && !E.A.hidden && !E.S.sleeping) E.say(c.text, 3200, true, c.gesture); setTimeout(nextSay, 3600); }, 900);
+  }
+
   function greetingByHour() {
     const h = new Date().getHours();
     return h >= 6 && h < 13 ? T.morning : h >= 13 && h < 21 ? T.afternoon : T.night;
@@ -127,6 +162,7 @@
 
   E.listen("senses", (ev) => {
     const s = ev.payload;
+    E.lastSenses = s;
     const cat = categorize(s.app || "", s.title || "");
 
     // Inactividad: se duerme si te vas, te recibe al volver
@@ -160,12 +196,24 @@
     const key = (s.app || "") + "|" + (s.title || "").slice(0, 60);
     if (key !== lastKey) {
       lastKey = key;
-      const isBrowser = CATS.browser.some((k) => (s.app || "").startsWith(k));
+      const app = s.app || "", C = window.EkoComments;
+      const isBrowser = CATS.browser.some((k) => app.startsWith(k));
       const chatty = cfg().chatty, prob = [0, 0.3, 0.6, 0.85][chatty] ?? 0.6;
-      if (window.EkoComments) window.EkoComments.setGap([99, 6, 3, 1.5][chatty] ?? 3);
-      if (!ignored(s.app || "") && Math.random() < prob && window.EkoComments) {
-        const c = window.EkoComments.find(s.app || "", s.title || "", isBrowser, ES);
-        if (c) setTimeout(() => E.say(c.text, 3200, false, c.gesture), 1200);
+      if (C) C.setGap([99, 6, 3, 1.5][chatty] ?? 3);
+      if (C && app && !ignored(app) && !SKIP_APPS.has(app) && chatty > 0) {
+        // Seguro: cada vez que se abre un programa, y la primera vez en el día de cada app o web
+        const rid = C.ruleId(app, s.title, isBrowser) || "app:" + app;
+        const justOpened = startedAt[app] && Date.now() - startedAt[app] < 90000 && !announced[app];
+        const firstToday = !seenToday().includes(rid);
+        if (justOpened || firstToday) {
+          announced[app] = true;
+          markSeen(rid);
+          const c = C.find(app, s.title || "", isBrowser, ES, true) || (isBrowser && !justOpened ? null : C.generic(app, s.title, ES));
+          if (c) queueSay(c);
+        } else if (Math.random() < prob) {
+          const c = C.find(app, s.title || "", isBrowser, ES);
+          if (c) setTimeout(() => E.say(c.text, 3200, false, c.gesture), 1200);
+        }
       }
     }
     // Mucho rato seguido en la misma app: propone una pausa

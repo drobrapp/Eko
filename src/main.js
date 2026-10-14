@@ -24,11 +24,23 @@
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
+    sprout: $("#sprout"), freckles: $("#freckles"),
+    paint: $("#paint"), paintDots: [...document.querySelectorAll("#paint > g")], paintHead: $("#paintHead"),
   };
 
   // ---------- Utilidades ----------
   const LANG = window.EKO_LANG || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  // Elige una frase sin repetir las últimas que ha dicho de esa lista
+  const usedLines = new WeakMap();
+  const pickNew = (list) => {
+    const used = usedLines.get(list) || [];
+    const fresh = list.filter((x) => !used.includes(x));
+    const v = (fresh.length ? fresh : list)[Math.floor(Math.random() * (fresh.length ? fresh : list).length)];
+    used.push(v); if (used.length > Math.max(1, Math.floor(list.length * 0.6))) used.shift();
+    usedLines.set(list, used);
+    return v;
+  };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const lerp = (a, b, k) => a + (b - a) * k;
@@ -46,7 +58,11 @@
       pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!"],
       pet: ["Esto es mejor que una actualización", "Qué gustitito", "No pares, porfa"],
       drop: ["¡Mis piernitas!", "Diez de diez en el aterrizaje", "Avisa la próxima vez", "¿Eso es todo?", "Ni un rasguño", "Otra, otra"],
-      dizzy: ["Veo tres pantallas…", "¿Quién ha apagado la gravedad?", "Necesito sentarme"],
+      dizzy: ["Veo tres pantallas…", "¿Quién ha apagado la gravedad?", "Necesito sentarme", "¿Dónde está el suelo? Había uno por aquí", "Creo que he visto mi brote dar vueltas", "No me mires, estoy procesando"],
+      grab: ["¡Eh, que me despeino!", "¡Secuestro!", "¿A dónde vamos?", "Con cuidado, que soy de plastilina", "Esto no estaba en mi agenda", "¡Wiii!", "¿Me vas a llevar de paseo?", "¡Altura! ¡Mucha altura!", "Vale, pero luego me devuelves", "¿Esto cuenta como abrazo?"],
+      held: ["¿Me vas a tener aquí todo el día?", "Se me están quedando los pies fríos", "Vale, ya puedes soltarme", "Desde aquí se ve todo tu escritorio", "Me estoy acostumbrando a las alturas", "¿Hemos llegado ya?"],
+      zoom: ["¡Más despacio!", "¡Wiiiiii!", "¡Que me dejo la cara atrás!", "¡Velocidad máxima!"],
+      shake: ["¡Para, paraaa!", "¡Que no soy una maraca!", "¡Me vas a dejar hecho una bola!", "Mis ojitooos…", "¡Esto es un terremoto!", "¡Socorrooo!"],
       sleep: ["Me echo una siestecita", "Despiértame si me necesitas", "Zzz… digo, buenas noches"],
       wake: ["¡No estaba dormido!", "¿Qué hora es?", "Soñaba con una pelota gigante"],
       updating: ["Me voy a la peluquería, ahora vuelvo"],
@@ -63,6 +79,17 @@
       monday: ["Lunes… ánimo, que tú puedes", "¿Ya es lunes otra vez?"],
       fly: ["¡Al rescate!", "¡Capa activada!", "¡Esto es un trabajo para Eko!"],
       costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
+      ride: ["¡Uoh, despacito!", "¡Que me caigo!", "¡Wiii!"],
+      desk: ["¡Escritorio a la vista!", "A ver qué tienes por aquí…"],
+      makeRoom: ["Te dejo sitio", "Me aparto, tranqui"],
+      winBye: ["¡Adiós, ventanita!", "Una menos"],
+      winMin: ["¿A dónde ha ido?", "Se ha escondido…"],
+      fall: ["¡Eh, que estaba ahí!", "¡Uy!"],
+      climb: ["¡Arriba!", "Desde aquí se ve todo"],
+      huntMiss: ["¡Casi!", "¡Se me ha escapado!"],
+      huntCaught: ["¡Te pillé!", "¡Mío!"],
+      huntHigh: ["Uf, está muy alto", "No llego…"],
+      evolve: ["¡Mira! ¡Me ha salido una hojita!", "¡Otra hoja! Estoy creciendo", "¡Me ha salido un capullo! Algo se viene…", "¡Un año juntos! Mira qué flor"],
       hats: { auto: "Complemento automático", witch: "Bruja", pumpkin: "Calabaza", vampire: "Vampiro", ghost: "Fantasma", santa: "Papá Noel", reindeer: "Reno", elf: "Elfo", scarf: "Bufanda", party: "Fiesta", crown: "Corona", none: "Sin complemento" },
     },
     en: {
@@ -71,7 +98,11 @@
       pokeAnnoyed: ["Enough!", "Again?", "You'll wear me out", "I'm not a button!"],
       pet: ["mmm…", "That's nice", "Again"],
       drop: ["Oof!", "Perfect landing", "Not again…"],
-      dizzy: ["Everything's spinning…", "Where am I?"],
+      dizzy: ["Everything's spinning…", "Where am I?", "I see three screens…", "Where's the floor? There was one here"],
+      grab: ["Hey, my hair!", "Kidnapping!", "Where are we going?", "Careful, I'm made of clay", "This wasn't on my schedule", "Wheee!", "Does this count as a hug?"],
+      held: ["Are you keeping me up here all day?", "Okay, you can put me down now", "Great view of your desktop", "Are we there yet?"],
+      zoom: ["Slow down!", "Wheeeee!", "Top speed!"],
+      shake: ["Stop, stooop!", "I'm not a maraca!", "My eyes…", "Earthquake!", "Heeelp!"],
       sleep: ["Good night…", "Five more minutes…"],
       wake: ["Already?", "I was just resting my eyes"],
       updating: ["Changing clothes, be right back"],
@@ -88,6 +119,17 @@
       monday: ["Monday… again"],
       fly: ["Here I go!", "To infinity!", "Taking off!"],
       costume: ["How do I look?", "New look!", "Looking good, right?"],
+      ride: ["Whoa, easy!", "I'm gonna fall!", "Wheee!"],
+      desk: ["Desktop ahoy!", "Let's see what's here…"],
+      makeRoom: ["Making room for you", "I'll move, no worries"],
+      winBye: ["Bye, little window!", "One less"],
+      winMin: ["Where did it go?", "It's hiding…"],
+      fall: ["Hey, I was up there!", "Oops!"],
+      climb: ["Up we go!", "Great view from here"],
+      huntMiss: ["So close!", "It got away!"],
+      huntCaught: ["Got you!", "Mine!"],
+      huntHigh: ["Too high up there", "Can't reach…"],
+      evolve: ["Look! I grew a little leaf!", "Another leaf! I'm growing", "A bud! Something's coming…", "One year together! Look at this flower"],
       hats: { auto: "Automatic accessory", witch: "Witch", pumpkin: "Pumpkin", vampire: "Vampire", ghost: "Ghost", santa: "Santa", reindeer: "Reindeer", elf: "Elf", scarf: "Scarf", party: "Party", crown: "Crown", none: "No accessory" },
     },
   }[LANG];
@@ -184,16 +226,21 @@
   const minX = () => world.left - W / 2 + 70;
   const maxX = () => world.left + world.width - W / 2 - 70;
   const centerX = () => world.left + world.width / 2 - W / 2;
+  // Suelo actual: la barra de tareas o el borde de arriba de una ventana (S.perch)
+  const PERCH_SINK = 3;
+  const groundY = () => S.perch ? S.perch.y - H + PERCH_SINK : floorY();
+  const loX = () => S.perch ? S.perch.x + 50 - W / 2 : minX() + 40;
+  const hiX = () => S.perch ? S.perch.x + S.perch.w - 50 - W / 2 : maxX() - 40;
 
   // ---------- Estado ----------
   const S = {
     x: 0, y: 0, vx: 0, vy: 0, prevX: 0,
     airborne: false, dragging: false, pressed: false,
     mode: "idle", modeUntil: 0, targetX: 0, facing: 1, speed: 46, then: null, peekSide: 0,
-    sleeping: false, sulking: false, fly: null, prevY: 0, pendingHop: null,
+    sleeping: false, sulking: false, fly: null, prevY: 0, pendingHop: null, perch: null, sneak: false,
   };
   const A = {
-    t: 0, squash: 0, squashV: 0, appear: 0,
+    t: 0, squash: 0, squashV: 0, appear: 0, dizzy: 0, woozyUntil: 0,
     tilt: 0, tiltTarget: 0, turn: 0, lag: 0, lagV: 0, sit: 0,
     eyeX: 0, eyeY: 0, eyeTX: 0, eyeTY: 0,
     blink: 1, nextBlink: 2, blinkEnd: 0,
@@ -324,6 +371,13 @@
       if (d < 0) { P.aL = lerp(P.aL, 95, e); P.aR = lerp(P.aR, -30, e); } else { P.aR = lerp(P.aR, -95, e); P.aL = lerp(P.aL, 30, e); }
       P.front = true; P.eyeX = 5 * d * e; P.turn += 0.3 * d * e;
     } },
+    // Hito de evolución: se recoge, brilla, "pop" del brote nuevo y lo enseña contento
+    evolve: { dur: 3.4, f(P, k, e, o) {
+      if (k < 0.3) { const c = Math.sin(k / 0.3 * Math.PI / 2); P.sy *= 1 - 0.1 * c; P.sx *= 1 + 0.06 * c; P.aL = lerp(P.aL, -10, c); P.aR = lerp(P.aR, 10, c); P.eyes = "closed"; P.shift += Math.sin(A.t * 60) * 1.2 * c; }
+      else if (k < 0.45) { const u = (k - 0.3) / 0.15; P.lift += 26 * Math.sin(u * Math.PI); P.sy *= 1 + 0.12 * Math.sin(u * Math.PI); P.aL = 120; P.aR = -120; P.front = true; P.eyes = "happy"; }
+      else { P.eyes = "happy"; P.aL = lerp(P.aL, 100, e); P.aR = lerp(P.aR, -100, e); P.front = true; P.tilt += Math.sin(A.t * 7) * 6 * e; P.eyeY -= 4 * e; }
+      if (k > 0.33 && !o.done) { o.done = true; o.apply && o.apply(); }
+    } },
     flip: { dur: 0.9, f(P, k) { P.spin = 360 * (k < 0.15 ? 0 : Math.min(1, (k - 0.15) / 0.7)); P.aL = 70; P.aR = -70; P.eyes = "closed"; } },
     hug: { dur: 2.6, eyes: "happy", f(P, k, e) {
       const open = k < 0.4 ? e : 0;
@@ -435,6 +489,7 @@
     for (const e of el.accEls) e.style.display = e.dataset.acc === a ? "inline" : "none";
     stage.classList.toggle("has-hat", TALL.has(a));
     stage.classList.toggle("acc-ghost", a === "ghost");
+    applyEvo();
     if (!first && animate && a !== "none") {
       fx("spark", 3); hop(-360);
       setTimeout(() => say(pick(TXT.costume), 2400, false, "wink"), 500);
@@ -463,21 +518,158 @@
     return options[0][0];
   }
 
+  // ---------- Ventanas: subirse a la ventana activa y reaccionar a lo que pasa con ellas ----------
+  // WIN.cur llega desde Rust (evento "win"): { id, x, y, w, h, max, desk } en píxeles lógicos, o null.
+  const DRAG = { t0: 0, heldSaid: false, lastVx: 0, lastVy: 0, zoomAt: 0, nextGrabLine: 0, dizzyLanding: 0 };
+  const WIN = { cur: null, pendDx: 0, cd: {}, hunt: null, startleAt: 0, nextBigAt: 0, hist: [] };
+  // ¿Cabe Eko encima? Ventana normal, ni maximizada ni minúscula, y con sitio por arriba para que se le vea entero
+  const perchRoom = (c) => !!c && !c.desk && !c.max && c.w > 260 && c.h > 120 && c.y - world.top >= H - 125 && c.y < world.top + world.height - 160;
+  const cfgNow = () => (window.EkoSettings ? window.EkoSettings.get() : { walk: true, fly: true, chatty: 2 });
+  const chattyLvl = () => { const c = cfgNow().chatty; return c == null ? 2 : c; };
+  const discreet = () => { const l = window.Eko && window.Eko.lastSenses; return !!(l && (l.fullscreen || l.in_call)) || !!(window.Eko && window.Eko.quiet); };
+  const busy = () => S.sleeping || S.sulking || S.dragging || S.fly || S.airborne || A.action || S.pendingHop || discreet();
+  function cool(key, secs) { if ((WIN.cd[key] || 0) > A.t) return false; WIN.cd[key] = A.t + secs; return true; }
+  const chance = (base) => Math.random() < base * [0.35, 0.6, 0.85, 1][chattyLvl()];
+  const talk = (list, p = 0.4) => { if (chattyLvl() > 0 && Math.random() < p) say(pick(list)); };
+
+  function onWin(c) {
+    const prev = WIN.cur;
+    WIN.cur = c;
+    if (S.perch) {
+      if (!c || c.id !== S.perch.id) fallOff(true);
+      else if (c.max) { S.perch = c; hopDown(true); }
+      else if (!perchRoom(c)) fallOff(true);
+      else {
+        const dx = c.x - S.perch.x, dy = c.y - S.perch.y;
+        S.perch = c;
+        if ((dx || dy) && !S.airborne && !S.dragging) {
+          // viaja con la ventana y se tambalea (las físicas de brazos, brote y capa hacen el resto)
+          WIN.pendDx += dx; S.targetX += dx;
+          A.sqxV += clamp(Math.abs(dx) / 25, 0, 7);
+          A.tiltTarget = clamp(-dx * 0.5, -16, 16);
+          if (dy < -4) bump(clamp(-dy / 12, 1, 8)); else if (dy > 4) bump(-clamp(dy / 14, 1, 6));
+          clearTimeout(WIN.tiltT); WIN.tiltT = setTimeout(() => { A.tiltTarget = 0; }, 450);
+          if (Math.hypot(dx, dy) > 90 && cool("ride", 90) && chance(0.6)) { act("surprise"); talk(TXT.ride, 0.5); }
+        }
+      }
+    }
+    if (!c || busy()) return;
+    if (c.desk && !(prev && prev.desk) && cool("desk", 180) && chance(0.8)) {
+      // escritorio a la vista: sale a curiosear
+      S.mode = "walk"; S.speed = 52; S.then = "curious"; S.modeUntil = A.t + 30;
+      S.targetX = clamp(S.x + rnd(-500, 500), loX(), hiX()); talk(TXT.desk, 0.5);
+    } else if (prev && c.id === prev.id && c.max && !prev.max && !S.perch && cool("max", 120)) {
+      // ventana maximizada: se aparta a un lado para no molestar
+      const cx = S.x + W / 2, edge = Math.min(cx - world.left, world.left + world.width - cx);
+      if (edge > 160 && chance(0.9)) { startPeek(); talk(TXT.makeRoom, 0.35); }
+    }
+  }
+  function onWinEv(kind) {
+    if (busy()) return;
+    if (kind === "closed" && cool("closed", 60) && chance(0.7)) { act("bye"); talk(TXT.winBye, 0.3); }
+    if (kind === "minimized" && cool("min", 75) && chance(0.6)) { act("lookAround"); talk(TXT.winMin, 0.35); }
+  }
+  // Se queda sin suelo (cierran, minimizan o cambian de ventana): cae con su aplastón
+  function fallOff(surprised) {
+    S.perch = null; WIN.pendDx = 0; S.then = null; S.sneak = false;
+    if (S.dragging || S.fly) return;
+    S.airborne = true; S.vy = Math.min(S.vy, 0); S.mode = "idle";
+    if (surprised) { act("surprise"); if (cool("fall", 60)) talk(TXT.fall, 0.5); }
+  }
+  // Se baja de un saltito hacia el lado más cercano
+  function hopDown(fromMax) {
+    const p = S.perch; S.perch = null; WIN.pendDx = 0; S.then = null;
+    if (!p) return;
+    const cx = S.x + W / 2, dir = cx - p.x < p.x + p.w - cx ? -1 : 1;
+    S.facing = dir; S.mode = "idle"; S.modeUntil = A.t + 3;
+    hop(-430, dir * 230, 0.18);
+    if (fromMax) talk(TXT.makeRoom, 0.3);
+  }
+  // Salto grande para subirse a la ventana activa (con mucha anticipación, como un muelle de plastilina)
+  function climbJump() {
+    const c = WIN.cur;
+    if (!perchRoom(c) || S.perch) { S.mode = "idle"; S.modeUntil = A.t + 2; return; }
+    const cx = S.x + W / 2, feet = S.y + H, h = feet - c.y + 55;
+    if (h < 60 || h > 950) { S.mode = "idle"; S.modeUntil = A.t + 3; act("think"); return; }
+    const vy = Math.sqrt(2 * 2300 * h), tUp = vy / 2300;
+    const tx = clamp(cx, c.x + 80, c.x + c.w - 80), vx = clamp((tx - cx) / tUp / 0.78, -900, 900);
+    S.facing = Math.sign(tx - cx) || S.facing; S.mode = "idle"; S.modeUntil = A.t + 4;
+    bump(9); hop(-vy, vx, 0.32);
+    if (cool("climbTalk", 300)) setTimeout(() => talk(TXT.climb, 0.35), 900);
+  }
+
+  // ---------- Juego con el ratón ----------
+  function startHunt() {
+    if (S.fly || S.airborne || S.dragging || S.sleeping) return;
+    const cx = S.x + W / 2, side = Math.sign(cursor.x - cx) || 1;
+    WIN.hunt = { x: cursor.x, y: cursor.y };
+    S.sneak = true; S.mode = "walk"; S.speed = 24; S.then = "pounce"; S.modeUntil = A.t + 40;
+    S.targetX = clamp(cursor.x - W / 2 - side * 85, loX(), hiX());
+  }
+  function abortHunt(talkIt) {
+    if (!WIN.hunt) return;
+    WIN.hunt = null; S.sneak = false;
+    if (S.then === "pounce") { S.then = null; S.mode = "idle"; S.modeUntil = A.t + 3; act("shrug"); if (talkIt) talk(TXT.huntMiss, 0.5); }
+  }
+  function pounce() {
+    S.sneak = false;
+    const h0 = WIN.hunt; WIN.hunt = null;
+    if (!h0) { S.mode = "idle"; S.modeUntil = A.t + 2; return; }
+    const cx = S.x + W / 2, mid = S.y + H - 120;
+    const h = clamp(mid - cursor.y + 25, 50, 420);
+    if (mid - cursor.y > 440) { S.mode = "idle"; S.modeUntil = A.t + 3; act("think"); talk(TXT.huntHigh, 0.5); return; }
+    const vy = Math.sqrt(2 * 2300 * h), tUp = vy / 2300;
+    S.facing = Math.sign(cursor.x - cx) || S.facing; S.mode = "idle"; S.modeUntil = A.t + 3;
+    A.pounceUntil = A.t + 0.4 + tUp * 2;
+    bump(7); hop(-vy, clamp((cursor.x - cx) / tUp / 0.8, -700, 700), 0.22);
+    const lm = cursor.lastMove;
+    setTimeout(() => {
+      if (cursor.lastMove > lm + 0.15) { act("surprise"); talk(TXT.huntMiss, 0.6); }
+      else { setMood("happy", 2.5); fx("spark", 3); Voice.chirp(); talk(TXT.huntCaught, 0.7); }
+    }, (0.3 + tUp * 2) * 1000 + 150);
+  }
+
+  // ---------- Qué hacer ahora (sin repetirse) ----------
+  // Pesos + historial (no repite lo último y castiga lo reciente) + gestos "grandes" espaciados según lo charlatán que sea.
+  const BIG = new Set(["peek", "fly", "approach", "climb", "hunt", "friday", "explore"]);
+  const BIG_GAP = [[900, 1500], [480, 780], [240, 420], [120, 240]];
   function decide() {
     if (S.sleeping || S.sulking || S.airborne || S.dragging) return;
     const sleepy = isMonday() || isLate();
-    const cfg = window.EkoSettings ? window.EkoSettings.get() : { walk: true, fly: true };
+    const hr = today().getHours(), morning = hr >= 6 && hr < 11;
+    const cfg = cfgNow();
     const cursorRecent = A.t - cursor.lastMove < 8;
-    const choice = weighted([
+    const cursorStill = A.t - cursor.lastMove > 5 && A.t - cursor.lastMove < 90;
+    const onWinTop = !!S.perch, quietNow = discreet();
+    const bigOk = A.t >= WIN.nextBigAt && !quietNow;
+    const c = WIN.cur;
+    const canClimb = cfg.walk && !onWinTop && perchRoom(c) && (S.y + H) - c.y < 950 && (S.y + H) - c.y > 120;
+    const reach = (S.y + H - 120) - cursor.y;
+    const canHunt = cfg.walk && cursorStill && reach > 20 && reach < 420 && cursor.x > (onWinTop ? S.perch.x : world.left) && cursor.x < (onWinTop ? S.perch.x + S.perch.w : world.left + world.width);
+    const perchedFor = onWinTop ? A.t - (WIN.perchSince || A.t) : 0;
+    let opts = [
       ["idle", 30], ["walk", cfg.walk ? 24 : 0], ["look", 7], ["sit", 8],
-      ["stretch", sleepy ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
-      ["peek", cfg.walk ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0], ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly ? 2 : 0],
-    ]);
+      ["stretch", sleepy ? 6 : morning ? 6 : 3], ["yawn", sleepy ? 9 : 2], ["scratch", 5], ["think", 4],
+      ["peek", cfg.walk && !onWinTop ? 5 : 0], ["approach", cfg.walk && cursorRecent ? 8 : 0],
+      ["friday", isFridayEve() ? 6 : 0], ["fly", cfg.fly && !onWinTop ? 2 : 0],
+      ["climb", canClimb ? 7 : 0], ["hunt", canHunt ? 6 : 0],
+      ["getdown", onWinTop ? clamp(perchedFor / 30, 1, 30) : 0],
+    ];
+    const last = WIN.hist[WIN.hist.length - 1], recent = WIN.hist.slice(-4);
+    opts = opts.map(([k, w]) => {
+      if (BIG.has(k) && !bigOk) w = 0;
+      if (k === last && k !== "idle") w = 0;
+      else if (recent.includes(k)) w *= 0.3;
+      return [k, w];
+    });
+    const choice = weighted(opts);
+    WIN.hist.push(choice); if (WIN.hist.length > 8) WIN.hist.shift();
+    if (BIG.has(choice)) { const g = BIG_GAP[chattyLvl()] || BIG_GAP[2]; WIN.nextBigAt = A.t + rnd(g[0], g[1]); }
     S.speed = sleepy ? 34 : 46;
     S.then = null;
     switch (choice) {
       case "walk":
-        S.mode = "walk"; S.targetX = clamp(S.x + rnd(-450, 450), minX() + 40, maxX() - 40); S.modeUntil = A.t + 30; break;
+        S.mode = "walk"; S.targetX = clamp(S.x + rnd(-450, 450), loX(), hiX()); S.modeUntil = A.t + 30; break;
       case "look":
         S.mode = "idle"; S.modeUntil = A.t + 4; act("lookAround"); break;
       case "sit":
@@ -487,8 +679,17 @@
       case "peek": startPeek(); break;
       case "fly": startFlight(); break;
       case "approach":
-        S.mode = "walk"; S.targetX = clamp(cursor.x - W / 2 + rnd(-60, 60), minX() + 40, maxX() - 40);
+        S.mode = "walk"; S.targetX = clamp(cursor.x - W / 2 + rnd(-60, 60), loX(), hiX());
         S.then = "curious"; S.modeUntil = A.t + 30; break;
+      case "climb":
+        S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30;
+        S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); break;
+      case "hunt": startHunt(); break;
+      case "getdown": {
+        const p = S.perch, toLeft = (S.x + W / 2) - p.x < p.x + p.w - (S.x + W / 2);
+        S.mode = "walk"; S.then = "hopdown"; S.modeUntil = A.t + 30;
+        S.targetX = toLeft ? loX() : hiX(); break;
+      }
       case "friday":
         S.mode = "idle"; S.modeUntil = A.t + 9; A.danceUntil = A.t + 8; fx("note", 2);
         if (Math.random() < 0.4) say(pick(TXT.friday)); break;
@@ -504,6 +705,50 @@
     S.mode = "walk"; S.speed = 46;
     S.targetX = side < 0 ? world.left - W / 2 - 8 : world.left + world.width - W / 2 + 8;
     S.then = "peek"; S.modeUntil = A.t + 40;
+  }
+
+  // ---------- Evolución ----------
+  // Tres capas: base continua (días juntos), hitos (brote a los 7 · 30 · 100 · 365 días) y rasgos según hábitos (0..1).
+  const EVO = { days: 0, traits: { creative: 0, night: 0, active: 0, love: 0, wet: 1 }, shown: -1, season: null, seed: 0 };
+  // Semilla única de este Eko (para su dibujo de motitas)
+  EVO.seed = +store.get("eko-seed") || 0;
+  if (!EVO.seed) { EVO.seed = 1 + Math.floor(Math.random() * 2147483646); store.set("eko-seed", String(EVO.seed)); }
+  const evoStage = (d) => d >= 365 ? 4 : d >= 100 ? 3 : d >= 30 ? 2 : d >= 7 ? 1 : 0;
+  function applyEvo(stageOverride) {
+    const st = stageOverride ?? (EVO.shown >= 0 ? EVO.shown : evoStage(EVO.days));
+    EVO.shown = st;
+    const t = EVO.traits, acc = typeof currentAcc === "function" ? currentAcc() : "none";
+    const headwear = TALL.has(acc) || acc === "ghost";
+    el.sprout.style.display = st > 0 && !headwear ? "inline" : "none";
+    A.sprStage = st;
+    // motitas: aparecen poco a poco a partir del primer mes
+    const fk = Math.min(1, Math.max(0, (EVO.days - 20) / 60));
+    if (fk > 0 && !el.freckles.childNodes.length) el.freckles.innerHTML = EkoArt.freckles(EVO.seed);
+    el.freckles.style.opacity = (0.6 * fk).toFixed(2);
+    stage.style.setProperty("--wet", (0.15 + 0.6 * (t.wet ?? 1)).toFixed(2));
+    // base continua: algo más de brillo con el tiempo
+    el.hl.setAttribute("opacity", (0.45 + 0.17 * Math.min(1, EVO.days / 365)).toFixed(2));
+    // rasgos
+    stage.style.setProperty("--blush0", (t.love * 0.3).toFixed(2));
+    stage.style.setProperty("--love", (t.love > 0.7 ? (t.love - 0.7) / 0.3 * 0.9 : 0).toFixed(2));
+    stage.style.setProperty("--owl", (t.night * 0.6).toFixed(2));
+    el.paint.style.display = t.creative > 0.2 ? "inline" : "none";
+    el.paintDots.forEach((d, i) => { d.style.display = t.creative > [0.2, 0.5, 0.8][i] ? "inline" : "none"; });
+    el.paintHead.style.display = t.creative > 0.65 && !headwear ? "inline" : "none";
+    A.energy = t.active;
+  }
+  function setEvo(o = {}, celebrate = false) {
+    if (o.days != null) EVO.days = Math.max(0, o.days | 0);
+    if (o.traits) Object.assign(EVO.traits, o.traits);
+    if (o.season !== undefined) EVO.season = o.season;
+    if (o.seed) { EVO.seed = o.seed; el.freckles.innerHTML = ""; }
+    const st = evoStage(EVO.days);
+    if (celebrate && st > EVO.shown && st > 0) { celebrateStage(st); return; }
+    EVO.shown = st; applyEvo();
+  }
+  function celebrateStage(st) {
+    act("evolve", { apply: () => { applyEvo(st); A.sprPop = 0; A.sprPopV = 0; fx("spark", 4); fx("heart", 1); Voice.chirp(); bump(-6); } });
+    setTimeout(() => say(TXT.evolve[st - 1], 3200, true), 1400);
   }
 
   // ---------- Volar ----------
@@ -545,14 +790,17 @@
     if (then === "peek") { S.mode = "peeking"; S.modeUntil = A.t + rnd(4, 7); S.facing = -S.peekSide; return; }
     if (then === "curious") { S.mode = "idle"; S.modeUntil = A.t + 3.5; act("curious", { dir: Math.sign(cursor.x - (S.x + W / 2)) || 1 }); return; }
     if (then === "hug") { S.mode = "idle"; S.modeUntil = A.t + 4; hop(-380); setTimeout(() => act("hug"), 450); return; }
+    if (then === "climb") { climbJump(); return; }
+    if (then === "hopdown") { hopDown(); return; }
+    if (then === "pounce") { pounce(); return; }
     S.mode = "idle"; S.modeUntil = A.t + rnd(2, 6); A.tiltTarget = 0;
   }
 
   // Salto con anticipación: primero se aplasta un instante y luego sale estirado
-  function hop(v = -420) {
+  function hop(v = -420, vx = 0, wind = 0.1) {
     if (S.dragging || S.sleeping || S.pendingHop) return;
     if (S.airborne) { S.vy = Math.min(S.vy, v * 0.6); return; }
-    S.pendingHop = { v, at: A.t + 0.1 };
+    S.pendingHop = { v, vx, at: A.t + wind };
     bump(Math.min(5, -v / 110));
   }
 
@@ -590,10 +838,10 @@
   // ---------- Física y lógica ----------
   function update(dt) {
     A.t += dt;
-    const fy = floorY();
+    let fy = groundY();
     S.prevX = S.x; S.prevY = S.y;
     if (S.pendingHop && A.t >= S.pendingHop.at && !S.dragging) {
-      S.airborne = true; S.vy = S.pendingHop.v; S.vx = 0; S.pendingHop = null;
+      S.airborne = true; S.vy = S.pendingHop.v; S.vx = S.pendingHop.vx || 0; S.pendingHop = null;
       bump(-7); Voice.hop();
     }
 
@@ -606,6 +854,12 @@
       S.y += S.vy * dt;
       S.x += S.vx * dt;
       S.vx *= Math.pow(0.4, dt);
+      // ¿Cae encima de la ventana activa? Entonces se queda ahí
+      const wc = WIN.cur;
+      if (!S.perch && S.vy > 0 && perchRoom(wc)) {
+        const top = wc.y - H + PERCH_SINK, cx = S.x + W / 2;
+        if (S.prevY <= top + 2 && S.y >= top && cx > wc.x + 30 && cx < wc.x + wc.w - 30) { S.perch = wc; fy = groundY(); WIN.perchSince = A.t; }
+      }
       if (S.x < minX()) { A.sqxV += Math.min(9, Math.abs(S.vx) / 160); S.x = minX(); S.vx = Math.abs(S.vx) * 0.4; if (Math.abs(S.vx) > 120) Voice.thump(0.6); }
       if (S.x > maxX()) { A.sqxV += Math.min(9, Math.abs(S.vx) / 160); S.x = maxX(); S.vx = -Math.abs(S.vx) * 0.4; if (Math.abs(S.vx) > 120) Voice.thump(0.6); }
       if (S.y >= fy) {
@@ -627,7 +881,22 @@
         }
       }
     } else {
-      S.y = fy;
+      if (S.perch) {
+        // la ventana se ha movido: Eko la sigue con suavidad (los datos llegan a saltos)
+        const y0 = S.y;
+        S.y += (fy - S.y) * Math.min(1, dt * 22);
+        const mv = WIN.pendDx * Math.min(1, dt * 18); S.x += mv; WIN.pendDx -= mv;
+        // Movimiento de la plataforma → aceleración que sienten sus pies
+        const pvx = mv / dt, pvy = (S.y - y0) / dt;
+        const sm = (WIN.stepDx || 0) * Math.min(1, dt * 20); S.x += sm; WIN.stepDx -= sm;
+        const pax = (pvx - (WIN.pvx || 0)) / dt, pay = (pvy - (WIN.pvy || 0)) / dt;
+        WIN.pvx = pvx; WIN.pvy = pvy;
+        WIN.pax = (WIN.pax || 0) + (pax - (WIN.pax || 0)) * Math.min(1, dt * 10);
+        WIN.pay = (WIN.pay || 0) + (pay - (WIN.pay || 0)) * Math.min(1, dt * 10);
+        // subir de golpe le aplasta (pesa más), bajar de golpe le estira
+        A.squashV += clamp(-WIN.pay * 0.006, -14, 14) * dt;
+        if (S.x < S.perch.x + 20 - W / 2 || S.x > S.perch.x + S.perch.w - 20 - W / 2) fallOff(false);
+      } else S.y = fy;
       if (A.t > S.modeUntil) {
         if (S.sulking) endSulk(false);
         else if (S.mode === "peeking") { S.mode = "walk"; S.targetX = clamp(S.x - S.peekSide * rnd(200, 400), minX() + 40, maxX() - 40); S.modeUntil = A.t + 30; }
@@ -684,6 +953,41 @@
     A.legSwingV += ((legTarget - A.legSwing) * 60 - A.legSwingV * 6) * dt;
     A.legSwing += A.legSwingV * dt;
     stepCape(dt);
+    // Brote: muelle que se queda atrás al moverse y "pop" al crecer
+    const sprT = clamp(-A.ax * 0.012, -30, 30) + clamp(-A.vx * 0.035, -18, 18) + clamp(A.hyV * 0.08, -12, 12) + Math.sin(A.t * 1.4) * 2.5;
+    A.sprV = (A.sprV || 0) + ((sprT - (A.spr || 0)) * 90 - (A.sprV || 0) * 7) * dt;
+    A.spr = (A.spr || 0) + A.sprV * dt;
+    A.sprPopV = (A.sprPopV || 0) + ((1 - (A.sprPop ?? 1)) * 220 - (A.sprPopV || 0) * 9) * dt;
+    A.sprPop = (A.sprPop ?? 1) + A.sprPopV * dt;
+    // Mareo: se va pasando poco a poco (más rápido en el suelo)
+    A.dizzy = Math.max(0, (A.dizzy || 0) - dt * (S.dragging ? 0.12 : 0.3));
+    if (S.dragging && !DRAG.heldSaid && A.t - DRAG.t0 > 5 && A.dizzy < 0.3 && Math.hypot(S.vx, S.vy) < 200) { DRAG.heldSaid = true; if (Math.random() < 0.7) say(pickNew(TXT.held), 2600, true); }
+    if (DRAG.dizzyLanding && !S.airborne && !S.dragging) {
+      const lvl = DRAG.dizzyLanding; DRAG.dizzyLanding = 0;
+      act("dizzy", { dur: 2.2 + lvl * 0.8 }); fx("spark", 3);
+      A.woozyUntil = A.t + 3 + lvl * 2.5; A.woozyLen = 3 + lvl * 2.5;
+      S.mode = lvl > 1.8 ? "sit" : "idle"; S.modeUntil = A.t + 3 + lvl * 2.5; S.then = null;
+      setTimeout(() => say(pickNew(TXT.dizzy), 2800, true), 900);
+    }
+    // Equilibrio: péndulo con los pies como pivote. La aceleración de la ventana le hace inclinarse al lado contrario
+    // y él se recupera con un muelle amortiguado (varias oscilaciones). Si se pasa, da un pasito; si se pasa mucho, se cae.
+    const onTop = S.perch && !S.airborne && !S.dragging;
+    const balF = onTop ? clamp(-(WIN.pax || 0) * 0.36, -1400, 1400) : 0;
+    A.balV = (A.balV || 0) + (balF - (A.bal || 0) * 50 - (A.balV || 0) * 4.2) * dt;
+    A.bal = clamp((A.bal || 0) + A.balV * dt, -50, 50);
+    if (onTop && Math.abs(A.bal) > 17 && A.t > (WIN.stepAt || 0)) {
+      const sd = Math.sign(A.bal), st = sd * 24;
+      WIN.stepDx = (WIN.stepDx || 0) + st; WIN.stepAt = A.t + 0.32; WIN.stepSide = sd; WIN.stepUntil = A.t + 0.22;
+      A.bal *= 0.6; A.balV *= 0.45; bump(-2);
+      if (Math.abs(A.bal) > 22 && cool("wobbleTalk", 60)) talk(TXT.ride, 0.4);
+    }
+    if (onTop && Math.abs(A.bal) > 40) {
+      const sd = Math.sign(A.bal);
+      fallOff(true); S.vx = (WIN.pvx || 0) * 0.6 + sd * 160; A.bal = 0; A.balV = 0;
+    }
+    if (!onTop) { WIN.pax = 0; WIN.pay = 0; WIN.pvx = 0; WIN.pvy = 0; }
+    // la flor se cierra al dormir y se abre al despertar
+    A.bloom = (A.bloom ?? 1) + ((S.sleeping ? 0.1 : 1) - (A.bloom ?? 1)) * Math.min(1, dt * 0.8);
 
     // Sentarse
     const sitGoal = (S.mode === "sit" || S.sleeping || S.sulking) && !S.airborne && !S.dragging ? 1 : 0;
@@ -800,9 +1104,34 @@
       P.aL = Math.sin(A.t * 2.2) * 2; P.aR = -P.aL;
     }
 
+    // Rasgo "activo": de vez en cuando da saltitos de energía en el sitio
+    if (A.energy > 0.3 && S.mode === "idle" && !A.action && !S.airborne && !S.dragging && Math.sin(A.t * 0.9) > 0.8) P.lift += Math.max(0, Math.sin(A.t * 9)) * 4 * A.energy;
     if (shownAcc === "ghost") { P.lift += 9 + Math.sin(A.t * 2.2) * 5; P.sway += Math.sin(A.t * 1.6) * 4; }
     P.nod += A.gNod;
     if (S.fly) flyPose(P);
+    // Zarandeado: ojos en espiral y brazos sueltos; después, un rato tambaleándose
+    if (S.dragging && A.dizzy > 0.5) { P.eyes = "spiral"; P.aL += Math.sin(A.t * 17) * 25; P.aR += Math.sin(A.t * 17 + 2) * 25; }
+    if (A.woozyUntil > A.t) {
+      const k = clamp((A.woozyUntil - A.t) / (A.woozyLen || 3), 0, 1);
+      P.sway += Math.sin(A.t * 2.6) * 8 * k; P.tilt += Math.sin(A.t * 3.4 + 1) * 10 * k; P.shift += Math.sin(A.t * 1.9) * 4 * k;
+      if (!P.eyes && k > 0.45) P.eyes = "spiral";
+    }
+    // Haciendo equilibrio: se inclina desde los pies, la cabeza compensa, brazos en cruz y molinillo si va muy justo
+    const bal = A.bal || 0, abal = Math.abs(bal);
+    if (abal > 0.5 && !S.airborne && !S.dragging) {
+      const e = clamp((abal - 1.5) / 9, 0, 1), wm = clamp((abal - 10) / 14, 0, 1);
+      P.sway += bal; P.tilt -= bal * 0.45;
+      if (!A.action) {
+        P.aL = lerp(P.aL, 82 + Math.sin(A.t * 15) * 40 * wm, e); P.aR = lerp(P.aR, -82 + Math.sin(A.t * 15 + 1.2) * 40 * wm, e);
+        P.eyeScale = (P.eyeScale || 1) * (1 + 0.22 * wm);
+        if (S.mode !== "walk") { if (bal > 0) P.legL = (P.legL || 0) - clamp(bal - 5, 0, 12) * 0.8; else P.legR = (P.legR || 0) - clamp(-bal - 5, 0, 12) * 0.8; }
+      }
+    }
+    if (A.t < (WIN.stepUntil || 0) && S.mode !== "walk") { const k = WIN.stepSide > 0 ? "legR" : "legL"; P[k] = (P[k] || 0) - 7 * Math.sin((WIN.stepUntil - A.t) / 0.22 * Math.PI); }
+    // Al acecho del ratón: agachado, ojos entornados, brazos preparados
+    if (S.sneak && S.mode === "walk" && !A.action) { P.sy *= 0.9; P.sx *= 1.05; if (!P.eyes) P.eyes = "squint"; P.tilt += 5 * S.facing; P.aL = lerp(P.aL, 34, 0.7); P.aR = lerp(P.aR, -34, 0.7); }
+    // Abalanzándose: brazos arriba hacia delante
+    if (A.pounceUntil > A.t && !A.action) { P.aL = 128; P.aR = -128; P.front = true; }
     if (A.menuPose && !A.action && !S.fly && !S.dragging && !S.airborne) {
       P.aR = 104 + Math.sin(A.t * 9) * 4; P.front = true; P.tilt -= 8;
     }
@@ -861,9 +1190,9 @@
     const lean = (walking ? t * (S.speed > 100 ? 9 : 5) : 0) + P.sway;
     el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
-    const lift = clamp((floorY() - S.y) / 300, 0, 1);
+    const lift = clamp((groundY() - S.y) / 300, 0, 1);
     const sh = (1 - lift * 0.7) * A.appear;
-    el.shadow.setAttribute("transform", `translate(0 ${floorY() - S.y}) translate(0 176) scale(${sh} ${sh}) translate(0 -176)`);
+    el.shadow.setAttribute("transform", `translate(0 ${groundY() - S.y}) translate(0 176) scale(${sh} ${sh}) translate(0 -176)`);
     el.shadow.style.opacity = String(0.28 * (1 - lift * 0.6));
 
     // Piernas: pivotan en la cadera hacia donde camina; la que avanza se levanta
@@ -883,7 +1212,7 @@
     el.legL.setAttribute("transform", `translate(${xL.toFixed(2)} ${lL.toFixed(2)}) rotate(${rL.toFixed(2)} -21 122)`);
     el.legR.setAttribute("transform", `translate(${xR.toFixed(2)} ${lR.toFixed(2)}) rotate(${rR.toFixed(2)} 21 122)`);
     // Profundidad: la pierna y el brazo del lado lejano, detrás y algo más oscuros
-    const farLeft = t > 0.15, farRight = t < -0.15;
+    const farLeft = t < -0.15, farRight = t > 0.15;   // al mirar a la derecha, el lado lejano es el derecho de la pantalla (su brazo izquierdo)
     if (farLeft !== A.farLeft || farRight !== A.farRight) {
       A.farLeft = farLeft; A.farRight = farRight;
       if (farLeft) el.legs.appendChild(el.legR); else el.legs.appendChild(el.legL);
@@ -903,25 +1232,28 @@
       else if (armKey === "R") el.upper.after(el.armR);
       else if (armKey === "L") el.upper.after(el.armL);
     }
-    const dxL = t > 0 ? 22 * t : -16 * t;
-    const dxR = t > 0 ? -16 * t : 22 * t;
+    const dxL = t > 0 ? 16 * t : -22 * t;
+    const dxR = t > 0 ? -22 * t : 16 * t;
     el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
     el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
-    el.body.setAttribute("transform", `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
-    el.bodyHl.setAttribute("transform", `translate(${(-12 * t).toFixed(2)} 0)`);
+    el.body.setAttribute("transform", `translate(${(3 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
+    el.bodyHl.setAttribute("transform", `translate(${(4 * t).toFixed(2)} 0)`);
     // Los complementos del cuerpo siguen al cuerpo; el cuello del vampiro y la capa, también a la cabeza y al sentarse
-    const bodyT = `translate(${(-2 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`;
+    const bodyT = `translate(${(3 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`;
     el.accBody.setAttribute("transform", bodyT);
 
     const headDrop = (S.sleeping ? 4 : 0) + P.nod + A.hy;
     el.accBack.setAttribute("transform", `translate(${(2 * th + A.lag * 0.6).toFixed(2)} ${(sitDrop + Math.min(0, headDrop) * 0.3).toFixed(2)}) scale(${(1 - 0.1 * at).toFixed(4)} 1)`);
     el.head.setAttribute("transform", `translate(${(4 * th + A.lag).toFixed(2)} ${headDrop.toFixed(2)}) rotate(${(A.tilt + P.tilt).toFixed(2)} 0 40) scale(${(1 - 0.05 * ath).toFixed(4)} 1)`);
-    el.hl.setAttribute("transform", `translate(${(-14 * th).toFixed(2)} ${(P.nod * 0.5).toFixed(2)})`);
+    el.hl.setAttribute("transform", `translate(${(5 * th).toFixed(2)} ${(P.nod * 0.5).toFixed(2)})`);
     el.hat.setAttribute("transform", `translate(${(10 * th).toFixed(2)} 0)`);
 
     const ex = P.eyeX != null ? P.eyeX : A.eyeX;
     const ey = (P.eyeY != null ? P.eyeY : A.eyeY) + P.nod * 0.9;
     el.eyes.setAttribute("transform", `translate(${ex.toFixed(2)} ${ey.toFixed(2)})`);
+    if (A.sprStage && el.sprout.style.display !== "none") {
+      EkoArt.pose(el.sprout, { stage: A.sprStage, pop: A.sprPop ?? 1, sway: A.spr || 0, swayV: A.sprV || 0, bloom: A.bloom ?? 1, season: EVO.season || EkoArt.seasonOf(), t: A.t });
+    }
     const pos = [];
     el.eyeEls.forEach((e, i) => {
       const base = i === 0 ? -32 : 32;
@@ -1138,7 +1470,7 @@
   hit.addEventListener("pointermove", (e) => {
     if (!S.pressed) return;
     if (!S.dragging && Math.hypot(e.screenX - downX, e.screenY - downY) > 5) {
-      S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null;
+      S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null; S.perch = null; S.sneak = false; WIN.pendDx = 0;
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; }
       if (window.EkoMenu) window.EkoMenu.close();
       if (S.fly) { S.fly = null; setTimeout(() => setFlyGear(null), 800); }
@@ -1148,6 +1480,8 @@
       touched();
       bump(-3);
       fx("bang");
+      DRAG.t0 = A.t; DRAG.heldSaid = false; DRAG.lastVx = 0; DRAG.lastVy = 0; DRAG.zoomAt = 0;
+      if (Math.random() < 0.65 && A.t > DRAG.nextGrabLine) { DRAG.nextGrabLine = A.t + 6; setTimeout(() => { if (S.dragging && A.dizzy < 0.4) say(pickNew(TXT.grab), 2200, true); }, 250); }
     }
     if (S.dragging) {
       const now = performance.now();
@@ -1157,6 +1491,18 @@
       S.vx = S.vx * 0.5 + ((S.x - prevX) / dtm) * 0.5;
       S.vy = S.vy * 0.5 + ((S.y - prevY) / dtm) * 0.5;
       prevX = S.x; prevY = S.y; prevT = now;
+      // Zarandeo: cada cambio brusco de sentido suma al mareo
+      const flipX = Math.sign(S.vx) !== Math.sign(DRAG.lastVx) && Math.abs(S.vx - DRAG.lastVx) > 900;
+      const flipY = Math.sign(S.vy) !== Math.sign(DRAG.lastVy) && Math.abs(S.vy - DRAG.lastVy) > 900;
+      if (flipX || flipY) {
+        const before = A.dizzy;
+        A.dizzy = Math.min(3, A.dizzy + clamp((Math.abs(S.vx - DRAG.lastVx) + Math.abs(S.vy - DRAG.lastVy)) / 5000, 0.08, 0.35));
+        bump(-1.5); A.sqxV += 3;
+        if (before < 0.6 && A.dizzy >= 0.6) { say(pickNew(TXT.shake), 1800, true); Voice.chirp(); }
+        else if (before < 1.6 && A.dizzy >= 1.6) { say(pickNew(TXT.shake), 1800, true); fx("spark", 2); }
+      }
+      DRAG.lastVx = S.vx; DRAG.lastVy = S.vy;
+      if (Math.hypot(S.vx, S.vy) > 1700 && A.dizzy < 0.5 && A.t > DRAG.zoomAt) { DRAG.zoomAt = A.t + 8; if (Math.random() < 0.5) say(pickNew(TXT.zoom), 1600, true); }
     }
   });
 
@@ -1170,7 +1516,11 @@
       S.vx = clamp(S.vx, -1800, 1800);
       S.vy = clamp(S.vy, -1800, 1800);
       S.airborne = true; S.mode = "idle";
-      setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pick(TXT.drop)); }, 900);
+      if (A.dizzy > 0.8) {
+        // Mareado: al tocar suelo, ojos en espiral, se tambalea un rato y quizá se sienta
+        const lvl = A.dizzy;
+        DRAG.dizzyLanding = lvl;
+      } else setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
     } else if (performance.now() - downT < 350) {
       // Clic = menú; doble clic = saltito. Se espera un instante para distinguirlos.
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; poke(); }
@@ -1214,6 +1564,12 @@
   function onCursor(p) {
     const moved = Math.hypot(p.x - cursor.lastX, p.y - cursor.lastY);
     if (moved > 0.5) cursor.lastMove = A.t;
+    const nowMs = performance.now(), dts = Math.max(0.016, (nowMs - (cursor.lastT || nowMs - 40)) / 1000);
+    cursor.lastT = nowMs;
+    // Si pasa el ratón disparado justo a su lado, se asusta (de vez en cuando)
+    const ecx = S.x + W / 2, ecy = S.y + H - 120;
+    if (moved / dts > 2600 && Math.hypot(p.x - ecx, p.y - ecy) < 170 && !busy() && cool("startle", rnd(40, 90))) { act("surprise"); bump(-4); Voice.chirp(); }
+    if (WIN.hunt && Math.hypot(p.x - WIN.hunt.x, p.y - WIN.hunt.y) > 70) abortHunt(true);
     if (p.over && !S.pressed && moved > 0.5 && moved < 22) {
       cursor.pet += moved;
       if (cursor.pet > 260 && A.mood !== "happy") {
@@ -1240,6 +1596,8 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
+    setEvo, evo: EVO, celebrateStage,
+    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
@@ -1321,6 +1679,8 @@
       sendHitbox();
       invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
       listen("cursor", (e) => onCursor(e.payload));
+      listen("win", (e) => onWin(e.payload));
+      listen("winev", (e) => onWinEv(e.payload));
       listen("eko-reset", () => location.reload());
       listen("cmd", (e) => {
         const c = e.payload;

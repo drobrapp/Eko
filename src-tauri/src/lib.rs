@@ -5,6 +5,7 @@
 
 mod actions;
 mod senses;
+mod winwatch;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -292,6 +293,7 @@ pub fn run() {
             build_tray(app)?;
             let _ = app.global_shortcut().register(panic_key);
             start_cursor_loop(app.handle().clone());
+            winwatch::start(app.handle().clone());
             start_update_loop(app.handle().clone());
             senses::start(app.handle().clone());
             Ok(())

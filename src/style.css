@@ -58,7 +58,13 @@ html, body {
 .eye .rim { fill: rgba(255, 255, 255, .12); stroke: #3b2f2a; stroke-width: 2.6; display: none; }
 #bridge { stroke: #3b2f2a; stroke-width: 2.6; stroke-linecap: round; display: none; }
 .has-glasses .eye .rim, .has-glasses #bridge { display: inline; }
-.eye .blush { opacity: 0; transition: opacity .4s ease; }
+.eye .blush { opacity: var(--blush0, 0); transition: opacity .4s ease; }
+/* Evolución: ojeras (noctámbulo) y corazoncito (cariño) */
+.eye .owl { fill: #8f79b8; opacity: var(--owl, 0); }
+.eye .lovemark { opacity: var(--love, 0); }
+#paint .gloss, #paintHead .gloss { opacity: var(--wet, .75); }
+[data-eyes="closed"] .eye .owl, [data-eyes="happy"] .eye .owl { opacity: calc(var(--owl, 0) * .6); }
+.acc-pumpkin .eye .owl, .acc-pumpkin .eye .lovemark, .acc-ghost #paint { display: none; }
 .blushing .eye .blush { opacity: .55; }
 
 [data-eyes="happy"] .eye .open,

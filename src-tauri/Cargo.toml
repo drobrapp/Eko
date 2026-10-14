@@ -1,6 +1,6 @@
 [package]
 name = "eko"
-version = "0.6.0"
+version = "0.7.1"
 description = "Eko, tu inquilino de escritorio"
 edition = "2021"
 
@@ -27,7 +27,7 @@ notify = "8"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
-windows = { version = "0.62", features = ["Foundation", "Media_Control", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_SystemInformation", "Win32_System_Power"] }
+windows = { version = "0.62", features = ["Foundation", "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Media_Control", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_SystemInformation", "Win32_System_Power"] }
 
 [profile.release]
 codegen-units = 1

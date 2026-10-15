@@ -103,6 +103,7 @@
       { id: "util", react: "curioso", icon: "util", label: L.util, go: "util" },
       { id: "wardrobe", react: "orgulloso", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
       { id: "rest", react: "yawn", icon: "moon", label: L.rest, go: "rest" },
+      { id: "chat", react: "curioso", icon: "sparkle", label: ES ? "Habla conmigo" : "Talk to me", run: () => window.EkoChat && window.EkoChat.open(), when: () => !!(window.EkoChat && window.EkoChat.enabled()) },
       { id: "settings", react: "settings", icon: "sliders", label: L.settings, run: openSettings },
     ],
     treats: [
@@ -247,7 +248,7 @@
 
   function layout(n) {
     const out = [];
-    if (n > 6) {                      // muchas opciones (armario): rejilla encima de la cabeza
+    if (n > 7) {                      // muchas opciones (armario): rejilla encima de la cabeza
       const cols = 4, rows = Math.ceil(n / cols);
       for (let i = 0; i < n; i++) {
         const r = Math.floor(i / cols), c = i % cols, inRow = Math.min(cols, n - r * cols);
@@ -255,7 +256,7 @@
       }
       return out;
     }
-    const radius = n <= 4 ? 122 : n <= 5 ? 138 : 150;  // arco por encima de la cabeza
+    const radius = n <= 4 ? 122 : n <= 5 ? 138 : n <= 6 ? 150 : 164;  // arco por encima de la cabeza
     for (let i = 0; i < n; i++) {
       const a = (n === 1 ? 270 : 200 + 140 * (i / (n - 1))) * Math.PI / 180;
       out.push({ x: HEAD.x + Math.cos(a) * radius, y: HEAD.y + Math.sin(a) * radius });
@@ -273,7 +274,7 @@
     level = levelId;
     menu.innerHTML = "";
     capText = "";
-    const items = levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId];
+    const items = (levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId]).filter((it) => !it.when || it.when());
     if (!capText) capText = (levelId === "smart" || (levelId === "root" && greetNext)) ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     greetNext = false;
     const pos = layout(items.length);

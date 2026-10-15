@@ -523,3 +523,9 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 #updBadge.in { opacity: 1; transform: none; animation: updPulse 1.6s ease-in-out infinite .4s; }
 @keyframes updPulse { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-4px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
 .menu-open #updBadge { opacity: 0; }
+
+/* ---------- Habla conmigo (IA local, prueba) ---------- */
+.card.chat { top: 18px; width: 250px; padding: 8px 10px 8px 12px; }
+.card.chat form { display: flex; gap: 6px; margin: 0; }
+.card.chat input { flex: 1; min-width: 0; }
+.card.chat .x { position: absolute; right: -6px; top: -8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #efe3da; color: #6b5348; font: 700 14px/22px "Segoe UI", system-ui, sans-serif; cursor: pointer; padding: 0; }

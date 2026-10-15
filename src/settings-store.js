@@ -16,7 +16,10 @@ window.EkoSettings = (() => {
     hideCall: true,          // esconderse en llamadas
     desktop: false,
     menuAsk: true,
-    listen: false,           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
+    listen: false,
+    ai: false,               // PRUEBA: hablar con Eko usando una IA local (Ollama)
+    aiModel: "qwen2.5:7b",
+    aiCpu: false,            // usar solo el procesador (si la gráfica da problemas)           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
     hideRecord: true,        // esconderse al grabar la pantalla
     hideFull: true,          // esconderse en pantalla completa
     size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande

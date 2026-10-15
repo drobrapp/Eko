@@ -47,6 +47,8 @@
     walk: (v) => yes(v) ? "¡A pasear!" : "¿Quieto? Bueno, haré yoga",
     fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
     follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
+    ai: (v) => yes(v) ? "¡Voy a poder charlar contigo de verdad!" : "Vale, vuelvo a ser de pocas palabras",
+    aiCpu: (v) => yes(v) ? "Pensaré más despacio, pero sin forzar tu gráfica" : "¡A toda máquina!",
     listen: (v) => yes(v) ? "¡Te escucho! Llámame por mi nombre" : "Vale, me tapo las orejas",
     desktop: (v) => yes(v) ? "¡Bien! Me encanta curiosear. Prometo no abrir nada" : "Vale, no toco tu escritorio",
     hideCall: (v) => yes(v) ? "En llamadas, desaparezco" : "¿Puedo salir en tus llamadas? ¡Hola a todos!",
@@ -162,6 +164,21 @@
     const add = (line) => { const pre = $("#voiceLog"); if (pre.hidden) return; vlog.push(line); vlog = vlog.slice(-12); pre.textContent = vlog.join("\n"); pre.scrollTop = 1e6; };
     T.event.listen("voice-status", (e) => { const f = VS[e.payload.state]; if (f) add(f(e.payload)); });
   }
+
+  // Comprobar la IA local (Ollama)
+  $("#aiCheck").addEventListener("click", async () => {
+    const st = $("#aiState");
+    if (!invoke) { st.textContent = "Solo funciona en la app"; return; }
+    st.textContent = "Comprobando…";
+    try {
+      const j = JSON.parse(await invoke("ai_status"));
+      const names = (j.models || []).map((m) => m.name);
+      const want = (S.get().aiModel || "qwen2.5:7b").trim();
+      const has = names.some((n) => n === want || n === want + ":latest" || n.split(":")[0] === want);
+      if (has) { st.textContent = `✅ Todo listo: Ollama funciona y tienes «${want}»`; says("¡Tengo cerebro! Háblame desde mi menú"); }
+      else st.textContent = `⚠ Ollama funciona, pero falta el modelo «${want}». Abre una terminal y escribe: ollama pull ${want}` + (names.length ? ` (tienes: ${names.join(", ")})` : "");
+    } catch (_) { st.textContent = "❌ No encuentro Ollama. Instálalo desde ollama.com y ábrelo"; says("No encuentro mi cerebro… ¿has instalado Ollama?"); }
+  });
 
   // Privacidad
   $("#wipe").addEventListener("mouseenter", () => says(pick(["No, no, no…", "Ese botón me da miedo", "¿Seguro que quieres tocar eso?"])));

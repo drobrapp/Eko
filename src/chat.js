@@ -127,13 +127,13 @@
   // Barra en el escritorio (si la IA está activada y «Barra para hablar» también)
   let barOn = false, ekoAway = false;
   if (E.listen) E.listen("cmd", (e) => {
-    if (e.payload === "stowball") { ekoAway = true; barOn = false; }          // Eko se ha escondido: la barra también
+    if (e.payload === "stowball") { barOn = false; }                          // Rust la ha escondido junto con Eko: se vuelve a mostrar
     if (e.payload === "wake" || e.payload === "back") { ekoAway = false; barOn = false; syncBar(); }
   });
   function syncBar() {
-    if (!invoke || ekoAway) return;
+    if (!invoke) return;
     const s = cfg(), l = E.lastSenses || {};
-    const want = !!s.ai && s.aiBar !== false && !E.A.hidden && !l.fullscreen && !l.in_call;
+    const want = !!s.ai && s.aiBar !== false && !E.A.hidden && !l.fullscreen;   // siempre visible salvo en pantalla completa
     if (want === barOn) return;
     barOn = want;
     if (want) {

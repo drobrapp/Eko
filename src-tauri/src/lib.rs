@@ -153,9 +153,6 @@ pub(crate) fn put_ball_away(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("ball") {
         let _ = w.hide();
     }
-    if let Some(w) = app.get_webview_window("chatbar") {
-        let _ = w.hide();
-    }
     let _ = app.emit_to("main", "cmd", "stowball");
 }
 

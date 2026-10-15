@@ -322,6 +322,26 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .thinking #thought i { animation: dot 1.2s infinite; }
 .thinking #thought i:nth-child(2) { animation-delay: .3s; }
 .thinking #thought i:nth-child(3) { animation-delay: .6s; }
+/* Bocadillo de deseo (necesidades): lo que le apetece, flotando */
+#wish {
+  position: absolute; left: 0px; bottom: 72px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: #fffaf6; box-shadow: 0 2px 8px rgba(60, 40, 30, .18);
+  display: grid; place-items: center;
+  opacity: 0; transform: scale(.4) translateY(10px); transform-origin: 85% 100%;
+  transition: opacity .25s ease, transform .4s cubic-bezier(.3, 1.6, .5, 1);
+  pointer-events: none; z-index: 3;
+}
+#wish::before, #wish::after { content: ""; position: absolute; background: #fffaf6; border-radius: 50%; box-shadow: 0 1px 4px rgba(60, 40, 30, .15); }
+#wish::before { width: 10px; height: 10px; right: -8px; bottom: 0px; }
+#wish::after { width: 6px; height: 6px; right: -17px; bottom: -8px; }
+#wish img { width: 34px; height: 34px; object-fit: contain; }
+#wish[data-k="energy"] img { width: 42px; height: 42px; transform: translateY(4px); }
+.wishing #wish { opacity: 1; transform: none; }
+.wishing #wish img { animation: wishBob 1.6s ease-in-out infinite; }
+@keyframes wishBob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+#wish[data-k="energy"] img { animation-name: wishBobE; }
+@keyframes wishBobE { 0%, 100% { transform: translateY(4px) rotate(-6deg); } 50% { transform: translateY(1px) rotate(6deg); } }
 @keyframes dot { 0%, 100% { opacity: .15; } 40% { opacity: 1; } }
 
 /* ---------- Disfraz de fantasma: sin brazos ---------- */
@@ -390,6 +410,23 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
   66% { border-radius: 55% 45% 52% 48% / 45% 52% 48% 55%; }
 }
 
+/* ---------- Libreta (necesidades) ---------- */
+.card .nb h4 { margin: 0 0 8px; font: 700 14px "Segoe UI", system-ui, sans-serif; text-align: center; }
+.card .nbr { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 6px; margin: 0 0 3px; border-radius: 12px; background: none; color: inherit; text-align: left; font: inherit; transition: background .15s; }
+.card .nbr:hover { background: #f7ece4; }
+.card .nbr:hover .nbi img { transform: rotate(-10deg) scale(1.12); }
+.nbi { flex: 0 0 32px; height: 32px; display: grid; place-items: center; }
+.nbi img { width: 30px; height: 30px; object-fit: contain; transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+.nbr[data-k="energy"] .nbi img { width: 34px; height: 34px; }
+.nbr.low .nbi img { animation: nbWobble 1.4s ease-in-out infinite; }
+@keyframes nbWobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+.nbl { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr auto; row-gap: 3px; align-items: baseline; }
+.nbl b { font-size: 12.5px; }
+.nbl em { font-style: normal; font-size: 11px; color: #9a8478; }
+.nbl .bar { grid-column: 1 / -1; height: 7px; border-radius: 99px; background: #f1e6dd; overflow: hidden; }
+.nbl .bar i { display: block; height: 100%; border-radius: 99px; transition: width .6s ease, background .6s ease; }
+.card .nbh { margin: 6px 0 8px; font-size: 11px; color: #9a8478; text-align: center; }
+.card .nbs { display: block; margin: 0 auto; background: #f1e6dd; color: #6b5348; }
 /* ---------- Tarjeta (formularios y listas) ---------- */
 .card {
   position: absolute;

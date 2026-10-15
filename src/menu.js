@@ -18,6 +18,7 @@
     util: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>',
     hanger: '<path d="M10 6.5a2 2 0 1 1 2.6 1.9c-.4.1-.6.5-.6.9V10"/><path d="M12 10L3.5 16.5c-.8.6-.4 1.5.5 1.5h16c.9 0 1.3-.9.5-1.5L12 10Z"/>',
     moon: '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z"/>',
+    book: '<path d="M5 4.5h10.5a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2V4.5Z"/><path d="M5 18a2 2 0 0 1 2-2h10.5M9 8.5h5"/>',
     sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
     ball: '<circle cx="12" cy="12" r="8.5"/><path d="M4 10c5 2 11 2 16 0M8.5 4.5c-2 5-2 10 0 15"/>',
     cookie: '<circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="9.5" r="1.2" fill="currentColor"/><circle cx="14.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="15" r="1.2" fill="currentColor"/>',
@@ -104,7 +105,8 @@
       { id: "wardrobe", react: "orgulloso", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
       { id: "rest", react: "yawn", icon: "moon", label: L.rest, go: "rest" },
       { id: "chat", react: "curioso", icon: "sparkle", label: ES ? "Habla conmigo" : "Talk to me", run: () => window.EkoChat && window.EkoChat.open(), when: () => !!(window.EkoChat && window.EkoChat.enabled()) },
-      { id: "settings", react: "settings", icon: "sliders", label: L.settings, run: openSettings },
+      { id: "notebook", react: "orgulloso", icon: "book", label: ES ? "Mi libreta" : "My notebook", run: () => showNotebook(), when: () => !!(window.EkoNeeds && window.EkoNeeds.on()) },
+      { id: "settings", react: "settings", icon: "sliders", label: L.settings, run: openSettings, when: () => !(window.EkoNeeds && window.EkoNeeds.on()) },
     ],
     treats: [
       { id: "snack", react: "divertido", icon: "cookie", label: L.snack, run: giveSnack },
@@ -397,7 +399,10 @@
 
   // ---------- Jugar: snack, truco ----------
   function giveSnack() {
+    const Nd = window.EkoNeeds;
+    if (Nd && Nd.full()) { E.act("shake"); E.express("contento", 2); E.say(pick(Nd.L.full), 2200, true); return; }
     E.act("eat");
+    if (Nd) Nd.give("feed");
     setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);
   }
   function trick() {
@@ -409,6 +414,7 @@
 
   // ---------- Piedra, papel o tijera ----------
   function playRps(you) {
+    if (window.EkoNeeds) window.EkoNeeds.give("fetch");
     E.act("rps");
     setTimeout(() => {
       const me = Math.floor(Math.random() * 3);
@@ -518,6 +524,8 @@
   }
 
   function startGame(game) {
+    const Nd = window.EkoNeeds;
+    if (Nd) { Nd.give("play"); if (Nd.on() && Nd.get().energy < 20) setTimeout(() => E.say(pick(Nd.L.tired), 2000, true), 900); }
     if (game === "ball") startBall();
     else if (game === "hide") startHide();
     else { openAt("rps"); E.say(pick(P_TX.rpsGo), 1800, true); }
@@ -638,6 +646,7 @@
           ball.held = false; ball.vx = toMid * (140 + Math.random() * 120); ball.vy = -420;
           E.hop(-360);
           E.say(pick(SAY.fetch), 2200);
+          if (window.EkoNeeds) window.EkoNeeds.give("fetch");
           ball.idleSince = performance.now();
         }, 900);
       }
@@ -723,6 +732,40 @@
       E.say(pick(SAY.done), 2200, true); E.hop(-360); E.fx("spark", 2);
       setTimeout(() => { if (!tasks.some((x) => !x.done)) closeCard(); }, 900);
     }));
+    setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
+  }
+
+  // ---------- Libreta: cómo está (necesidades) ----------
+  let nbTimer = 0;
+  function showNotebook() {
+    const Nd = window.EkoNeeds; if (!Nd) return openSettings();
+    const name = (window.EkoSettings && window.EkoSettings.get().petName) || "Eko";
+    const NAMES = ES ? { hunger: "Hambre", energy: "Energía", fun: "Diversión", love: "Cariño" } : { hunger: "Food", energy: "Energy", fun: "Fun", love: "Love" };
+    const src = (id) => { const n = document.getElementById(id); return n ? n.getAttribute("href") : ""; };
+    const row = (k) => `<button type="button" class="nbr" data-k="${k}"><span class="nbi"><img src="${src(Nd.WISH[k])}" alt=""></span><span class="nbl"><b>${NAMES[k]}</b><em></em><span class="bar"><i></i></span></span></button>`;
+    const c = card(`<div class="nb"><h4>${ES ? "La libreta de" : ""} ${name}${ES ? "" : "'s notebook"}</h4>${Nd.KINDS.map(row).join("")}<p class="nbh">${ES ? "Toca una para cuidarme" : "Tap one to look after me"}</p><button type="button" class="nbs">${L.settings}</button></div>`);
+    const paint = () => {
+      const n = Nd.get();
+      c.querySelectorAll(".nbr").forEach((b) => {
+        const v = Math.round(n[b.dataset.k]);
+        const bar = b.querySelector(".bar i");
+        bar.style.width = Math.max(4, v) + "%";
+        bar.style.background = `hsl(${Math.round(8 + v * 1.02)}, 58%, 60%)`;
+        b.querySelector("em").textContent = Nd.word(b.dataset.k);
+        b.classList.toggle("low", v < 40);
+      });
+    };
+    paint();
+    clearInterval(nbTimer); nbTimer = setInterval(() => { if (!c.classList.contains("in") || !c.querySelector(".nb")) { clearInterval(nbTimer); return; } paint(); }, 1500);
+    E.act("nod");
+    const act = {
+      hunger: () => giveSnack(),
+      energy: () => (Nd.get().energy < 60 ? E.goToSleep() : (E.act("shake"), E.say(ES ? "¡Aún no tengo sueño!" : "I'm not sleepy yet!", 2000, true))),
+      fun: () => propose(true),
+      love: () => { E.act("hug"); Nd.give("hug"); E.fx("heart", 2); E.say(pick(ES ? ["¡Achuchón!", "Qué gustito…", "¡Te quiero!"] : ["Squeeze!", "So nice…", "Love you!"]), 2200, true); },
+    };
+    c.querySelectorAll(".nbr").forEach((b) => b.addEventListener("click", () => { closeCard(); setTimeout(act[b.dataset.k], 250); }));
+    c.querySelector(".nbs").addEventListener("click", () => { closeCard(); openSettings(); });
     setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
   }
 
@@ -880,7 +923,7 @@
       if (!open && updPending()) { openAt("update"); return true; }
       return false;
     },
-    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), propose: () => { try { propose(false, "bored"); } catch (_) {} }, startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

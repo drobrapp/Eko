@@ -16,6 +16,8 @@ window.EkoSettings = (() => {
     hideCall: true,          // esconderse en llamadas
     desktop: false,
     menuAsk: true,
+    needs: true,             // modo tamagotchi: hambre, energía, diversión y cariño
+    needsMode: "normal",     // relax · normal · hard
     listen: false,
     ai: false,               // PRUEBA: hablar con Eko usando una IA local (Ollama)
     aiModel: "qwen2.5:7b",

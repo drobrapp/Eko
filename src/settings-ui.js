@@ -42,6 +42,8 @@
     userName: (v) => v ? `¡Encantado, ${v}!` : "Vale, seguirás siendo un misterio",
     bedtime: () => "Apuntado. A esa hora te mandaré a dormir (con cariño)",
     menuAsk: (v) => yes(v) ? "¡Bien! Me encanta preguntarte cosas" : "Vale, nada de preguntas. Solo opciones",
+    needs: (v) => yes(v) ? "¡Bien! Así sabrás cuándo me apetece algo" : "Vale, me apaño solito",
+    needsMode: (v) => v === "relax" ? "Tranqui, soy de bajo mantenimiento" : v === "hard" ? "¡Prepárate, que soy muy demandante!" : "Ni mucho ni poco",
     voice: (v) => yes(v) ? "¡Bla, bla! ¿Me oyes?" : "Vale… seré un mimo",
     pitch: () => "¿Así sueno mejor?",
     walk: (v) => yes(v) ? "¡A pasear!" : "¿Quieto? Bueno, haré yoga",

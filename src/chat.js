@@ -37,13 +37,14 @@
       `Si te apetece hacer algo, termina con una acción entre llaves: {baila}, {salta}, {saluda}, {abrazo}, {piensa} o {duerme}. Úsalo poco.`,
       `Contexto ahora: es ${dias[now.getDay()]}, son las ${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}.` +
         (l.app ? ` Tu humano está usando ${String(l.app).replace(/\.exe$/i, "")}.` : "") +
-        (thirsty ? " Tu brote tiene sed." : "") + (E.S.sleeping ? " Estabas dormido." : ""),
+        (thirsty ? " Tu brote tiene sed." : "") + (E.S.sleeping ? " Estabas dormido." : "") + (window.EkoNeeds ? window.EkoNeeds.describe() : ""),
     ].join("\n");
   }
 
   async function ask(text) {
     if (thinking && Date.now() - thinking < 130000) { E.sayChat("¡Espera, que aún estoy pensando lo anterior!", 2200); return; }
     thinking = Date.now();
+    if (window.EkoNeeds) window.EkoNeeds.give("chat");
     history.push({ role: "user", content: text });
     history = history.slice(-12);
     E.lockTalk(130);                       // nada de comentarios propios mientras pensamos la respuesta

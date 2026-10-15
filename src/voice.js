@@ -81,6 +81,7 @@
       const fn = MAP.get(norm(v.text).replace(/,/g, ""));
       if (!fn) { status("unknown", v.text, v.conf); return; }
       lastCmd = performance.now();
+      if (window.EkoNeeds) window.EkoNeeds.give("voice");
       if (E.S.sleeping && !/despierta|arriba|buenos días/.test(norm(v.text))) { E.wakeUp(); setTimeout(fn, 1600); return; }
       fn();
     } else if (v.kind === "error" && !onVoice.warned) {

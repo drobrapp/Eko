@@ -920,6 +920,7 @@
     const first = !CARE.days.includes(today);
     if (first) CARE.days.push(today);
     CARE.last = Date.now(); CARE.wilted = false; saveCare();
+    if (window.EkoNeeds) window.EkoNeeds.give("water");
     const st = careStage();
     if (st > before && EVO.shown < st) { setTimeout(() => celebrateStage(st), 900); return "grow"; }
     A.sprPop = 0.55; A.sprPopV = 0;
@@ -1902,6 +1903,7 @@
   const pokes = [];
   function poke() {
     touched();
+    if (window.EkoNeeds) window.EkoNeeds.give("pet");
     if (S.sleeping) { wakeUp(); return; }
     const now = performance.now();
     pokes.push(now);

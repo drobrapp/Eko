@@ -10,7 +10,7 @@
   const stage = document.getElementById("stage");
   const MOODS = ["feliz", "curioso", "sorprendido", "triste", "emocionado", "picaro", "enamorado", "timido", "confundido", "orgulloso", "divertido", "cansado", "sereno", "esperanzado"];
   const ACTS = { baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"), abrazo: () => E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep() };
-  let history = [], thinking = false;
+  let history = [], thinking = 0;
 
   function system() {
     const s = cfg(), now = new Date(), l = E.lastSenses || {};
@@ -30,12 +30,16 @@
   }
 
   async function ask(text) {
-    if (thinking) return;
-    thinking = true;
+    if (thinking && Date.now() - thinking < 130000) { E.say("¡Espera, que aún estoy pensando lo anterior!", 2200, true); return; }
+    thinking = Date.now();
     history.push({ role: "user", content: text });
     history = history.slice(-12);
     E.act("think");
     E.express("curioso", 3);
+    // que se vea que está pensando (la primera vez tarda más: Ollama carga el modelo)
+    E.say("…", 120000, true);
+    const slow1 = setTimeout(() => { if (thinking) E.say("Mmm… déjame pensar…", 120000, true); }, 8000);
+    const slow2 = setTimeout(() => { if (thinking) E.say("La primera vez tardo más, estoy despertando mi cerebro…", 120000, true); }, 25000);
     let reply = "";
     try {
       if (!invoke) { await new Promise((r) => setTimeout(r, 900)); reply = `[divertido] Esto es la vista previa: en tu PC te respondería la IA de verdad. ¡Has dicho «${text.slice(0, 30)}»! {salta}`; }
@@ -49,12 +53,15 @@
         reply = (JSON.parse(raw).message || {}).content || "";
       }
     } catch (e) {
+      clearTimeout(slow1); clearTimeout(slow2);
       thinking = false;
+      window.EkoChat.lastError = String(e || "");
       const msg = String(e || "");
       E.express("confundido", 2.5); E.fx("ask", 1);
-      E.say(/offline/.test(msg) ? "No encuentro mi cerebro… ¿está Ollama abierto?" : /404|not found/i.test(msg) ? "Me falta descargar mi cerebro (el modelo). Mira en Ajustes" : "Uy, se me ha cruzado un cable. ¿Me lo repites?", 3600, true);
+      E.say(/offline/.test(msg) ? "No encuentro mi cerebro… ¿está Ollama abierto?" : /404|not found/i.test(msg) ? "Me falta descargar mi cerebro (el modelo). Mira en Ajustes" : /timed out|tiempo|10060|os error/i.test(msg) ? "He tardado demasiado en pensar… prueba otra vez o activa «Usar solo el procesador»" : "Uy, se me ha cruzado un cable: " + msg.slice(0, 80), 5000, true);
       return;
     }
+    clearTimeout(slow1); clearTimeout(slow2);
     thinking = false;
     show(reply);
   }

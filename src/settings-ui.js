@@ -175,7 +175,17 @@
       const names = (j.models || []).map((m) => m.name);
       const want = (S.get().aiModel || "qwen2.5:7b").trim();
       const has = names.some((n) => n === want || n === want + ":latest" || n.split(":")[0] === want);
-      if (has) { st.textContent = `✅ Todo listo: Ollama funciona y tienes «${want}»`; says("¡Tengo cerebro! Háblame desde mi menú"); }
+      if (has) {
+        st.textContent = `✅ Ollama funciona y tienes «${want}». Probando a hablar… (la primera vez puede tardar hasta un minuto)`;
+        const t0 = Date.now();
+        try {
+          const body = { model: want, stream: false, messages: [{ role: "user", content: "Di solo: hola" }], options: Object.assign({ num_predict: 12 }, S.get().aiCpu ? { num_gpu: 0 } : {}) };
+          const r = JSON.parse(await invoke("ai_chat", { body: JSON.stringify(body) }));
+          const txt = ((r.message || {}).content || "").trim();
+          st.textContent = `✅ Todo listo. Ha respondido «${txt.slice(0, 40)}» en ${((Date.now() - t0) / 1000).toFixed(1)} s`;
+          says("¡Tengo cerebro! Háblame desde mi menú");
+        } catch (e2) { st.textContent = `⚠ Ollama está, pero al hablar ha fallado: ${String(e2).slice(0, 120)}`; }
+      }
       else st.textContent = `⚠ Ollama funciona, pero falta el modelo «${want}». Abre una terminal y escribe: ollama pull ${want}` + (names.length ? ` (tienes: ${names.join(", ")})` : "");
     } catch (_) { st.textContent = "❌ No encuentro Ollama. Instálalo desde ollama.com y ábrelo"; says("No encuentro mi cerebro… ¿has instalado Ollama?"); }
   });

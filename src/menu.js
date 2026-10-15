@@ -49,7 +49,7 @@
   const svg = (k, color) => `<svg viewBox="0 0 24 24" ${color ? `style="color:${color}"` : ""}>${I[k] || ""}</svg>`;
 
   const L = ES ? {
-    letsPlay: "¿Jugamos?", stowBall: "Guardar pelota", ballTip: "(Doble clic en la pelota para guardarla)", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
+    letsPlay: "¿Jugamos?", water: "Regar", waterTip: "¡Arrastra la regadera sobre mi cabeza!", stowBall: "Guardar pelota", ballTip: "(Doble clic en la pelota para guardarla)", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
     ball: "Pelota", snack: "Snack", games: "Juegos", trick: "Truco",
     rps: "Piedra, papel…", hand: "¿Qué mano?", hide: "Escondite",
     rock: "Piedra", paper: "Papel", scissors: "Tijera", lefth: "Izquierda", righth: "Derecha",
@@ -62,7 +62,7 @@
     soon: "Ajustes: nombre, cumpleaños, sonido, apps por categoría… ¡muy pronto!",
     onlyApp: "Eso solo funciona en la app",
   } : {
-    letsPlay: "Let's play?", stowBall: "Put ball away", ballTip: "(Double-click the ball to put it away)", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
+    letsPlay: "Let's play?", water: "Water", waterTip: "Drag the watering can over my head!", stowBall: "Put ball away", ballTip: "(Double-click the ball to put it away)", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
     ball: "Ball", snack: "Snack", games: "Games", trick: "Trick",
     rps: "Rock, paper…", hand: "Which hand?", hide: "Hide & seek",
     rock: "Rock", paper: "Paper", scissors: "Scissors", lefth: "Left", righth: "Right",
@@ -108,6 +108,7 @@
     treats: [
       { icon: "cookie", label: L.snack, run: giveSnack },
       { icon: "star", label: L.trick, run: trick },
+      { img: "artCan", label: L.water, run: () => startWater() },
     ],
     rps: [
       { icon: "rock", label: L.rock, run: () => playRps(0) },
@@ -174,7 +175,7 @@
       b.style.setProperty("--d", i * 45 + "ms");
       b.style.setProperty("--r", Math.random() * 2 + "s");
       const label = it.dyn ? it.dyn() : it.label;
-      b.innerHTML = (it.text ? `<b>${it.text}</b>` : svg(it.icon, it.color)) + (label ? `<span>${label}</span>` : "");
+      b.innerHTML = (it.text ? `<b>${it.text}</b>` : it.img ? `<img class="ic" src="${artSrc(it.img)}" alt="">` : svg(it.icon, it.color)) + (label ? `<span>${label}</span>` : "");
       b.addEventListener("click", (ev) => { ev.stopPropagation(); choose(it); });
       b.addEventListener("mouseenter", () => E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 80, 1000 + i * 80, 0.05, 0.015));
       menu.appendChild(b);
@@ -292,10 +293,25 @@
 
   // ---------- Escondite ----------
   let hideGame = false;
-  function startHide() {
+  async function startHide() {
     hideGame = true;
     E.say(pick(SAY.hide), 2200, true, "wink");
-    setTimeout(() => E.forcePeek(), 900);
+    // ¿Dónde se esconde? Borde de la pantalla, detrás de la ventana activa o detrás de un icono del escritorio
+    const spots = ["edge"];
+    if (E.perchRoom(E.win.cur)) spots.push("window", "window");
+    const icon = window.EkoDesktop ? await window.EkoDesktop.hideSpot() : null;
+    if (icon) spots.push("icon", "icon");
+    const where = pick(spots);
+    const hide = () => { if (hideGame && window.EkoAntics) window.EkoAntics.run("hideBehind"); };
+    if (where === "window") {
+      setTimeout(() => {
+        E.climb();
+        let n = 0;
+        const wait = setInterval(() => { n++; if (E.S.perch && !E.S.airborne) { clearInterval(wait); setTimeout(hide, 400); } else if (n > 40) { clearInterval(wait); E.forcePeek(); } }, 200);
+      }, 900);
+    } else if (where === "icon") {
+      setTimeout(() => { if (!E.visitIcon(icon, () => setTimeout(hide, 300))) E.forcePeek(); }, 900);
+    } else setTimeout(() => E.forcePeek(), 900);
     // Si lo encuentras (clic en él mientras se esconde) se ríe
     const onFound = () => {
       if (!hideGame) return;
@@ -394,7 +410,7 @@
   let ball = null, ballTips = 0;
   const ballEl = document.createElement("div");
   ballEl.id = "ball";
-  ballEl.innerHTML = '<svg viewBox="-12 -12 24 24"><circle r="11" fill="#f05d5e"/><path d="M-11,-2 C-4,2 4,2 11,-2" stroke="#fff" stroke-width="2.4" fill="none"/><circle cx="-4" cy="-5" r="3" fill="#fff" opacity=".5"/></svg>';
+  ballEl.innerHTML = `<img src="${(document.getElementById("artBall") || {}).getAttribute?.("href") || "art/ball.webp"}" alt="" draggable="false">`;
   stage.appendChild(ballEl);
   const R = 13; // radio de la pelota
 
@@ -607,11 +623,101 @@
     invoke(cmd).catch(() => E.say(L.onlyApp, 2400, true, "shrug"));
   }
 
+  // ---------- Regar el brote ----------
+  // Sale una regadera; la arrastras sobre la cabeza de Eko, se inclina sola y caen gotas.
+  const artSrc = (id) => { const n = document.getElementById(id); return n ? n.getAttribute("href") : ""; };
+  const CAN_W = 92, CAN_H = Math.round(92 * 143 / 200), TIP = { x: 198 / 200 * CAN_W, y: 49 / 143 * CAN_H };
+  let can = null;
+  const canEl = document.createElement("div");
+  canEl.id = "can";
+  canEl.innerHTML = `<img src="${artSrc("artCan")}" alt="" draggable="false">`;
+  stage.appendChild(canEl);
+  const dropsEl = document.createElement("div");
+  dropsEl.id = "drops";
+  stage.appendChild(dropsEl);
+  function waterTarget() {
+    const sb = stage.getBoundingClientRect();
+    const sp = E.sprout && E.sprout();
+    const r = sp && sp.style.display !== "none" ? sp.getBoundingClientRect() : document.getElementById("mochi").getBoundingClientRect();
+    const mo = document.getElementById("mochi").getBoundingClientRect();
+    return { x: mo.left + mo.width / 2 - sb.left, y: Math.min(r.top + r.height * 0.5, mo.top + 8) - sb.top };
+  }
+  function startWater() {
+    if (can) return;
+    if (open) close();
+    const t = waterTarget();
+    can = { x: t.x - 150, y: Math.max(8, t.y - 120), tilt: 0, poured: 0, drag: null, dropT: 0, drops: [], until: performance.now() + 30000, done: false };
+    canEl.classList.add("in");
+    E.setHitFull(true);
+    E.hold && E.hold(30);
+    E.say(L.waterTip, 2600, true);
+    E.express && E.express("esperanzado", 2.5);
+  }
+  function endWater() {
+    can = null;
+    canEl.classList.remove("in");
+    dropsEl.innerHTML = "";
+    if (!open && !ball && !hideGame) E.setHitFull(false);
+  }
+  canEl.addEventListener("pointerdown", (e) => {
+    if (!can || can.done) return;
+    canEl.setPointerCapture(e.pointerId);
+    can.drag = { x: e.clientX, y: e.clientY };
+    can.until = performance.now() + 30000;
+  });
+  canEl.addEventListener("pointermove", (e) => {
+    if (!can || !can.drag) return;
+    can.x += e.clientX - can.drag.x; can.y += e.clientY - can.drag.y;
+    can.x = E.clamp(can.x, -CAN_W * 0.3, innerWidth - CAN_W * 0.7); can.y = E.clamp(can.y, -10, innerHeight - CAN_H);
+    can.drag = { x: e.clientX, y: e.clientY };
+  });
+  canEl.addEventListener("pointerup", () => { if (can) can.drag = null; });
+  function canStep(dt) {
+    if (!can) return;
+    const t = waterTarget();
+    const tipX = can.x + TIP.x, tipY = can.y + TIP.y;
+    const over = !can.done && Math.abs(tipX - t.x) < 48 && tipY < t.y - 6 && tipY > t.y - 170;
+    can.tilt += ((over ? 38 : 0) - can.tilt) * Math.min(1, dt * 8);
+    // punta del pitorro una vez inclinada (gira sobre el centro de la regadera)
+    const a = can.tilt * Math.PI / 180, cx = can.x + CAN_W / 2, cy = can.y + CAN_H / 2;
+    const tx = cx + (TIP.x - CAN_W / 2) * Math.cos(a) - (TIP.y - CAN_H / 2) * Math.sin(a);
+    const ty = cy + (TIP.x - CAN_W / 2) * Math.sin(a) + (TIP.y - CAN_H / 2) * Math.cos(a);
+    if (over && can.tilt > 25) {
+      can.poured += dt;
+      can.dropT -= dt;
+      if (can.dropT <= 0) {
+        can.dropT = 0.07 + Math.random() * 0.05;
+        const s = 7 + Math.random() * 5;
+        const d = document.createElement("img");
+        d.src = artSrc("artDrop"); d.alt = ""; d.className = "drop";
+        d.style.width = s + "px";
+        dropsEl.appendChild(d);
+        can.drops.push({ el: d, x: tx + (Math.random() - 0.5) * 8, y: ty, vx: 30 + Math.random() * 40, vy: 20 + Math.random() * 30, s, floor: t.y + Math.random() * 10 });
+      }
+      if (can.poured > 1.8 && !can.done) {
+        can.done = true;
+        const res = E.water ? E.water() : "ok";
+        setTimeout(() => canEl.classList.add("bye"), 700);
+        setTimeout(() => { canEl.classList.remove("bye"); endWater(); }, 1300);
+        if (res !== "grow") E.act && E.act("nod");
+      }
+    }
+    for (const d of can.drops) {
+      d.vy += 900 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+      if (d.y >= d.floor) { d.el.remove(); d.dead = true; continue; }
+      d.el.style.transform = `translate(${(d.x - d.s / 2).toFixed(1)}px, ${(d.y - d.s * 0.7).toFixed(1)}px)`;
+    }
+    can.drops = can.drops.filter((d) => !d.dead);
+    canEl.style.transform = `translate(${can.x.toFixed(1)}px, ${can.y.toFixed(1)}px) rotate(${can.tilt.toFixed(1)}deg)`;
+    if (!can.done && performance.now() > can.until) endWater();
+  }
+
   // ---------- Bucle ----------
   let last = performance.now();
   (function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     ballStep(dt);
+    if (can) canStep(dt);
     requestAnimationFrame(loop);
   })(last);
   setInterval(() => { checkReminders(); tickPomo(); }, 1000);
@@ -631,6 +737,7 @@
 
   window.EkoMenu = {
     toggle() {
+      if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) { hideGame = false; return; }   // estaba escondido y lo has pillado
       const wasHiding = hideGame;
       document.dispatchEvent(new Event("eko-tap"));
       if (wasHiding) return;
@@ -638,7 +745,7 @@
     },
     close,
     propose: (force) => propose(force),
-    startGame: (g) => startGame(g), stowBall: () => stowBall(), get ball() { return ball; },
+    startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

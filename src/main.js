@@ -85,10 +85,18 @@
       winBye: ["¡Adiós, ventanita!", "Una menos"],
       winMin: ["¿A dónde ha ido?", "Se ha escondido…"],
       fall: ["¡Eh, que estaba ahí!", "¡Uy!"],
+      flyDown: ["¡Abajo voy!", "¡Aterrizaje heroico!", "¡Capa, al suelo!"],
+      stumble: ["¡Uy, uy, uy…!", "¡Ay, que me caigo!", "¿Esto se acaba aquí?"],
       climb: ["¡Arriba!", "Desde aquí se ve todo"],
       huntMiss: ["¡Casi!", "¡Se me ha escapado!"],
       huntCaught: ["¡Te pillé!", "¡Mío!"],
       huntHigh: ["Uf, está muy alto", "No llego…"],
+      thirsty: ["Mi brote tiene sed…", "¿Me riegas un poquito?", "Glu, glu… se me seca la hojita"],
+      careLow: ["Mi brote se ha puesto mustio… ¿me riegas?", "Necesito agüita, porfa…"],
+      careBack: ["¡Gracias! Ya estoy mucho mejor", "¡Mira, mi brote ha revivido!", "¡Agüita! Qué gusto"],
+      seedWater: ["Noto cosquillas en la cabeza… ¿algo va a brotar?", "¡Gracias! Creo que ahí arriba crece algo"],
+      watered: ["¡Qué rica el agua!", "¡Gracias! Glu, glu", "Mmm, fresquita"],
+      wateredAgain: ["¡Ya me regaste hoy! Pero gracias", "¡Me vas a ahogar! Jeje"],
       dapper: ["Me he puesto elegante, ¿te gusta?", "Hoy toca ir de gala, ¿qué tal estoy?", "Pajarita puesta. ¿A que estoy guapo?"],
       evolve: ["¡Mira! ¡Me ha salido una hojita!", "¡Otra hoja! Estoy creciendo", "¡Me ha salido un capullo! Algo se viene…", "¡Un año juntos! Mira qué flor"],
       hats: { auto: "Complemento automático", witch: "Bruja", pumpkin: "Calabaza", vampire: "Vampiro", ghost: "Fantasma", santa: "Papá Noel", reindeer: "Reno", elf: "Elfo", scarf: "Bufanda", party: "Fiesta", crown: "Corona", none: "Sin complemento" },
@@ -126,10 +134,18 @@
       winBye: ["Bye, little window!", "One less"],
       winMin: ["Where did it go?", "It's hiding…"],
       fall: ["Hey, I was up there!", "Oops!"],
+      flyDown: ["Coming down!", "Heroic landing!"],
+      stumble: ["Whoa, whoa, whoa…!", "I'm falling!"],
       climb: ["Up we go!", "Great view from here"],
       huntMiss: ["So close!", "It got away!"],
       huntCaught: ["Got you!", "Mine!"],
       huntHigh: ["Too high up there", "Can't reach…"],
+      thirsty: ["My sprout is thirsty…", "Water me a little?"],
+      careLow: ["My sprout is droopy… water me?"],
+      careBack: ["Thanks! I feel much better", "Look, my sprout came back to life!"],
+      seedWater: ["My head tickles… is something about to sprout?"],
+      watered: ["Yummy water!", "Thanks! Glug glug"],
+      wateredAgain: ["You already watered me today! Thanks though", "You'll drown me! Hehe"],
       dapper: ["I dressed up a bit, do you like it?", "Feeling fancy today. How do I look?"],
       evolve: ["Look! I grew a little leaf!", "Another leaf! I'm growing", "A bud! Something's coming…", "One year together! Look at this flower"],
       hats: { auto: "Automatic accessory", witch: "Witch", pumpkin: "Pumpkin", vampire: "Vampire", ghost: "Ghost", santa: "Santa", reindeer: "Reindeer", elf: "Elf", scarf: "Scarf", party: "Party", crown: "Crown", none: "No accessory" },
@@ -170,22 +186,49 @@
     setOn(v) { this.on = !!v; if (window.EkoSettings && window.EkoSettings.get().voice !== !!v) window.EkoSettings.set("voice", !!v); },
   };
 
-  // ---------- Símbolos flotantes ----------
+  // ---------- Símbolos flotantes (imágenes de Aitor, cada uno con su animación) ----------
+  const artSrc = (id) => { const n = document.getElementById(id); return n ? n.getAttribute("href") : ""; };
   const FX = { heart: ["♥", "#ef6b86"], bang: ["!", "#f2a33a"], ask: ["?", "#8a7cc9"], note: ["♪", "#5fa8d8"], spark: ["✦", "#f2c14e"], drop: ["…", "#9d8a7f"] };
+  // img · tamaño (px; w = ancho, h = alto) · duración · posición base en la caja de Eko
+  { const sw = document.getElementById("sweat"); if (sw) sw.innerHTML = `<img src="${artSrc("artSweat")}" alt="">`; }
+  const FXI = {
+    heart: { id: "artHeart", w: [15, 22], life: 1700, x: 104, y: 88, spread: 28 },
+    spark: { id: "artSpark", w: [11, 20], life: 1200, x: 104, y: 84, spread: 40 },
+    bang:  { id: "artBang",  h: [24, 30], life: 1300, x: 150, y: 62, spread: 6 },
+    ask:   { id: "artAsk",   h: [22, 28], life: 1700, x: 152, y: 64, spread: 6 },
+    note:  { id: "artNote",  h: [16, 24], life: 1900, x: 104, y: 86, spread: 30 },
+    drop:  { id: "artSweat", h: [11, 14], life: 1300, x: 134, y: 140, spread: 3 },   // en la sien, por delante de la cara
+  };
   function fx(kind, n = 1) {
-    const [ch, color] = FX[kind] || [kind, "#3b2f2a"];
+    const d = FXI[kind];
     for (let i = 0; i < n; i++) {
       setTimeout(() => {
-        const s = document.createElement("span");
-        s.className = "fx";
-        s.textContent = ch;
-        s.style.color = color;
-        s.style.left = 104 + rnd(-26, 26) + "px";
-        s.style.top = 92 + rnd(-6, 8) + "px";
-        s.style.setProperty("--dx", rnd(-14, 14) + "px");
-        fxLayer.appendChild(s);
-        setTimeout(() => s.remove(), 1500);
-      }, i * 180);
+        let e;
+        if (d) {
+          e = document.createElement("img");
+          e.alt = "";
+          e.src = kind === "note" && Math.random() < 0.4 ? artSrc("artNotes") : artSrc(d.id);
+          e.className = "fx fx-" + kind;
+          if (d.w) e.style.width = rnd(d.w[0], d.w[1]).toFixed(1) + "px"; else e.style.height = rnd(d.h[0], d.h[1]).toFixed(1) + "px";
+          const side = (kind === "bang" || kind === "ask" || kind === "drop") ? (Math.random() < 0.5 ? -1 : 1) : 0;
+          e.style.left = (side ? 104 + side * (d.x - 104) : d.x) + rnd(-d.spread, d.spread) + "px";
+          e.style.top = d.y + rnd(-6, 8) + "px";
+          const dir = side || (Math.random() < 0.5 ? -1 : 1);
+          e.style.setProperty("--dx", (dir * rnd(6, 22)).toFixed(1) + "px");
+          e.style.setProperty("--r0", (rnd(-18, 18)).toFixed(1) + "deg");
+          e.style.setProperty("--r1", (dir * rnd(8, 22)).toFixed(1) + "deg");
+          e.style.setProperty("--side", side || 1);
+          e.style.animationDuration = d.life + "ms";
+        } else {
+          const [ch, color] = FX[kind] || [kind, "#3b2f2a"];
+          e = document.createElement("span");
+          e.className = "fx"; e.textContent = ch; e.style.color = color;
+          e.style.left = 104 + rnd(-26, 26) + "px"; e.style.top = 92 + rnd(-6, 8) + "px";
+          e.style.setProperty("--dx", rnd(-14, 14) + "px");
+        }
+        fxLayer.appendChild(e);
+        setTimeout(() => e.remove(), (d ? d.life : 1400) + 100);
+      }, i * (kind === "spark" ? 110 : 180));
     }
   }
 
@@ -200,6 +243,7 @@
     const slots = [[0, 0], [20, 0], [10, 14], [0, 28], [20, 28]];
     b.style.left = slots[i][0] + "px";
     b.style.bottom = slots[i][1] + "px";
+    b.style.setProperty("--rot", rnd(-9, 9).toFixed(1) + "deg");
     boxesEl.appendChild(b);
     boxes.push(b);
     b._timer = setTimeout(() => removeBox(b), 15 * 60 * 1000);
@@ -405,6 +449,15 @@
       P.aR = lerp(lerp(P.aR, -118, open), 38, close);
       P.front = true; P.sy *= 1 + 0.04 * close; P.tilt += 5 * close;
     } },
+    // se tapa la nariz (papelera llena)
+    pinchNose: { dur: 3, f(P, k) { const e = Math.min(1, k * 5) * Math.min(1, (1 - k) * 5); P.aR = 118 * e; P.front = true; P.hturn += -0.25 * e; P.eyes = "x"; P.brows = "worried"; P.nod += 3 * e; } },
+    // tambaleo al borde: brazos como molinillo y cuerpo hacia delante y atrás
+    teeter: { dur: 1, f(P, k, e, o) {
+      const d = o.dir || 1, w = Math.sin(k * Math.PI * 7);
+      P.sway += d * (6 + w * 7); P.tilt += d * w * 10;
+      P.aR = 95 + Math.sin(k * 40) * 55; P.aL = -95 + Math.sin(k * 40 + 1.6) * 55;
+      P.eyeScale *= 1.25; P.brows = "worried"; P.mouth = Math.max(P.mouth, 0.4);
+    } },
     dizzy: { dur: 2.6, eyes: "spiral", f(P, k) { P.tilt += Math.sin(A.t * 7) * 13 * (1 - k); P.sway += Math.sin(A.t * 5) * 4 * (1 - k); } },
     surprise: { dur: 1.4, f(P, k, e) {
       P.eyeScale = 1 + 0.8 * e; P.brows = "up"; P.mouth = Math.max(P.mouth, 0.45 * e);
@@ -555,7 +608,10 @@
   function onWin(c) {
     const prev = WIN.cur;
     WIN.cur = c;
-    if (S.perch) {
+    if (S.perch && S.perch.icon) {
+      // sentado en un icono del escritorio: las ventanas no le afectan… salvo que una lo tape todo
+      if (c && c.max && !S.dragging) getDown("hop");
+    } else if (S.perch) {
       if (!c || c.id !== S.perch.id) fallOff(true);
       else if (c.max) { S.perch = c; hopDown(true); }
       else if (!perchRoom(c)) fallOff(true);
@@ -604,6 +660,59 @@
     S.facing = dir; S.mode = "idle"; S.modeUntil = A.t + 3;
     hop(-430, dir * 230, 0.18);
     if (fromMax) talk(TXT.makeRoom, 0.3);
+  }
+  // Bajarse de la ventana: de un salto · con la capa volando · o andando hasta el borde y cayéndose (mareado)
+  function getDown(style) {
+    const p = S.perch;
+    if (!p) return;
+    style = style || pick(p.icon ? ["hop", "fly"] : ["hop", "hop", "fly", "stumble"]);
+    if (p.icon && style === "stumble") style = "hop";
+    if (p.icon && style === "hop") { hopDown(false); return; }
+    const toLeft = (S.x + W / 2) - p.x < p.x + p.w - (S.x + W / 2);
+    if (style === "fly") { flyDown(toLeft ? -1 : 1); return; }
+    S.mode = "walk"; S.speed = style === "stumble" ? 42 : 58; S.modeUntil = A.t + 30;
+    S.then = style === "stumble" ? "stumble" : "hopdown"; S.stumbleDir = toLeft ? -1 : 1;
+    S.targetX = toLeft ? loX() : hiX();
+  }
+  function flyDown(dir) {
+    const p = S.perch; S.perch = null; WIN.pendDx = 0; S.then = null;
+    if (!p) return;
+    const x1 = clamp(S.x + dir * rnd(260, 460), minX() + 40, maxX() - 40);
+    S.fly = { kind: "cape", t0: A.t, prep: 1.1, dur: clamp(Math.abs(x1 - S.x) / 240, 2.4, 4.2), x0: S.x, x1, y0: S.y, h: rnd(50, 110), dir: Math.sign(x1 - S.x) || dir };
+    S.mode = "fly"; A.action = null; S.airborne = false; S.vx = 0; S.vy = 0;
+    setFlyGear("cape"); fx("spark", 3); Voice.chirp();
+    say(pick(TXT.flyDown), 2200, true);
+  }
+  // Vuela con la capa hasta un icono del escritorio y se posa encima (lo usa desktop.js)
+  function visitIcon(ic, then) {
+    if (S.fly || S.airborne || S.dragging || S.sleeping || S.sulking) return false;
+    const cx = ic.x + ic.w / 2, top = ic.y + 6;
+    const perch = { id: "icon:" + ic.name, icon: true, x: cx - 45, y: top, w: 90, h: ic.h };
+    const x1 = cx - W / 2, y1 = top - H + PERCH_SINK;
+    S.perch = null; WIN.pendDx = 0; S.then = null; A.action = null;
+    S.fly = { kind: "cape", t0: A.t, prep: 0.9, dur: clamp(Math.hypot(x1 - S.x, y1 - S.y) / 300, 2, 4.5), x0: S.x, x1, y0: S.y, y1, h: rnd(50, 110), dir: Math.sign(x1 - S.x) || 1, perch, then };
+    S.mode = "fly"; S.airborne = false; S.vx = 0; S.vy = 0;
+    setFlyGear("cape"); fx("spark", 2); Voice.chirp();
+    return true;
+  }
+  // Llega al borde, se tambalea… y se cae. Al aterrizar queda mareado.
+  function stumbleOff() {
+    const dir = S.stumbleDir || S.facing || 1, p = S.perch;
+    if (!p) return;
+    S.facing = dir; S.mode = "idle"; S.modeUntil = A.t + 3;
+    act("teeter", { dir });
+    express("asustado", 1.4);
+    say(pick(TXT.stumble), 1400, true);
+    // se va resbalando hasta el filo mientras se tambalea…
+    const x0 = S.x, x1 = (dir < 0 ? p.x - 6 : p.x + p.w + 6) - W / 2, t0 = performance.now();
+    const slide = setInterval(() => {
+      const drop = () => { clearInterval(slide); S.vx = dir * rnd(90, 140); S.vy = Math.max(S.vy, 60); DRAG.dizzyLanding = 1.5; };
+      if (S.dragging) { clearInterval(slide); return; }
+      if (S.perch !== p) { if (S.airborne) drop(); else clearInterval(slide); return; }   // ya se ha caído solo por el filo
+      const k = Math.min(1, (performance.now() - t0) / 950);
+      S.x = x0 + (x1 - x0) * k * k;
+      if (k >= 1) { fallOff(false); drop(); }      // …y al vacío: al aterrizar queda mareado
+    }, 16);
   }
   // Salto grande para subirse a la ventana activa (con mucha anticipación, como un muelle de plastilina)
   function climbJump() {
@@ -656,6 +765,7 @@
   const BIG_GAP = [[900, 1500], [480, 780], [240, 420], [120, 240]];
   function decide() {
     if (S.sleeping || S.sulking || S.airborne || S.dragging) return;
+    if (S.perch && S.perch.icon) { if (A.t > (S.perch.until || 0)) getDown(); else { S.mode = "sit"; S.modeUntil = A.t + 2; } return; }
     const sleepy = isMonday() || isLate();
     const hr = today().getHours(), morning = hr >= 6 && hr < 11;
     const cfg = cfgNow();
@@ -722,11 +832,7 @@
         if (!window.EkoAntics.random()) { S.mode = "idle"; S.modeUntil = A.t + 2; }
         break;
       }
-      case "getdown": {
-        const p = S.perch, toLeft = (S.x + W / 2) - p.x < p.x + p.w - (S.x + W / 2);
-        S.mode = "walk"; S.then = "hopdown"; S.modeUntil = A.t + 30;
-        S.targetX = toLeft ? loX() : hiX(); break;
-      }
+      case "getdown": getDown(); break;
       case "friday":
         S.mode = "idle"; S.modeUntil = A.t + 9; A.danceUntil = A.t + 8; fx("note", 2);
         if (Math.random() < 0.4) say(pick(TXT.friday)); break;
@@ -749,21 +855,25 @@
   // ---------- Evolución ----------
   // Tres capas: base continua (días juntos), hitos (brote a los 7 · 30 · 100 · 365 días) y rasgos según hábitos (0..1).
   const EVO = { days: 0, traits: { creative: 0, night: 0, active: 0, love: 0, wet: 1 }, shown: -1, season: null, seed: 0 };
+  // Riego: el brote crece por días regados y se mustia si pasa 2 días sin agua
+  let careSaved = null; try { careSaved = JSON.parse(store.get("eko-water") || "null"); } catch (_) {}
+  const CARE = Object.assign({ last: 0, days: [], wilted: false, nag: 0 }, careSaved || {});
+  const CARE_STAGES = [3, 12];                   // días regados: brotecito · planta (la flor está aparcada)
+  const careStage = () => CARE.days.length >= CARE_STAGES[1] ? 2 : CARE.days.length >= CARE_STAGES[0] ? 1 : 0;
+  const saveCare = () => store.set("eko-water", JSON.stringify({ last: CARE.last, days: CARE.days.slice(-40), wilted: CARE.wilted }));
   // Semilla única de este Eko (para su dibujo de motitas)
   EVO.seed = +store.get("eko-seed") || 0;
   if (!EVO.seed) { EVO.seed = 1 + Math.floor(Math.random() * 2147483646); store.set("eko-seed", String(EVO.seed)); }
   const evoStage = (d) => d >= 365 ? 4 : d >= 100 ? 3 : d >= 30 ? 2 : d >= 7 ? 1 : 0;
   function applyEvo(stageOverride) {
-    const st = stageOverride ?? (EVO.shown >= 0 ? EVO.shown : evoStage(EVO.days));
+    const st = stageOverride ?? (EVO.shown >= 0 ? EVO.shown : (EVO.days ? evoStage(EVO.days) : careStage()));
     EVO.shown = st;
     const t = EVO.traits, acc = typeof currentAcc === "function" ? currentAcc() : "none";
     const headwear = TALL.has(acc) || acc === "ghost";
     el.sprout.style.display = st > 0 && !headwear ? "inline" : "none";
     A.sprStage = st;
     // motitas: aparecen poco a poco a partir del primer mes
-    const fk = Math.min(1, Math.max(0, (EVO.days - 20) / 60));
-    if (fk > 0 && !el.freckles.childNodes.length) el.freckles.innerHTML = EkoArt.freckles(EVO.seed);
-    el.freckles.style.opacity = (0.6 * fk).toFixed(2);
+    el.freckles.style.opacity = "0";      // motitas descartadas
     stage.style.setProperty("--wet", (0.15 + 0.6 * (t.wet ?? 1)).toFixed(2));
     // base continua: algo más de brillo con el tiempo
     el.hl.setAttribute("opacity", (0.45 + 0.17 * Math.min(1, EVO.days / 365)).toFixed(2));
@@ -785,6 +895,34 @@
     if (celebrate && st > EVO.shown && st > 0) { celebrateStage(st); return; }
     EVO.shown = st; applyEvo();
   }
+  // ---------- Riego ----------
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const sinceWater = () => (CARE.last ? (Date.now() - CARE.last) / 3600000 : 0);   // horas
+  function careCheck() {
+    if (careStage() >= 1 && !CARE.wilted && sinceWater() > 48) { CARE.wilted = true; saveCare(); }
+  }
+  // Lo llama la regadera (menu.js) al terminar de regar
+  function water() {
+    const before = careStage(), wasWilted = CARE.wilted, today = dayKey();
+    const first = !CARE.days.includes(today);
+    if (first) CARE.days.push(today);
+    CARE.last = Date.now(); CARE.wilted = false; saveCare();
+    const st = careStage();
+    if (st > before && EVO.shown < st) { setTimeout(() => celebrateStage(st), 900); return "grow"; }
+    A.sprPop = 0.55; A.sprPopV = 0;
+    if (wasWilted) { setTimeout(() => { fx("spark", 3); hop(-320); express("emocionado", 2.5); say(pick(TXT.careBack), 3200, true); }, 700); return "back"; }
+    express("contento", 2.2); say(pick(!first ? TXT.wateredAgain : st === 0 ? TXT.seedWater : TXT.watered), 2600, true);
+    return "ok";
+  }
+  careCheck();
+  setInterval(() => {
+    careCheck();
+    // con sed (más de un día sin agua) lo pide, como mucho cada ~5 h
+    if (careStage() >= 1 && sinceWater() > 24 && !S.sleeping && !A.hidden && !busy() && Date.now() - CARE.nag > 5 * 3600000 && Math.random() < 0.1) {
+      CARE.nag = Date.now(); express(CARE.wilted ? "triste" : "esperanzado", 3); say(pick(CARE.wilted ? TXT.careLow : TXT.thirsty), 3200);
+    }
+  }, 60000);
+
   function celebrateStage(st) {
     act("evolve", { apply: () => { applyEvo(st); A.sprPop = 0; A.sprPopV = 0; fx("spark", 4); fx("heart", 1); Voice.chirp(); bump(-6); } });
     setTimeout(() => say(TXT.evolve[st - 1], 3200, true), 1400);
@@ -909,17 +1047,22 @@
   function updateFlight(dt) {
     const f = S.fly, fy = floorY();
     const tt = A.t - f.t0;
-    if (tt < f.prep) { S.y = fy; if (tt > f.prep - 0.35 && !f.crouched) { f.crouched = true; bump(4); } return; }
+    const base0 = f.y0 ?? fy;
+    if (tt < f.prep) { S.y = base0; if (tt > f.prep - 0.35 && !f.crouched) { f.crouched = true; bump(4); } return; }
     const u = clamp((tt - f.prep) / f.dur, 0, 1);
     if (!f.launched) { f.launched = true; bump(-6); Voice.hop(); }
     const ease = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
     S.x = lerp(f.x0, f.x1, ease);
-    S.y = fy - f.h * Math.pow(Math.sin(u * Math.PI), 0.75) - Math.sin(tt * 3) * 6 * Math.sin(u * Math.PI);
+    const base1 = f.y1 ?? fy;
+    const k = f.y1 != null ? ease : f.y0 != null ? Math.pow(u, 1.4) : 0;
+    S.y = lerp(base0, base1, k) - f.h * Math.pow(Math.sin(u * Math.PI), 0.75) - Math.sin(tt * 3) * 6 * Math.sin(u * Math.PI);
     S.facing = f.dir;
     if (u >= 1) {
-      S.y = fy; S.fly = null; S.mode = "idle"; S.modeUntil = A.t + 3;
+      S.y = base1; S.fly = null; S.mode = "idle"; S.modeUntil = A.t + 3;
+      if (f.perch) { S.perch = f.perch; S.y = groundY(); WIN.perchSince = A.t; }
       bump(7); Voice.thump(1);
       setTimeout(() => { if (!S.fly) setFlyGear(null); }, 2800);
+      if (f.then) setTimeout(f.then, 350);
     }
   }
 
@@ -932,6 +1075,7 @@
     if (then === "hug") { S.mode = "idle"; S.modeUntil = A.t + 4; hop(-380); setTimeout(() => act("hug"), 450); return; }
     if (then === "climb") { climbJump(); return; }
     if (then === "hopdown") { hopDown(); return; }
+    if (then === "stumble") { stumbleOff(); return; }
     if (then === "pounce") { pounce(); return; }
     S.mode = "idle"; S.modeUntil = A.t + rnd(2, 6); A.tiltTarget = 0;
   }
@@ -1443,7 +1587,7 @@
     const ey = (P.eyeY != null ? P.eyeY : A.eyeY) + P.nod * 0.9;
     el.eyes.setAttribute("transform", `translate(${ex.toFixed(2)} ${ey.toFixed(2)})`);
     if (A.sprStage && el.sprout.style.display !== "none") {
-      EkoArt.pose(el.sprout, { stage: A.sprStage, pop: A.sprPop ?? 1, sway: A.spr || 0, swayV: A.sprV || 0, bloom: A.bloom ?? 1, season: EVO.season || EkoArt.seasonOf(), t: A.t });
+      EkoArt.pose(el.sprout, { stage: A.sprStage, pop: A.sprPop ?? 1, sway: A.spr || 0, swayV: A.sprV || 0, bloom: A.bloom ?? 1, wilt: (A.wilt = (A.wilt ?? (CARE.wilted ? 1 : 0)) + ((CARE.wilted ? 1 : 0) - (A.wilt ?? 0)) * 0.03), season: EVO.season || EkoArt.seasonOf(), t: A.t });
     }
     const pos = [];
     el.eyeEls.forEach((e, i) => {
@@ -1790,9 +1934,9 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
-    setEvo, evo: EVO, celebrateStage, express, useProp, dropProp, dressUp, prop: PROP,
+    setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
-    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
+    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon,
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },

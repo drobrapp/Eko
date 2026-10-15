@@ -108,9 +108,9 @@
       seed.id = "seed";
       seed.innerHTML = `<svg viewBox="-40 -60 80 90"><defs><radialGradient id="sg" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fffaf5"/><stop offset=".6" stop-color="#efe2d8"/><stop offset="1" stop-color="#c7b0a2"/></radialGradient></defs>
         <ellipse cx="0" cy="26" rx="26" ry="5" fill="#2a1a12" opacity=".25"/>
-        <path d="M0,-34 C20,-34 30,-8 30,6 C30,22 16,28 0,28 C-16,28 -30,22 -30,6 C-30,-8 -20,-34 0,-34Z" fill="url(#sg)"/>
+        <image href="${(document.getElementById("artSeed") || {}).getAttribute?.("href") || ""}" x="-26" y="-40" width="52" height="66" preserveAspectRatio="none"/>
         <path class="crack c1" d="M-6,-30 L-1,-20 L-8,-12" /><path class="crack c2" d="M-8,-12 L2,-4 L-4,6" /><path class="crack c3" d="M8,-26 L4,-14 L12,-6" />
-        <path d="M0,-34 C-2,-44 4,-52 12,-54 C12,-46 8,-40 0,-34Z" fill="#7cc48a"/></svg>`;
+</svg>`;
       pod.appendChild(seed);
       E.setHitFull(true);
       card(`<p>${TX.hint}</p>`);

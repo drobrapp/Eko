@@ -38,7 +38,8 @@
       build(root);
       const q = (s) => root.querySelector(s), qa = (s) => [...root.querySelectorAll(s)];
       p = { sway: q(".spSway"), stem: q(".spStem"), stemHl: q(".spStemHl"), coty: qa(".spCoty"), leaves: qa(".spLeaf"),
-        bud: q(".spBud"), flower: q(".spFlower"), petals: qa(".spPetal"), center: q(".spCenter"), st: -1, season: "" };
+        bud: q(".spBud"), flower: q(".spFlower"), petals: qa(".spPetal"), center: q(".spCenter"), st: -1, season: "",
+        img: q(".spImg"), i1: q(".spI1"), i2: q(".spI2"), i1w: q(".spI1w"), i2w: q(".spI2w") };
       cache.set(root, p);
     }
     return p;
@@ -47,6 +48,27 @@
   // o: { stage 0..4, pop (0→1 al crecer, con rebote), sway (grados), swayV, bloom 0..1, season, t }
   function pose(root, o) {
     const p = parts(root), st = o.stage | 0;
+    // Arte en imagen (mismo estilo que los accesorios): brotecito (1) y planta (2+; la flor está aparcada)
+    if (p.img) {
+      if (st !== p.st || o.season !== p.season) {
+        p.st = st; p.season = o.season;
+        [p.stem, p.stemHl, ...p.coty, ...p.leaves, p.bud, p.flower].forEach((n) => n && (n.style.display = "none"));
+        p.i1.style.display = p.i1w.style.display = st === 1 ? "inline" : "none";
+        p.i2.style.display = p.i2w.style.display = st >= 2 ? "inline" : "none";
+        p.img.style.filter = { autumn: "hue-rotate(-48deg) saturate(1.25)", winter: "saturate(.55) brightness(1.12)", summer: "saturate(1.12) hue-rotate(-6deg)" }[o.season] || "";
+      }
+      // mustio ↔ sano: fundido suave entre las dos imágenes
+      const w = Math.max(0, Math.min(1, o.wilt || 0));
+      if (Math.abs(w - (p.w ?? -1)) > 0.004) {
+        p.w = w;
+        p.i1.style.opacity = p.i2.style.opacity = (1 - w).toFixed(3);
+        p.i1w.style.opacity = p.i2w.style.opacity = w.toFixed(3);
+      }
+      const pop = Math.max(0, o.pop ?? 1), t = o.t || 0, sway = o.sway || 0;
+      const sq = 1 + 0.03 * Math.sin(t * 2) + Math.max(0, Math.min(1, 1 - pop)) * 0.2;
+      p.sway.setAttribute("transform", `translate(0 -101) rotate(${sway.toFixed(2)}) scale(${(pop / Math.sqrt(sq)).toFixed(3)} ${(pop * sq).toFixed(3)}) translate(0 101)`);
+      return;
+    }
     if (st !== p.st || o.season !== p.season) {
       p.st = st; p.season = o.season;
       p.stem.setAttribute("d", STEM[st]); p.stemHl.setAttribute("d", STEM[st]);

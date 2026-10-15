@@ -172,23 +172,21 @@ html, body {
 /* ---------- Sudor ---------- */
 #sweat {
   position: absolute;
-  left: 142px;
-  bottom: 112px;
-  width: 9px;
-  height: 13px;
-  background: radial-gradient(circle at 35% 35%, #fff, #9fd3f0 60%, #6bb6e0);
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  left: 130px;
+  bottom: 98px;
+  width: 10px;
   opacity: 0;
   pointer-events: none;
 }
+#sweat img { width: 100%; display: block; }
 .mood-hot #sweat, .sweaty #sweat { animation: sweat 1.6s infinite ease-in; }
 @keyframes sweat {
-  0% { opacity: 0; transform: translateY(0) rotate(-20deg); }
-  20% { opacity: .95; }
-  100% { opacity: 0; transform: translateY(16px) rotate(-20deg); }
+  0% { opacity: 0; transform: translateY(0) rotate(-20deg) scale(.6); }
+  20% { opacity: .95; transform: translateY(1px) rotate(-20deg) scale(1); }
+  100% { opacity: 0; transform: translateY(16px) rotate(-20deg) scale(.85, 1.15); }
 }
 
-/* ---------- Símbolos flotantes ---------- */
+/* ---------- Símbolos flotantes (cada uno con su carácter) ---------- */
 #fx { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .fx {
   position: absolute;
@@ -198,10 +196,70 @@ html, body {
   text-shadow: 0 1px 2px rgba(60, 40, 30, .25);
   animation: fx 1.4s ease-out forwards;
 }
+img.fx { height: auto; filter: drop-shadow(0 1px 1.5px rgba(40, 25, 15, .28)); transform-origin: 50% 70%; will-change: transform, opacity; }
+img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 @keyframes fx {
   0% { opacity: 0; transform: translate(0, 6px) scale(.5); }
   18% { opacity: 1; transform: translate(0, 0) scale(1.15); }
   100% { opacity: 0; transform: translate(var(--dx, 0px), -38px) scale(.9); }
+}
+/* corazón: pop con rebote, sube meciéndose */
+.fx-heart { animation-name: fxHeart; animation-timing-function: ease-out; }
+@keyframes fxHeart {
+  0% { opacity: 0; transform: translate(0, 6px) rotate(var(--r0)) scale(0); }
+  14% { opacity: 1; transform: translate(0, 0) rotate(var(--r0)) scale(1.25); }
+  24% { transform: translate(0, -3px) rotate(var(--r0)) scale(.95); }
+  32% { transform: translate(0, -6px) rotate(var(--r0)) scale(1.05); }
+  60% { opacity: 1; transform: translate(calc(var(--dx) * -.4), -24px) rotate(var(--r1)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), -48px) rotate(calc(var(--r1) * -.5)) scale(.85); }
+}
+/* chispa: aparece girando y titila */
+.fx-spark { animation-name: fxSpark; animation-timing-function: ease-out; transform-origin: 50% 50%; }
+@keyframes fxSpark {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-45deg) scale(0); }
+  20% { opacity: 1; transform: translate(calc(var(--dx) * .3), -6px) rotate(0deg) scale(1.2); }
+  40% { transform: translate(calc(var(--dx) * .5), -10px) rotate(20deg) scale(.7); }
+  60% { opacity: 1; transform: translate(calc(var(--dx) * .7), -14px) rotate(40deg) scale(1.1); }
+  100% { opacity: 0; transform: translate(var(--dx), -20px) rotate(90deg) scale(0); }
+}
+/* exclamación: salta, se pasa de tamaño y vibra */
+.fx-bang { animation-name: fxBang; animation-timing-function: cubic-bezier(.2, .9, .3, 1); transform-origin: 50% 100%; }
+@keyframes fxBang {
+  0% { opacity: 0; transform: translateY(10px) scale(.2, .4); }
+  16% { opacity: 1; transform: translateY(-8px) scale(1.15, 1.3); }
+  28% { transform: translateY(0) scale(1.05, .9); }
+  36% { transform: translateY(-2px) rotate(-9deg) scale(1); }
+  44% { transform: translateY(-2px) rotate(8deg); }
+  52% { transform: translateY(-2px) rotate(-5deg); }
+  60% { transform: translateY(-2px) rotate(0deg); }
+  82% { opacity: 1; transform: translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateY(-12px) scale(.7); }
+}
+/* interrogación: aparece y se balancea dudando */
+.fx-ask { animation-name: fxAsk; animation-timing-function: ease-in-out; transform-origin: 50% 90%; }
+@keyframes fxAsk {
+  0% { opacity: 0; transform: translateY(6px) rotate(0deg) scale(.3); }
+  15% { opacity: 1; transform: translateY(-2px) rotate(-6deg) scale(1.12); }
+  30% { transform: translateY(-4px) rotate(14deg) scale(1); }
+  48% { transform: translateY(-6px) rotate(-12deg); }
+  66% { opacity: 1; transform: translateY(-8px) rotate(8deg); }
+  100% { opacity: 0; transform: translateY(-16px) rotate(-4deg) scale(.85); }
+}
+/* nota: flota en diagonal bailando */
+.fx-note { animation-name: fxNote; animation-timing-function: linear; transform-origin: 50% 80%; }
+@keyframes fxNote {
+  0% { opacity: 0; transform: translate(0, 4px) rotate(var(--r0)) scale(.5); }
+  12% { opacity: 1; transform: translate(calc(var(--dx) * .15), -4px) rotate(-12deg) scale(1.05); }
+  35% { transform: translate(calc(var(--dx) * .45), -16px) rotate(12deg) scale(1); }
+  60% { opacity: 1; transform: translate(calc(var(--dx) * .7), -30px) rotate(-10deg); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.4), -54px) rotate(14deg) scale(.8); }
+}
+/* gota de sudor: asoma al lado de la cabeza y resbala */
+.fx-drop { animation-name: fxDrop; animation-timing-function: ease-in; transform-origin: 50% 0%; }
+@keyframes fxDrop {
+  0% { opacity: 0; transform: translateY(-4px) rotate(calc(var(--side) * 18deg)) scale(.4); }
+  22% { opacity: 1; transform: translateY(0) rotate(calc(var(--side) * 18deg)) scale(1); }
+  100% { opacity: 0; transform: translateY(18px) rotate(calc(var(--side) * 18deg)) scale(.85, 1.2); }
 }
 
 /* ---------- Paquetitos de descargas ---------- */
@@ -225,7 +283,7 @@ html, body {
   background: #ecd3a8;
 }
 .box.out { animation: boxout .4s ease-in forwards; }
-@keyframes boxin { from { transform: translateY(-30px) scale(.6); opacity: 0; } }
+@keyframes boxin { 0% { transform: translateY(-30px) rotate(calc(var(--rot, 0deg) * -3)) scale(.6); opacity: 0; } 70% { transform: translateY(2px) rotate(var(--rot, 0deg)) scale(1.05, .92); opacity: 1; } 100% { transform: rotate(var(--rot, 0deg)); } }
 @keyframes boxout { to { transform: translateY(8px) scale(.4); opacity: 0; } }
 
 /* ---------- Ojo entornado (rascarse) ---------- */
@@ -273,6 +331,7 @@ html, body {
 .box { width: 22px; height: 18px; background: none; box-shadow: none; }
 .box::after { display: none; }
 .box svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1px 1.5px rgba(60, 40, 30, .35)); }
+.box { width: 20px; height: 20px; transform: rotate(var(--rot, 0deg)); }
 
 /* Equipo de vuelo: oculto salvo al volar */
 [data-fly] { display: none; }
@@ -358,9 +417,19 @@ html, body {
 .card li.done i { background: #8fc79a; border-color: #8fc79a; }
 
 /* ---------- Pelota ---------- */
+/* ---------- Regadera ---------- */
+#can { position: absolute; left: 0; top: 0; width: 92px; display: none; z-index: 30; cursor: grab; pointer-events: auto; transform-origin: 50% 50%; opacity: 0; transition: opacity .35s; }
+#can.in { display: block; opacity: 1; animation: canIn .45s cubic-bezier(.3,1.6,.5,1); }
+#can.bye { opacity: 0; }
+#can:active { cursor: grabbing; }
+#can img { width: 100%; display: block; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .25)); user-select: none; -webkit-user-drag: none; }
+@keyframes canIn { from { opacity: 0; scale: .6; } to { opacity: 1; scale: 1; } }
+#drops { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+#drops .drop { position: absolute; left: 0; top: 0; }
+.blob img.ic { width: 28px; height: auto; display: block; }
 #ball { position: absolute; left: 0; top: 0; width: 26px; height: 26px; display: none; z-index: 5; cursor: grab; pointer-events: auto; }
 #ball.in { display: block; }
-#ball svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
+#ball svg, #ball img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
 
 /* ---------- Temporizador del pomodoro ---------- */
 #badge {
@@ -385,7 +454,7 @@ html, body {
 /* ---------- Bautizo ---------- */
 #seed { position: absolute; left: 50%; bottom: 2px; width: 70px; height: 80px; margin-left: -35px; cursor: pointer; z-index: 4; animation: seedwiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
 #seed svg { width: 100%; height: 100%; overflow: visible; }
-#seed .crack { fill: none; stroke: #8a6f62; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .2s; }
+#seed .crack { fill: none; stroke: #5b3a26; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .2s; }
 #seed.c1 .c1, #seed.c2 .c1, #seed.c2 .c2, #seed.c3 .crack { opacity: 1; }
 #seed.jolt { animation: seedjolt .35s ease, seedwiggle 2.2s ease-in-out .35s infinite; }
 #seed.burst { animation: seedburst .38s ease-in forwards; }
@@ -417,10 +486,24 @@ html, body {
 
 /* ---------- Travesuras (antics.js) ---------- */
 .antic-sprite { position: absolute; pointer-events: none; z-index: 3; }
-.antic-sprite.puff { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #dcd6d0 70%); animation: a-puff .7s ease-out forwards; }
-@keyframes a-puff { 0% { transform: scale(.4); opacity: .95; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; } }
+.antic-sprite.puff { z-index: 4; opacity: 0; animation: a-puff 1.05s cubic-bezier(.25, .8, .3, 1) forwards; }
+.antic-sprite.puff img { width: 100%; display: block; filter: drop-shadow(0 2px 2px rgba(40, 30, 25, .15)); }
+@keyframes a-puff {
+  0% { opacity: 0; transform: rotate(var(--r, 0deg)) scale(.15); }
+  18% { opacity: 1; transform: rotate(var(--r, 0deg)) scale(1.08); }
+  26% { transform: rotate(var(--r, 0deg)) scale(.97); }
+  50% { opacity: 1; transform: translate(calc(var(--dx) * .2), calc(var(--dy) * .2)) rotate(var(--r, 0deg)) scale(1.02); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r, 0deg) * 1.6)) scale(1.35); }
+}
 .antic-sprite.airdraw svg { filter: drop-shadow(0 0 4px rgba(255, 211, 110, .9)); }
 .antic-sprite.airdraw.float { animation: a-float 2.4s ease-in forwards; }
 @keyframes a-float { 0% { transform: none; opacity: 1; } 100% { transform: translateY(-40px) scale(1.1); opacity: 0; } }
 .antic-sprite.ring { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.8); animation: a-ring .6s ease-out forwards; }
 @keyframes a-ring { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+
+/* ---------- Objetos de imagen: aparecen con un «pop» suave ---------- */
+[data-prop] image, [data-acc] image, #readGlasses image, #snack image {
+  transform-box: fill-box; transform-origin: 50% 60%;
+  animation: objIn .42s cubic-bezier(.3, 1.6, .5, 1);
+}
+@keyframes objIn { 0% { opacity: 0; transform: scale(.55) translateY(6%); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }

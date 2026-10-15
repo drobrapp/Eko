@@ -39,11 +39,21 @@
     if (life) setTimeout(() => d.remove(), life);
     return d;
   }
-  function puff(x, y, n = 7) {
+  // Nube de humo que TAPA a Eko: crece, se queda un instante cubriéndolo y se disipa hacia fuera.
+  // Cuando está tapado (≈ 230 ms) es cuando Eko desaparece o aparece debajo.
+  function puff(x, y, n = 9) {
+    const src = (document.getElementById("artPuff") || {}).getAttribute?.("href") || "";
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2, r = 8 + Math.random() * 6;
-      const s = sprite("", x + Math.cos(a) * 4 - 7, y + Math.sin(a) * 4 - 7, "puff", 700);
-      s.style.setProperty("--dx", Math.cos(a) * r * 2.2 + "px"); s.style.setProperty("--dy", Math.sin(a) * r * 1.6 - 6 + "px");
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+      const rr = i === 0 ? 0 : 0.45 + Math.random() * 0.55;
+      const cx = x + Math.cos(a) * 40 * rr, cy = y + Math.sin(a) * 62 * rr;
+      const w = i === 0 ? 92 : 56 + Math.random() * 28;
+      const s = sprite(`<img src="${src}" alt="">`, cx - w / 2, cy - w * 0.37, "puff", 1150);
+      s.style.width = w.toFixed(1) + "px";
+      s.style.animationDelay = (Math.random() * 60).toFixed(0) + "ms";
+      s.style.setProperty("--r", (Math.random() * 40 - 20).toFixed(0) + "deg");
+      s.style.setProperty("--dx", (Math.cos(a) * (18 + Math.random() * 16)).toFixed(1) + "px");
+      s.style.setProperty("--dy", (Math.sin(a) * (14 + Math.random() * 12) - 10).toFixed(1) + "px");
     }
   }
 
@@ -101,6 +111,28 @@
     return run(pick(pool));
   }
 
+  // Se hunde detrás de la ventana / el icono en el que está y asoma los ojos. Clic → sale de un salto.
+  function behind(dur) {
+    const hold = dur - 1.5;
+    return {
+      dur, when: () => free() && !!S.perch && !S.perch.icon,
+      start(c) { c.depth = 0; },
+      tick(dt, t, c) {
+        if (t > 0.2 && !c.clip) { c.clip = 1; clipGround(true); }
+        if (c.found) {
+          const k = seg(t, c.ft, c.ft + 0.22);
+          c.depth = c.d0 * (1 - k);
+          if (k >= 1 && !c.out) { c.out = 1; clipGround(false); E.hop(-520); E.fx("bang", 1); E.express("divertido", 2.5); say(pick(["¡Me has pillado!", "¡Jo, qué rápido!", "¡Aquí estoy!"]), "You found me!", 1800); V.chirp(); setTimeout(() => stop(true), 900); }
+          return;
+        }
+        c.depth = t < 1 ? ease(seg(t, 0.2, 1)) * 150 : t < hold ? 150 : (1 - ease(seg(t, hold, hold + 1))) * 150;
+        if (t > hold + 1.05 && !c.out) { c.out = 1; clipGround(false); if (dur > 10) say("¡Aquí estaba! ¿No me veías?", "I was right here!", 2200); }
+      },
+      tap(t, c) { if (c.found || t < 0.3 || t > hold + 0.8) return false; c.found = 1; c.ft = t; c.d0 = c.depth; return true; },
+      pose(P, t, c) { P.lift -= c.depth; if (t > 1 && t < hold) { P.eyeX = Math.sin(t * 1.6) * 6; P.eyes = (t % 2.5) < 0.2 ? "closed" : null; } },
+    };
+  }
+
   // ---------- Travesuras ----------
   const DEF = {
     // 1. Se encoge con un «pop» y aparece en otro sitio
@@ -109,9 +141,9 @@
       start(c) { c.x0 = S.x; E.express("picaro", 1); },
       pose(P, t) { const k = seg(t, 0, 0.35); P.sy *= 1 - 0.12 * Math.sin(k * Math.PI); P.sx *= 1 + 0.08 * Math.sin(k * Math.PI); },
       tick(dt, t, c) {
-        if (t > 0.35 && !c.a) { c.a = 1; const p = pod(0, 60); puff(p.x, p.y); V.chirp(); E.setHidden(true); }
-        if (t > 0.9 && !c.b) { c.b = 1; S.x = farX(); S.facing = S.x > c.x0 ? -1 : 1; const p = pod(0, 60); setTimeout(() => puff(p.x, p.y), 30); E.setHidden(false); E.bump(-6); }
-        if (t > 1.3 && !c.c) { c.c = 1; E.express(pick(["divertido", "picaro"]), 2); if (Math.random() < 0.4) say("¡Tachán!", "Ta-da!"); }
+        if (t > 0.35 && !c.a) { c.a = 1; const p = pod(0, 20); puff(p.x, p.y, 11); V.chirp(); setTimeout(() => E.setHidden(true), 230); }
+        if (t > 1.05 && !c.b) { c.b = 1; S.x = farX(); S.facing = S.x > c.x0 ? -1 : 1; const p = pod(0, 20); setTimeout(() => puff(p.x, p.y, 11), 30); setTimeout(() => { E.setHidden(false); E.bump(-6); }, 260); }
+        if (t > 1.6 && !c.c) { c.c = 1; E.express(pick(["divertido", "picaro"]), 2); if (Math.random() < 0.4) say("¡Tachán!", "Ta-da!"); }
       },
       end() { E.setHidden(false); },
     },
@@ -142,6 +174,13 @@
           E.hop(-460); E.fx("bang", 2); E.express("divertido", 2.5); say("¡Bu!", "Boo!", 1600); V.chirp();
           setTimeout(() => stop(true), 1600);
         }
+      },
+      tap(t, c) {
+        if (S.mode !== "peeking" || c.boo) return false;
+        c.boo = 1; S.mode = "idle"; S.modeUntil = A.t + 3;
+        E.hop(-460); E.fx("bang", 2); E.express("divertido", 2.5); say(pick(["¡Me has pillado!", "¡Bu! Ay, no, me has visto tú"]), "You got me!", 1600); V.chirp();
+        setTimeout(() => stop(true), 1600);
+        return true;
       },
       end(c) { if (!c.boo) E.express("divertido", 2); },
     },
@@ -182,16 +221,9 @@
       pose(P, t) { if (t < 2.3) { P.aR = -110 + Math.sin(t * 5) * 30; P.front = true; P.eyeX = 4; P.eyeY = -4; } },
     },
     // 18. Se esconde detrás de la ventana y asoma solo la cabeza
-    behindWindow: {
-      dur: 6.5, when: () => free() && !!S.perch,
-      start(c) { c.depth = 0; },
-      tick(dt, t, c) {
-        if (t > 0.2 && !c.clip) { c.clip = 1; clipGround(true); }
-        c.depth = t < 1 ? ease(seg(t, 0.2, 1)) * 150 : t < 5 ? 150 : (1 - ease(seg(t, 5, 6))) * 150;
-        if (t > 6.05 && !c.out) { c.out = 1; clipGround(false); }
-      },
-      pose(P, t, c) { P.lift -= c.depth; if (t > 1 && t < 5) { P.eyeX = Math.sin(t * 1.6) * 6; P.eyes = (t % 2.5) < 0.2 ? "closed" : null; } },
-    },
+    behindWindow: behind(6.5),
+    // Escondite: se esconde detrás de una ventana o un icono hasta que le encuentras (clic)
+    hideBehind: Object.assign(behind(30), { when: () => false }),
     // 25. Habla solo y se ríe
     mumble: {
       dur: 4.5, when: () => free(),
@@ -225,5 +257,7 @@
     },
   };
 
-  window.EkoAntics = { run, random, stop, list: Object.keys(DEF), get current() { return cur && cur.name; } };
+  // Clic sobre Eko mientras se esconde: lo encuentras (devuelve true si la travesura lo ha usado)
+  function tap() { return !!(cur && cur.tap && cur.tap(A.t - cur.t0, cur)); }
+  window.EkoAntics = { run, random, stop, tap, list: Object.keys(DEF), get current() { return cur && cur.name; } };
 })();

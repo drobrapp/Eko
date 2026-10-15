@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Habla con Eko</title>
+<style>
+html,body{margin:0;width:340px;height:56px;background:transparent;overflow:hidden;font:13px "Segoe UI",system-ui,sans-serif;user-select:none}
+.bar{position:absolute;left:6px;right:6px;top:8px;height:40px;display:flex;align-items:center;gap:4px;padding:0 6px 0 4px;border-radius:20px 22px 19px 23px;background:#fffaf6;box-shadow:0 3px 12px rgba(50,30,20,.32)}
+.grip{width:18px;height:28px;display:flex;align-items:center;justify-content:center;color:#c9b2a4;cursor:grab;font-size:13px;letter-spacing:-2px}
+.grip:active{cursor:grabbing}
+input{flex:1;min-width:0;border:none;outline:none;background:transparent;color:#3b2f2a;font:inherit;padding:6px 4px}
+input::placeholder{color:#b49e91}
+button{border:none;cursor:pointer;font:700 13px "Segoe UI",system-ui,sans-serif}
+.send{width:30px;height:30px;border-radius:50%;background:#6b5348;color:#fff}
+.send:disabled{background:#d8c6ba;cursor:default}
+.x{width:22px;height:22px;border-radius:50%;background:#efe3da;color:#6b5348;font-size:13px;line-height:22px;padding:0}
+</style></head>
+<body>
+<div class="bar">
+  <div class="grip" data-tauri-drag-region title="Arrástrame">⋮⋮</div>
+  <input id="t" maxlength="160" autocomplete="off" placeholder="Habla con Eko…" />
+  <button class="send" id="s" title="Enviar">➤</button>
+  <button class="x" id="x" title="Ocultar">×</button>
+</div>
+<script>
+// Barra para hablar con Eko: lo que escribas se lo pasa a Eko (que responde en su bocadillo).
+(() => {
+  const T = window.__TAURI__, t = document.getElementById("t"), s = document.getElementById("s");
+  try { const n = (JSON.parse(localStorage.getItem("eko-settings") || "{}").petName || "").trim(); if (n) t.placeholder = `Habla con ${n}…`; } catch (_) {}
+  const send = () => { const v = t.value.trim(); if (!v || !T) return; T.event.emit("chat-input", v); t.value = ""; s.disabled = true; setTimeout(() => (s.disabled = false), 1500); };
+  s.addEventListener("click", send);
+  t.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); if (e.key === "Escape") t.blur(); });
+  document.getElementById("x").addEventListener("click", () => T && T.event.emit("chat-input", "__hide"));
+  // arrastrar desde cualquier parte de la barra que no sea el texto o los botones
+  document.querySelector(".bar").addEventListener("mousedown", (e) => { if (e.target.closest("input,button")) return; T && T.window.getCurrentWindow().startDragging(); });
+  // recuerda dónde la dejas
+  if (T) {
+    const w = T.window.getCurrentWindow();
+    w.onMoved(async ({ payload }) => { try { const f = await w.scaleFactor(); localStorage.setItem("eko-chatbar-pos", JSON.stringify({ x: payload.x / f, y: payload.y / f })); } catch (_) {} });
+  }
+  document.addEventListener("contextmenu", (e) => { if (!e.target.closest("input")) e.preventDefault(); });
+})();
+</script>
+</body></html>

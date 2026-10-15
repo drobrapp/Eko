@@ -108,5 +108,30 @@
     E.setHitFull(false);
   }
 
+  // Barra en el escritorio (si la IA está activada y «Barra para hablar» también)
+  let barOn = false, ekoAway = false;
+  if (E.listen) E.listen("cmd", (e) => {
+    if (e.payload === "stowball") { ekoAway = true; barOn = false; }          // Eko se ha escondido: la barra también
+    if (e.payload === "wake" || e.payload === "back") { ekoAway = false; barOn = false; syncBar(); }
+  });
+  function syncBar() {
+    if (!invoke || ekoAway) return;
+    const s = cfg(), l = E.lastSenses || {};
+    const want = !!s.ai && s.aiBar !== false && !E.A.hidden && !l.fullscreen && !l.in_call;
+    if (want === barOn) return;
+    barOn = want;
+    if (want) {
+      let pos = null; try { pos = JSON.parse(localStorage.getItem("eko-chatbar-pos") || "null"); } catch (_) {}
+      const w = E.world, x = pos ? pos.x : w.left + w.width / 2 - 170, y = pos ? pos.y : w.top + w.height - 74;
+      invoke("chatbar_show", { x, y }).catch(() => { barOn = false; });
+    } else invoke("chatbar_hide").catch(() => {});
+  }
+  setInterval(syncBar, 2000);
+  if (E.listen) E.listen("chat-input", (e) => {
+    const v = String(e.payload || "");
+    if (v === "__hide") { if (window.EkoSettings) window.EkoSettings.set("aiBar", false); E.say("Vale, escondo la barra. La recuperas en mis ajustes", 3000, true); syncBar(); return; }
+    if (v.trim()) ask(v.trim());
+  });
+
   window.EkoChat = { open, close, ask, enabled: () => !!cfg().ai, reset: () => { history = []; } };
 })();

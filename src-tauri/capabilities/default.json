@@ -5,13 +5,16 @@
   "windows": [
     "main",
     "settings",
-    "ball"
+    "ball",
+    "chatbar"
   ],
   "permissions": [
     "core:default",
     "core:window:allow-set-position",
     "core:window:allow-show",
     "core:window:allow-outer-position",
-    "core:window:allow-set-focus"
+    "core:window:allow-set-focus",
+    "core:window:allow-start-dragging",
+    "core:window:allow-scale-factor"
   ]
 }

@@ -48,6 +48,7 @@
     fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
     follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
     ai: (v) => yes(v) ? "¡Voy a poder charlar contigo de verdad!" : "Vale, vuelvo a ser de pocas palabras",
+    aiBar: (v) => yes(v) ? "¡Barrita fuera! Arrástrala adonde te venga bien" : "Vale, escondo la barra",
     aiCpu: (v) => yes(v) ? "Pensaré más despacio, pero sin forzar tu gráfica" : "¡A toda máquina!",
     listen: (v) => yes(v) ? "¡Te escucho! Llámame por mi nombre" : "Vale, me tapo las orejas",
     desktop: (v) => yes(v) ? "¡Bien! Me encanta curiosear. Prometo no abrir nada" : "Vale, no toco tu escritorio",

@@ -93,6 +93,36 @@ fn show_settings(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// ---------- Barra para hablar con Eko (IA): ventanita propia que se puede mover por el escritorio ----------
+#[tauri::command]
+async fn chatbar_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("chatbar") {
+        let _ = w.show();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(&app, "chatbar", tauri::WebviewUrl::App("chatbar.html".into()))
+        .title("Habla con Eko")
+        .inner_size(340.0, 56.0)
+        .position(x, y)
+        .transparent(true)
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .shadow(false)
+        .focused(false)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn chatbar_hide(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("chatbar") {
+        let _ = w.hide();
+    }
+}
+
 // ---------- Pelota: ventanita propia para que pueda recorrer toda la pantalla ----------
 #[tauri::command]
 async fn ball_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
@@ -121,6 +151,9 @@ async fn ball_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
 /// Si Eko se esconde, la pelota se guarda con él
 pub(crate) fn put_ball_away(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("ball") {
+        let _ = w.hide();
+    }
+    if let Some(w) = app.get_webview_window("chatbar") {
         let _ = w.hide();
     }
     let _ = app.emit_to("main", "cmd", "stowball");
@@ -356,7 +389,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

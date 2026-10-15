@@ -1,6 +1,6 @@
 [package]
 name = "eko"
-version = "0.9.4"
+version = "0.9.5"
 description = "Eko, tu inquilino de escritorio"
 edition = "2021"
 

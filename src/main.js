@@ -498,6 +498,8 @@
   // ---------- Bocadillo + hablar con el cuerpo ----------
   let bubbleTimer = 0, lastSay = 0;
   function say(text, ms = 2800, force = false, gesture = null) {
+    // mientras habla contigo con la IA, sus comentarios espontáneos no pisan la conversación
+    if (A.chatLock && A.t < A.chatLock && !A.chatBypass) return false;
     const now = performance.now();
     if (!force && (now - lastSay < 6000 || window.Eko.quiet)) return false;
     lastSay = now;
@@ -610,7 +612,7 @@
   const cfgNow = () => (window.EkoSettings ? window.EkoSettings.get() : { walk: true, fly: true, chatty: 2 });
   const chattyLvl = () => { const c = cfgNow().chatty; return c == null ? 2 : c; };
   const discreet = () => { const l = window.Eko && window.Eko.lastSenses; return !!(l && (l.fullscreen || l.in_call)) || !!(window.Eko && window.Eko.quiet); };
-  const busy = () => S.sleeping || S.sulking || S.dragging || S.fly || S.airborne || A.action || S.pendingHop || discreet();
+  const busy = () => (A.chatLock && A.t < A.chatLock) || S.sleeping || S.sulking || S.dragging || S.fly || S.airborne || A.action || S.pendingHop || discreet();
   function cool(key, secs) { if ((WIN.cd[key] || 0) > A.t) return false; WIN.cd[key] = A.t + secs; return true; }
   const chance = (base) => Math.random() < base * [0.35, 0.6, 0.85, 1][chattyLvl()];
   const talk = (list, p = 0.4) => { if (chattyLvl() > 0 && Math.random() < p) say(pick(list)); };
@@ -1985,6 +1987,8 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
+    lockTalk: (secs) => { A.chatLock = secs > 0 ? A.t + secs : 0; },
+    sayChat: (text, ms = 4000) => { A.chatLock = Math.max(A.chatLock || 0, A.t + ms / 1000 + 5); A.chatBypass = true; try { say(text, ms, true); } finally { A.chatBypass = false; } },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),

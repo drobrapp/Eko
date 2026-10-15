@@ -42,10 +42,12 @@
   }
 
   async function ask(text) {
-    if (thinking && Date.now() - thinking < 130000) { E.say("¡Espera, que aún estoy pensando lo anterior!", 2200, true); return; }
+    if (thinking && Date.now() - thinking < 130000) { E.sayChat("¡Espera, que aún estoy pensando lo anterior!", 2200); return; }
     thinking = Date.now();
     history.push({ role: "user", content: text });
     history = history.slice(-12);
+    E.lockTalk(130);                       // nada de comentarios propios mientras pensamos la respuesta
+    E.hold(130);
     E.act("think");
     E.express("curioso", 3);
     // mientras piensa, solo su propia burbujita de pensar (se repite hasta que responde)
@@ -69,7 +71,8 @@
       window.EkoChat.lastError = String(e || "");
       const msg = String(e || "");
       E.express("confundido", 2.5); E.fx("ask", 1);
-      E.say(/offline/.test(msg) ? "No encuentro mi cerebro… ¿está Ollama abierto?" : /404|not found/i.test(msg) ? "Me falta descargar mi cerebro (el modelo). Mira en Ajustes" : /timed out|tiempo|10060|os error/i.test(msg) ? "He tardado demasiado en pensar… prueba otra vez o activa «Usar solo el procesador»" : "Uy, se me ha cruzado un cable: " + msg.slice(0, 80), 5000, true);
+      E.hold(3);
+      E.sayChat(/offline/.test(msg) ? "No encuentro mi cerebro… ¿está Ollama abierto?" : /404|not found/i.test(msg) ? "Me falta descargar mi cerebro (el modelo). Mira en Ajustes" : /timed out|tiempo|10060|os error/i.test(msg) ? "He tardado demasiado en pensar… prueba otra vez o activa «Usar solo el procesador»" : "Uy, se me ha cruzado un cable: " + msg.slice(0, 80), 5000);
       return;
     }
     stopThink();
@@ -87,7 +90,9 @@
     if (t.length > 220) t = t.slice(0, 217).replace(/\s+\S*$/, "") + "…";
     history.push({ role: "assistant", content: `[${mood || "feliz"}] ${t}` });
     if (mood && MOODS.includes(mood)) E.express(mood, 3.5);
-    E.say(t, Math.min(12000, 2600 + t.length * 55), true);
+    const ms = Math.min(12000, 2600 + t.length * 55);
+    E.sayChat(t, ms);
+    E.hold(ms / 1000 + 4);
     if (action && ACTS[action]) setTimeout(ACTS[action], 600);
   }
 
@@ -110,7 +115,7 @@
     E.setHitFull(true);
     E.hold(1e6);
     setTimeout(() => E.focusInput(c.querySelector("input")), 80);
-    if (!history.length) E.say(pick(["¡Cuéntame!", "Te escucho, dime", "¿De qué hablamos?"]), 2200, true);
+    if (!history.length) E.sayChat(pick(["¡Cuéntame!", "Te escucho, dime", "¿De qué hablamos?"]), 2200);
   }
   function close() {
     const c = document.getElementById("chatCard");

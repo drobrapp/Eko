@@ -15,6 +15,7 @@
     askUser: "¿Y tú cómo te llamas?", userOk: (n) => `Encantado, ${n}`, skip: "Prefiero no decirlo",
     askBday: "¿Cuándo es tu cumple?", bdayOk: "¡Apuntado! Ese día habrá fiesta",
     askBed: "¿A qué hora sueles irte a dormir?", bedOk: "Te avisaré si se hace tarde", varies: "Varía",
+    youDecide: "Tú decides", skipAll: "Saltar todo", setupIntro: "¡Ahora unas preguntitas para conocernos!", setupEnd: "¡Listo! Si cambias de idea, está todo en mis ajustes",
     privacy: "Para hacerte compañía miro qué programa usas, los títulos de las ventanas, cómo va el PC, tus descargas y lo que suena. Todo se queda en tu ordenador; no envío nada a ningún sitio. Puedes cambiarlo en Ajustes.",
     gotIt: "Entendido",
     end: (u) => `¡Vamos a llevarnos genial${u ? ", " + u : ""}!`,
@@ -26,6 +27,7 @@
     askUser: "And what's your name?", userOk: (n) => `Nice to meet you, ${n}`, skip: "I'd rather not say",
     askBday: "When's your birthday?", bdayOk: "Noted! There'll be a party that day",
     askBed: "What time do you usually go to bed?", bedOk: "I'll tell you if it gets late", varies: "It varies",
+    youDecide: "You decide", skipAll: "Skip all", setupIntro: "Now a few questions to get to know each other!", setupEnd: "Done! If you change your mind, it's all in my settings",
     privacy: "To keep you company I look at which app you use, window titles, how the PC is doing, your downloads and what's playing. Everything stays on your computer; I don't send anything anywhere. You can change it in Settings.",
     gotIt: "Got it",
     end: (u) => `We're going to get along great${u ? ", " + u : ""}!`,
@@ -62,6 +64,15 @@
     return new Promise((resolve) => {
       const c = card(`<p>${q}</p><div class="chips">${options.map(([v, l]) => `<button type="button" class="chip" data-v="${v}">${l}</button>`).join("")}</div>`);
       c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { hideCard(); resolve(b.dataset.v); }));
+    });
+  }
+  // Pregunta de configuración con barrita de progreso y «Saltar todo»
+  function askQ(q, options, i, n) {
+    return new Promise((resolve) => {
+      const dots = Array.from({ length: n }, (_, k) => `<i class="${k < i ? "done" : k === i ? "on" : ""}"></i>`).join("");
+      const c = card(`<div class="obdots">${dots}</div><p>${q}</p><div class="chips">${options.map(([v, l], k) => `<button type="button" class="chip${k === 0 ? " main" : ""}" data-k="${k}">${l}</button>`).join("")}<button type="button" class="chip soft" data-k="-1">${TX.youDecide}</button></div><button type="button" class="link skipall">${TX.skipAll}</button>`);
+      c.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { hideCard(); const k = +b.dataset.k; resolve(k < 0 ? null : options[k][0]); }));
+      c.querySelector(".skipall").addEventListener("click", () => { hideCard(); resolve("__skip"); });
     });
   }
   // Cumpleaños con selectores propios: los desplegables nativos no funcionan en la ventana transparente de Eko
@@ -138,6 +149,56 @@
   }
 
   // ---------- Secuencia ----------
+  // ---------- Preguntas que configuran lo básico ----------
+  const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : null;
+  const yes = (v) => v === "1";
+  const QS = ES ? [
+    { q: "¿Cuánto quieres que hable?", o: [["3", "¡Mucho!"], ["2", "Lo normal"], ["1", "Poquito"]],
+      set: (v) => S.set("chatty", +v), say: { 3: ["¡Por fin alguien que me entiende!", "spark"], 2: ["Ni mucho ni poco. Perfecto", "nod"], 1: ["Vale, seré de pocas palabras", "nod"] } },
+    { q: "¿Me dejas pasear por tu pantalla?", o: [["all", "¡Libre!"], ["walk", "Solo andar"], ["none", "Mejor quieto"]],
+      set: (v) => { S.set("walk", v !== "none"); S.set("fly", v === "all"); }, say: { all: ["¡Bieeen! Con capa y todo", "spark"], walk: ["Vale, con los pies en el suelo", "nod"], none: ["Vale, seré una estatua muy mona", "shrug"] } },
+    { q: "¿Quieres oír mi voz?", o: [["1", "¡Sí!"], ["0", "Mejor en silencio"]],
+      set: (v) => S.set("voice", yes(v)), say: { 1: ["¡Bla, bla, blu! Hola", "note"], 0: ["Vale… seré un mimo", "shrug"] } },
+    { q: "¿A qué hora te sueles ir a dormir?", o: [["23:30", "Antes de las 12"], ["01:00", "Sobre la 1"], ["02:30", "Más tarde"], ["", "No me avises"]],
+      set: (v) => S.set("bedtime", v), say: { "23:30": ["¡Qué sano! Te avisaré si se hace tarde", "yawn"], "01:00": ["Te avisaré si se hace tarde", "yawn"], "02:30": ["Uy, noctámbulo… te vigilaré", "ask"], "": ["Vale, nada de sermones", "nod"] } },
+    { q: "Si llevas mucho rato sin parar, ¿te aviso para descansar?", o: [["60", "Cada hora"], ["120", "Cada 2 horas"], ["0", "No hace falta"]],
+      set: (v) => { S.set("breaks", v !== "0"); if (v !== "0") S.set("breakMinutes", +v); }, say: { 60: ["Te cuidaré, prometido", "heart"], 120: ["Vale, cada dos horitas", "nod"], 0: ["Vale, pero estira de vez en cuando", "shrug"] } },
+    { q: "Cuando estés en una llamada o grabando la pantalla, ¿me escondo?", o: [["all", "Siempre"], ["call", "Solo en llamadas"], ["none", "No hace falta"]],
+      set: (v) => { S.set("hideCall", v !== "none"); S.set("hideRecord", v === "all"); S.set("hideFull", v === "all"); }, say: { all: ["Discreción total. Desapareceré", "nod"], call: ["En llamadas me escondo, prometido", "nod"], none: ["¡Voy a salir en todas tus llamadas!", "spark"] } },
+    { q: "¿Me dejas curiosear tu escritorio? Solo miro los nombres de los iconos, nunca abro nada", o: [["1", "Vale"], ["0", "Mejor no"]],
+      set: (v) => S.set("desktop", yes(v)), say: { 1: ["¡Gracias! Seré muy cotilla (pero respetuoso)", "spark"], 0: ["Entendido, tu escritorio es sagrado", "nod"] } },
+    { q: "¿Arranco contigo cada mañana?", o: [["1", "¡Sí!"], ["0", "No"]],
+      set: (v) => { if (invoke) invoke("set_autostart", { value: yes(v) }).catch(() => {}); }, say: { 1: ["¡Así nos vemos cada día!", "heart"], 0: ["Vale, ya me despertarás tú", "nod"] } },
+    { q: "¿Te pregunto qué tal estás de vez en cuando?", o: [["1", "¡Claro!"], ["0", "Mejor no"]],
+      set: (v) => S.set("menuAsk", yes(v)), say: { 1: ["¡Bien! Me encanta saber de ti", "heart"], 0: ["Vale, nada de preguntas", "nod"] } },
+  ] : [
+    { q: "How much should I talk?", o: [["3", "A lot!"], ["2", "Normal"], ["1", "A little"]], set: (v) => S.set("chatty", +v), say: {} },
+    { q: "Can I roam around your screen?", o: [["all", "Freely!"], ["walk", "Just walk"], ["none", "Stay still"]], set: (v) => { S.set("walk", v !== "none"); S.set("fly", v === "all"); }, say: {} },
+    { q: "Want to hear my voice?", o: [["1", "Yes!"], ["0", "Silence"]], set: (v) => S.set("voice", yes(v)), say: {} },
+    { q: "What time do you go to bed?", o: [["23:30", "Before 12"], ["01:00", "Around 1"], ["02:30", "Later"], ["", "Don't remind me"]], set: (v) => S.set("bedtime", v), say: {} },
+    { q: "Should I remind you to take breaks?", o: [["60", "Every hour"], ["120", "Every 2 h"], ["0", "No need"]], set: (v) => { S.set("breaks", v !== "0"); if (v !== "0") S.set("breakMinutes", +v); }, say: {} },
+    { q: "Should I hide during calls or screen recording?", o: [["all", "Always"], ["call", "Only calls"], ["none", "No need"]], set: (v) => { S.set("hideCall", v !== "none"); S.set("hideRecord", v === "all"); S.set("hideFull", v === "all"); }, say: {} },
+    { q: "Can I peek at your desktop? I only look at icon names", o: [["1", "OK"], ["0", "Rather not"]], set: (v) => S.set("desktop", yes(v)), say: {} },
+    { q: "Should I start with Windows?", o: [["1", "Yes!"], ["0", "No"]], set: (v) => { if (invoke) invoke("set_autostart", { value: yes(v) }).catch(() => {}); }, say: {} },
+    { q: "Can I ask how you're doing now and then?", o: [["1", "Sure!"], ["0", "Rather not"]], set: (v) => S.set("menuAsk", yes(v)), say: {} },
+  ];
+  async function setup() {
+    E.say(TX.setupIntro, 2400, true, "spark");
+    await wait(2500);
+    for (let i = 0; i < QS.length; i++) {
+      const Q = QS[i];
+      E.act("curious", { dir: 1 });
+      const v = await askQ(Q.q, Q.o, i, QS.length);
+      if (v === "__skip") break;
+      if (v === null) { E.act("nod"); await wait(500); continue; }       // «Tú decides»: se queda como está
+      Q.set(v);
+      const r = Q.say[v];
+      if (r) { E.say(r[0], 2200, true, r[1]); await wait(2300); } else await wait(400);
+    }
+    E.say(TX.setupEnd, 2600, true, "nod");
+    await wait(2700);
+  }
+
   async function run() {
     E.setHidden(true);
     E.S.x = Math.min(Math.max(E.S.x, E.world.left), E.world.left + E.world.width - E.W);   // ventana entera en pantalla
@@ -159,10 +220,7 @@
     const bday = await askBday();
     if (bday) { S.set("birthday", bday); E.say(TX.bdayOk, 2600, true, "spark"); await wait(2700); }
 
-    const bed = await askChips(TX.askBed, [["22:30", "22:30"], ["23:30", "23:30"], ["00:30", "00:30"], ["01:30", "01:30"], ["", TX.varies]]);
-    S.set("bedtime", bed || "01:30");
-    E.say(TX.bedOk, 2600, true, "yawn");
-    await wait(2700);
+    await setup();
 
     E.act("think");
     await info(TX.privacy, TX.gotIt);

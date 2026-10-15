@@ -9,6 +9,65 @@
   let savedTimer = 0;
   const saved = () => { $("#saved").classList.add("show"); clearTimeout(savedTimer); savedTimer = setTimeout(() => $("#saved").classList.remove("show"), 1100); };
 
+  // ---------- Eko te habla desde la cabecera ----------
+  const pick = (l) => l[Math.floor(Math.random() * l.length)];
+  let saysTimer = 0;
+  function says(text) {
+    const b = $("#says"), sv = $("header svg");
+    if (!b) return;
+    // si la cabecera no se ve, Eko asoma en la esquina
+    const fl = $("#floatSay");
+    if (fl && window.scrollY > 70) {
+      if (!fl.querySelector("svg")) { const c = sv.cloneNode(true); c.removeAttribute("class"); c.querySelector("#mEyes") && c.querySelector("#mEyes").removeAttribute("id"); fl.appendChild(c); }
+      $("#floatTxt").textContent = text;
+      fl.classList.remove("in"); void fl.offsetWidth; fl.classList.add("in");
+      clearTimeout(says.ft); says.ft = setTimeout(() => fl.classList.remove("in"), 4500);
+      return;
+    }
+    b.classList.remove("in"); void b.offsetWidth;
+    b.textContent = text; b.classList.add("in");
+    sv.classList.remove("hop"); void sv.offsetWidth; sv.classList.add("hop");
+    clearTimeout(saysTimer); saysTimer = setTimeout(() => b.classList.remove("in"), 6000);
+  }
+  const nm = () => (S.get().userName || "").trim();
+  const HELLO = [
+    () => "Aquí puedes cambiarme cosas. Con cariño, ¿eh?",
+    () => nm() ? `¡Hola, ${nm()}! ¿Qué toca cambiar hoy?` : "¡Hola! ¿Qué toca cambiar hoy?",
+    () => "No me quites la capa, porfa.",
+    () => "Toca lo que quieras, yo miro.",
+  ];
+  const yes = (v) => v === true || v === "true";
+  const REACT = {
+    petName: (v) => `¿«${v}»? ¡Me gusta cómo suena!`,
+    userName: (v) => v ? `¡Encantado, ${v}!` : "Vale, seguirás siendo un misterio",
+    bedtime: () => "Apuntado. A esa hora te mandaré a dormir (con cariño)",
+    menuAsk: (v) => yes(v) ? "¡Bien! Me encanta preguntarte cosas" : "Vale, nada de preguntas. Solo opciones",
+    voice: (v) => yes(v) ? "¡Bla, bla! ¿Me oyes?" : "Vale… seré un mimo",
+    pitch: () => "¿Así sueno mejor?",
+    walk: (v) => yes(v) ? "¡A pasear!" : "¿Quieto? Bueno, haré yoga",
+    fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
+    follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
+    desktop: (v) => yes(v) ? "¡Bien! Me encanta curiosear. Prometo no abrir nada" : "Vale, no toco tu escritorio",
+    hideCall: (v) => yes(v) ? "En llamadas, desaparezco" : "¿Puedo salir en tus llamadas? ¡Hola a todos!",
+    hideRecord: (v) => yes(v) ? "Si grabas, me escondo" : "¡Voy a salir en tu vídeo!",
+    hideFull: (v) => yes(v) ? "En pantalla completa no molesto" : "Vale, me quedo aunque veas una peli",
+    breaks: (v) => yes(v) ? "Te avisaré para que descanses un poco" : "Vale… pero no te olvides de estirar",
+    chatty: (v) => ["Me callo. Pero que conste que me cuesta", "Hablaré poquito", "Lo normal, como siempre", "¡Por fin! Tengo tanto que contarte"][+v] || "",
+    size: (v) => (+v < 1 ? "¡Me he encogido!" : +v > 1 ? "¡Mírame, soy enorme!" : "Tamaño normal, como me gusta"),
+    breakMinutes: () => "Vale, ese es el ritmo",
+    scrollMinutes: (v) => (+v ? "Te avisaré si te enganchas a las redes" : "Vale, scroll libre… pero yo lo veo todo"),
+    autostart: (v) => (yes(v) ? "¡Así nos vemos cada mañana!" : "¿Tendrás que despertarme tú? Vale"),
+    birthday: () => "¡Apuntado! Ese día, fiesta",
+  };
+  const react = (k, v) => { const f = REACT[k]; if (f) { const t = f(v); if (t) says(t); } };
+  setTimeout(() => says(pick(HELLO)()), 500);
+  // Los ojos miran hacia donde está el ratón
+  document.addEventListener("pointermove", (e) => {
+    const r = $("header svg").getBoundingClientRect();
+    const dx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / 300)), dy = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / 300));
+    $("#mEyes").style.translate = `${(dx * 9).toFixed(1)}px ${(dy * 7).toFixed(1)}px`;
+  });
+
   function fill() {
     const s = S.get();
     $("#title").textContent = `Ajustes de ${s.petName || "Eko"}`;
@@ -26,7 +85,7 @@
   const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   $("#bday-d").innerHTML = '<option value="">Día</option>' + Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, "0")}">${i + 1}</option>`).join("");
   $("#bday-m").innerHTML = '<option value="">Mes</option>' + meses.map((n, i) => `<option value="${String(i + 1).padStart(2, "0")}">${n}</option>`).join("");
-  const saveBday = () => { const d = $("#bday-d").value, m = $("#bday-m").value; S.set("birthday", d && m ? `${m}-${d}` : ""); saved(); };
+  const saveBday = () => { const d = $("#bday-d").value, m = $("#bday-m").value; S.set("birthday", d && m ? `${m}-${d}` : ""); saved(); if (d && m) react("birthday"); };
   $("#bday-d").addEventListener("change", saveBday);
   $("#bday-m").addEventListener("change", saveBday);
 
@@ -38,12 +97,13 @@
       if (k === "petName" && !String(v).trim()) return;
       S.set(k, v); saved();
       if (k === "petName") $("#title").textContent = `Ajustes de ${v}`;
+      clearTimeout(el._rt); el._rt = setTimeout(() => react(k, v), el.type === "text" ? 900 : 0);
     });
   });
   $$(".seg[data-k]").forEach((seg) => seg.addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     const v = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v;
-    S.set(seg.dataset.k, v); fill(); saved();
+    S.set(seg.dataset.k, v); fill(); saved(); react(seg.dataset.k, v);
   }));
   $$("textarea[data-app]").forEach((t) => t.addEventListener("change", () => { S.setApp(t.dataset.app, t.value); saved(); }));
 
@@ -67,7 +127,7 @@
     invoke("get_autostart").then((v) => { $("#autostart").checked = !!v; }).catch(() => {});
     invoke("app_version").then((v) => { $("#ver").textContent = `Versión ${v} · todo se guarda solo en tu PC`; }).catch(() => {});
   }
-  $("#autostart").addEventListener("change", (e) => { if (invoke) invoke("set_autostart", { value: e.target.checked }).then(saved); });
+  $("#autostart").addEventListener("change", (e) => { react("autostart", e.target.checked); if (invoke) invoke("set_autostart", { value: e.target.checked }).then(saved); });
   $("#checkUpd").addEventListener("click", () => {
     $("#updState").textContent = "Buscando…";
     if (!invoke) { setTimeout(() => { $("#updState").textContent = "Solo funciona en la app"; }, 600); return; }
@@ -76,7 +136,9 @@
   });
 
   // Privacidad
+  $("#wipe").addEventListener("mouseenter", () => says(pick(["No, no, no…", "Ese botón me da miedo", "¿Seguro que quieres tocar eso?"])));
   $("#showData").addEventListener("click", () => {
+    says("Esto es todo lo que sé de ti. Nada sale de tu PC");
     const pre = $("#dataView");
     const out = {};
     for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("eko")) { try { out[k] = JSON.parse(localStorage.getItem(k)); } catch (_) { out[k] = localStorage.getItem(k); } } }
@@ -85,7 +147,7 @@
   });
   let wipeArmed = false;
   $("#wipe").addEventListener("click", (e) => {
-    if (!wipeArmed) { wipeArmed = true; e.target.textContent = "¿Seguro? Pulsa otra vez"; setTimeout(() => { wipeArmed = false; e.target.textContent = "Borrar"; }, 4000); return; }
+    if (!wipeArmed) { wipeArmed = true; e.target.textContent = "¿Seguro? Pulsa otra vez"; says("Espera, espera… ¿de verdad quieres que vuelva a ser una semilla?"); setTimeout(() => { wipeArmed = false; e.target.textContent = "Borrar"; }, 4000); return; }
     S.reset();
     if (T) T.event.emit("eko-reset");
     e.target.textContent = "Borrado";

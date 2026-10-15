@@ -49,20 +49,20 @@
   const svg = (k, color) => `<svg viewBox="0 0 24 24" ${color ? `style="color:${color}"` : ""}>${I[k] || ""}</svg>`;
 
   const L = ES ? {
-    letsPlay: "¿Jugamos?", water: "Regar", waterTip: "¡Arrastra la regadera sobre mi cabeza!", stowBall: "Guardar pelota", ballTip: "(Doble clic en la pelota para guardarla)", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
-    ball: "Pelota", snack: "Snack", games: "Juegos", trick: "Truco",
+    letsPlay: "¡Juguemos!", other: "Otra cosa…", water: "Riégame", waterTip: "¡Arrastra la regadera sobre mi cabeza!", stowBall: "Guardar pelota", ballTip: "(Doble clic en la pelota para guardarla)", treats: "Cuídame", play: "Jugar", util: "Te ayudo", wardrobe: "Ponme guapo", rest: "A descansar", settings: "Mis ajustes",
+    ball: "Pelota", snack: "¡Comida!", games: "Juegos", trick: "Mira esto",
     rps: "Piedra, papel…", hand: "¿Qué mano?", hide: "Escondite",
     rock: "Piedra", paper: "Papel", scissors: "Tijera", lefth: "Izquierda", righth: "Derecha",
-    remind: "Recordatorio", pomo: "Pomodoro", note: "Nota", tasks: "Tareas", shortcuts: "Atajos",
+    remind: "Recuérdame", pomo: "Concentración", note: "Apunta algo", tasks: "Tus tareas", shortcuts: "Atajos",
     lastdl: "Última descarga", dlfolder: "Descargas", shot: "Captura", playpause: "Pausar", nexttrack: "Siguiente",
-    sleep: "Dormir", mute: "Silencio 1 h", discreet: "Discreto", back: "Volver",
+    sleep: "A dormir", mute: "Silencio 1 h", discreet: "Modo discreto", back: "Volver",
     auto: "Automático", none: "Ninguno",
     remindAsk: "¿Qué te recuerdo?", noteAsk: "Apunta una tarea o nota", ok: "Vale",
     stopPomo: "Parar pomodoro",
     soon: "Ajustes: nombre, cumpleaños, sonido, apps por categoría… ¡muy pronto!",
     onlyApp: "Eso solo funciona en la app",
   } : {
-    letsPlay: "Let's play?", water: "Water", waterTip: "Drag the watering can over my head!", stowBall: "Put ball away", ballTip: "(Double-click the ball to put it away)", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
+    letsPlay: "Let's play!", other: "Something else…", water: "Water me", waterTip: "Drag the watering can over my head!", stowBall: "Put ball away", ballTip: "(Double-click the ball to put it away)", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
     ball: "Ball", snack: "Snack", games: "Games", trick: "Trick",
     rps: "Rock, paper…", hand: "Which hand?", hide: "Hide & seek",
     rock: "Rock", paper: "Paper", scissors: "Scissors", lefth: "Left", righth: "Right",
@@ -98,17 +98,17 @@
   ];
   const TREE = {
     root: [
-      { id: "letsplay", icon: "play", label: L.letsPlay, run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : L.letsPlay) },
-      { id: "treats", icon: "cookie", label: L.treats, go: "treats" },
-      { id: "util", icon: "util", label: L.util, go: "util" },
-      { id: "wardrobe", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
-      { id: "rest", icon: "moon", label: L.rest, go: "rest" },
-      { id: "settings", icon: "sliders", label: L.settings, run: openSettings },
+      { id: "letsplay", react: "emocionado", icon: "play", label: L.letsPlay, run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : L.letsPlay) },
+      { id: "treats", react: "esperanzado", icon: "cookie", label: L.treats, go: "treats" },
+      { id: "util", react: "curioso", icon: "util", label: L.util, go: "util" },
+      { id: "wardrobe", react: "orgulloso", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
+      { id: "rest", react: "yawn", icon: "moon", label: L.rest, go: "rest" },
+      { id: "settings", react: "settings", icon: "sliders", label: L.settings, run: openSettings },
     ],
     treats: [
-      { icon: "cookie", label: L.snack, run: giveSnack },
-      { icon: "star", label: L.trick, run: trick },
-      { img: "artCan", label: L.water, run: () => startWater() },
+      { id: "snack", react: "divertido", icon: "cookie", label: L.snack, run: giveSnack },
+      { id: "trick", react: "picaro", icon: "star", label: L.trick, run: trick },
+      { id: "water", react: "esperanzado", img: "artCan", label: L.water, run: () => startWater() },
     ],
     rps: [
       { icon: "rock", label: L.rock, run: () => playRps(0) },
@@ -116,9 +116,9 @@
       { icon: "scissors", label: L.scissors, run: () => playRps(2) },
     ],
     util: [
-      { icon: "bell", label: L.remind, go: "remind" },
-      { icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
-      { icon: "pencil", label: L.note, run: askNote },
+      { id: "remind", react: "curioso", icon: "bell", label: L.remind, go: "remind" },
+      { id: "pomo", react: "orgulloso", icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
+      { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote },
       { icon: "list", label: L.tasks, run: showTasks },
       { icon: "bolt", label: L.shortcuts, go: "shortcuts" },
     ],
@@ -132,11 +132,114 @@
     ],
     wardrobe: COSTUMES.map(([id, lab, ic, col]) => ({ icon: ic, color: col, label: lab, run: () => { E.setHat(id); }, keep: true })),
     rest: [
-      { icon: "moon", label: L.sleep, run: () => E.goToSleep() },
+      { id: "sleep", react: "yawn", icon: "moon", label: L.sleep, run: () => E.goToSleep() },
       { icon: "mute", label: L.mute, run: muteHour },
       { icon: "feather", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
     ],
   };
+
+  // ---------- Actualizaciones: Eko lo anuncia y se actualiza con un clic en él ----------
+  const UPD = { v: null, snooze: 0 };
+  const updBadge = document.createElement("img");
+  updBadge.id = "updBadge"; updBadge.alt = "";
+  updBadge.src = (document.getElementById("artBang") || {}).getAttribute?.("href") || "";
+  (document.getElementById("pod") || stage).appendChild(updBadge);
+  const updPending = () => !!UPD.v && Date.now() > UPD.snooze;
+  const showBadge = () => updBadge.classList.toggle("in", updPending());
+  function announceUpdate(v) {
+    if (!v) return;
+    const fresh = UPD.v !== v; UPD.v = v;
+    if (Date.now() < UPD.snooze && !fresh) return;
+    UPD.snooze = 0; showBadge();
+    E.express && E.express("emocionado", 2.5); E.fx && E.fx("spark", 2);
+    E.say(ES ? `¡Hay una versión nueva de mí! Haz clic en mí para actualizarme` : "There's a new version of me! Click me to update", 4200, true);
+  }
+  if (E.listen) E.listen("update-available", (e) => announceUpdate(e.payload));
+  function installUpdate() {
+    updBadge.classList.remove("in");
+    if (invoke) invoke("install_update").catch(() => { E.say(ES ? "Uy, no he podido actualizarme. Lo intento más tarde" : "Couldn't update, I'll try later", 3000, true); showBadge(); });
+    else { E.act("bye"); E.say(ES ? "Me voy a la peluquería, ahora vuelvo (vista previa)" : "Off to the hairdresser (preview)", 3000, true); UPD.v = null; }
+  }
+  function snoozeUpdate() {
+    UPD.snooze = Date.now() + 3 * 3600000; showBadge();
+    E.say(ES ? "Vale, te lo recuerdo luego" : "OK, I'll remind you later", 2200, true, "nod");
+    setTimeout(() => { if (updPending()) announceUpdate(UPD.v); }, 3 * 3600000 + 1000);
+  }
+
+  // ---------- Menú con personalidad ----------
+  const USE = store.get("eko-menu-use") || {};
+  const hr = () => new Date().getHours();
+  const GREET = () => ES ? [
+    () => "¿Qué hacemos?", () => "¡Dime, dime!", () => "¿Me necesitas?", () => "Te escucho",
+    () => (hr() < 12 ? "¡Buenos días! ¿Qué te apetece?" : hr() < 20 ? "¿Qué te apetece?" : "¿Algo antes de dormir?"),
+  ] : [() => "What shall we do?", () => "Tell me!", () => "Need me?"];
+  // Sugerencias según el momento (y lo que más usas)
+  function buildSmart() {
+    const c = [];
+    const add = (score, item) => c.push({ score: score + Math.log(1 + (USE[item.id] || 0)) * 1.2 + Math.random() * 1.4, item });
+    const care = E.careState, thirsty = care && E.careStage && E.careStage() >= 1 && care.last && Date.now() - care.last > 20 * 3600000;
+    const music = !!(E.lastSenses && E.lastSenses.music && E.lastSenses.music.playing);
+    const h = hr(), wd = new Date().getDay(), work = wd >= 1 && wd <= 5 && h >= 9 && h < 19;
+    if (ball) add(30, { id: "stowball", react: "contento", icon: "ball", label: L.stowBall, run: stowBall });
+    if (pomo) add(25, { id: "pomo", react: "orgulloso", icon: "timer", label: L.stopPomo, run: stopPomo });
+    add(thirsty ? 12 : (care && care.days && care.days.length < 3 ? 4 : 0.5), { id: "water", react: "esperanzado", img: "artCan", label: ES ? (thirsty ? "¿Me riegas?" : "Riégame") : "Water me", run: () => startWater() });
+    if (music) add(9, { id: "dance", react: "emocionado", icon: "play", label: ES ? "¿Bailamos?" : "Dance?", run: () => { E.setDance(true); setTimeout(() => E.setDance(false), 9000); } });
+    if (h >= 23 || h < 6) add(9, { id: "sleep", react: "yawn", icon: "moon", label: ES ? "¿A dormir?" : "Bedtime?", run: () => E.goToSleep() });
+    add(3.5, { id: "letsplay", react: "emocionado", icon: "play", label: L.letsPlay, run: () => propose(true) });
+    add((h >= 13 && h < 15) || (h >= 20 && h < 22) ? 5 : 2, { id: "snack", react: "divertido", icon: "cookie", label: ES ? "¡Tengo hambre!" : "I'm hungry!", run: giveSnack });
+    if (work && !pomo) add(3, { id: "pomo", react: "orgulloso", icon: "timer", label: ES ? "Concéntrate, yo vigilo" : "Focus, I'll watch", run: startPomo });
+    if (h >= 7 && h < 12) add(2.5, { id: "remind", react: "curioso", icon: "bell", label: L.remind, go: "remind" });
+    const m = new Date().getMonth();
+    add(m === 9 || m === 11 ? 4 : 1, { id: "wardrobe", react: "orgulloso", icon: "hanger", label: L.wardrobe, go: "wardrobe" });
+    add(1.5, { id: "trick", react: "picaro", icon: "star", label: L.trick, run: trick });
+    add(1, { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote });
+    c.sort((a, b) => b.score - a.score);
+    const out = [], seen = new Set();
+    for (const { item } of c) { if (seen.has(item.id)) continue; seen.add(item.id); out.push(item); if (out.length === 2) break; }
+    out.push({ icon: "sparkle", label: L.other, go: "root", react: "curioso" });
+    return out;
+  }
+  // Preguntas (como mucho una al día): Eko pregunta y reacciona a tu respuesta
+  const QUESTIONS = ES ? [
+    { q: "¿Qué tal el día?", a: [
+      ["¡Genial!", () => { E.express("emocionado", 3); E.fx("spark", 3); E.hop(-380); E.say("¡Así me gusta! Contágiame un poco", 2800, true); }],
+      ["Regular", () => { E.express("esperanzado", 3); E.say("Venga, que tú puedes. ¿Una pausa cortita luego?", 3000, true); }],
+      ["Agotado", () => { E.express("triste", 2); E.act("hug"); E.fx("heart", 2); E.say("Ven aquí… Respira un poco. Yo te acompaño", 3200, true); }]] },
+    { q: "¿Has bebido agua hoy?", a: [
+      ["¡Sí!", () => { E.express("orgulloso", 2.5); E.say("¡Bien! Hidratación de campeón", 2600, true); }],
+      ["Todavía no", () => { E.express("sorprendido", 2.5); E.fx("bang", 1); E.say("¡Ve a por un vaso! Yo te espero aquí", 2800, true); }]] },
+    { q: "¿Café o té?", a: [
+      ["Café", () => { E.express("emocionado", 2.5); E.useProp && E.useProp("mug", 90, 0); E.say("¡Café! Yo también quiero", 2400, true); }],
+      ["Té", () => { E.express("sereno", 2.5); E.useProp && E.useProp("mug", 90, 0); E.say("Té… qué elegante", 2400, true); }],
+      ["Ninguno", () => { E.express("confundido", 2.5); E.say("¿Agua entonces? Muy sano", 2400, true); }]] },
+    { q: "¿En qué andas ahora?", a: [
+      ["Trabajando", () => { E.express("orgulloso", 2.5); E.say("¡Ánimo! Si quieres, te pongo un modo concentración", 3000, true); }],
+      ["Creando algo", () => { E.express("emocionado", 2.5); E.fx("spark", 2); E.say("¡Me encanta! Luego me lo enseñas", 2600, true); }],
+      ["Nada", () => { E.express("picaro", 2.5); E.say("¿Nada? Entonces… ¿jugamos?", 2400, true); setTimeout(() => propose(true), 2600); }]] },
+  ] : [
+    { q: "How's your day?", a: [["Great!", () => { E.express("emocionado", 3); E.say("Love it!", 2400, true); }], ["Meh", () => { E.express("esperanzado", 3); E.say("You've got this", 2400, true); }], ["Tired", () => { E.act("hug"); E.say("Come here… take a breath", 2800, true); }]] },
+  ];
+  function buildUpdate() {
+    capText = ES ? `¡Versión nueva (${UPD.v})! ¿Me actualizo?` : `New version (${UPD.v})! Update me?`;
+    E.express("emocionado", 2.5);
+    return [{ text: ES ? "¡Sí, ahora!" : "Yes, now!", chip: true, label: "", run: installUpdate }, { text: ES ? "Luego" : "Later", chip: true, label: "", run: snoozeUpdate }];
+  }
+  function buildAsk() {
+    const q = pick(QUESTIONS);
+    capText = q.q;
+    E.express("curioso", 3);
+    return q.a.map(([t, f]) => ({ text: t, chip: true, label: "", run: f }));
+  }
+  let hoverAt = 0;
+  function hoverReact(it) {
+    const now = performance.now();
+    if (!it.react || now - hoverAt < 500) return;
+    hoverAt = now;
+    if (it.react === "yawn") E.act("yawn");
+    else if (it.react === "settings") { if (Math.random() < 0.5) E.say(pick(ES ? ["¿Me vas a cambiar? Snif", "Con cuidadito, ¿eh?", "Ahí guardo mis secretos"] : ["Gonna change me?"]), 1600, true); E.express("timido", 1.5); }
+    else E.express(it.react, 1.4);
+  }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && open) close(); });
 
   // ---------- Dibujo del menú ----------
   const HEAD = { x: 210, y: 282 };          // centro de la cabeza dentro de la ventana
@@ -160,16 +263,24 @@
     return out;
   }
 
+  // Lo que dice Eko encima de las burbujas en cada nivel
+  let capText = "";
+  const CAP = ES ? {
+    root: ["¿Qué más te apetece?", "Todo lo que sé hacer"], treats: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
+    rest: ["¿Descansamos?"], remind: ["¿Cuándo te aviso?"], shortcuts: ["Atajos rápidos"], rps: ["¡Elige! Sin trampas"],
+  } : { root: ["What else?"], treats: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], rest: ["Rest?"], remind: ["When?"], shortcuts: ["Shortcuts"], rps: ["Pick one!"] };
   function render(levelId) {
     level = levelId;
     menu.innerHTML = "";
-    const items = TREE[levelId];
+    capText = "";
+    const items = levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId];
+    if (!capText) capText = levelId === "smart" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     const pos = layout(items.length);
     const all = [...items];
-    if (levelId !== "root") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
+    if (levelId !== "root" && levelId !== "smart" && levelId !== "ask" && levelId !== "update") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
     all.forEach((it, i) => {
       const b = document.createElement("button");
-      b.className = "blob" + (it.back ? " back" : "") + (it.text ? " txt" : "") + (pos[i].small ? " small" : "");
+      b.className = "blob" + (it.back ? " back" : "") + (it.text ? " txt" : "") + (it.chip ? " chip" : "") + (pos[i].small ? " small" : "");
       b.style.setProperty("--x", pos[i].x + "px");
       b.style.setProperty("--y", pos[i].y + "px");
       b.style.setProperty("--d", i * 45 + "ms");
@@ -177,14 +288,24 @@
       const label = it.dyn ? it.dyn() : it.label;
       b.innerHTML = (it.text ? `<b>${it.text}</b>` : it.img ? `<img class="ic" src="${artSrc(it.img)}" alt="">` : svg(it.icon, it.color)) + (label ? `<span>${label}</span>` : "");
       b.addEventListener("click", (ev) => { ev.stopPropagation(); choose(it); });
-      b.addEventListener("mouseenter", () => E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 80, 1000 + i * 80, 0.05, 0.015));
+      b.addEventListener("mouseenter", () => { E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 80, 1000 + i * 80, 0.05, 0.015); hoverReact(it); });
       menu.appendChild(b);
       requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add("in")));
     });
+    if (capText) {
+      const top = Math.min(...pos.map((q) => q.y)) - 62;
+      const c = document.createElement("div");
+      c.className = "mcap"; c.textContent = capText;
+      c.style.setProperty("--y", Math.max(6, top) + "px");
+      menu.appendChild(c);
+      requestAnimationFrame(() => requestAnimationFrame(() => c.classList.add("in")));
+      E.talk && E.talk(capText);
+    }
   }
 
   function choose(it) {
     E.Voice.ensure && E.Voice.ensure();
+    if (it.id) { USE[it.id] = (USE[it.id] || 0) + 1; store.set("eko-menu-use", USE); }
     if (it.back) { render(parentOf(level)); return; }
     if (it.go) { if (it.enter) it.enter(); render(it.go); return; }
     if (it.run) {
@@ -206,7 +327,12 @@
     E.hold(1e6);
     E.setHitFull(true);
     E.Voice.tone && E.Voice.tone("sine", 520, 780, 0.12, 0.03);
-    E.keepInside(() => { if (open) render("root"); });
+    // Eko habla primero: a veces una pregunta, normalmente 2 sugerencias + «Otra cosa…»
+    const cfgS = window.EkoSettings ? window.EkoSettings.get() : {};
+    const today = new Date().toDateString();
+    const askNow = cfgS.menuAsk !== false && store.get("eko-menu-asked") !== today && Math.random() < 0.35;
+    if (askNow) store.set("eko-menu-asked", today);
+    E.keepInside(() => { if (open) render(askNow ? "ask" : "smart"); });
   }
   function openAt(levelId) {
     if (!open) {
@@ -738,6 +864,7 @@
   window.EkoMenu = {
     toggle() {
       if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) { hideGame = false; return; }   // estaba escondido y lo has pillado
+      if (!open && updPending() && !hideGame) { openAt("update"); return; }                                   // actualización pendiente: un clic y listo
       const wasHiding = hideGame;
       document.dispatchEvent(new Event("eko-tap"));
       if (wasHiding) return;
@@ -745,7 +872,7 @@
     },
     close,
     propose: (force) => propose(force),
-    startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    announceUpdate, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

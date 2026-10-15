@@ -303,23 +303,31 @@ fn first_run_autostart(app: &tauri::App) {
     let _ = std::fs::write(marker, b"1");
 }
 
-/// Busca una versión nueva en GitHub Releases; si la hay, la instala y reinicia Eko.
+/// Busca una versión nueva en GitHub Releases; si la hay, Eko lo anuncia y tú decides cuándo instalarla (clic en él).
 async fn check_update(app: &AppHandle) -> tauri_plugin_updater::Result<()> {
     if let Some(update) = app.updater()?.check().await? {
-        let _ = app.emit_to("main", "cmd", "updating");
-        update.download_and_install(|_, _| {}, || {}).await?;
-        app.restart();
+        let _ = app.emit_to("main", "update-available", update.version.clone());
     }
     Ok(())
 }
 
-/// Comprueba actualizaciones 30 s después de arrancar y luego cada 6 horas.
+/// Instala la actualización ahora (lo pide Eko cuando le dices que sí) y reinicia.
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<bool, String> {
+    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let Some(u) = update else { return Ok(false) };
+    let _ = app.emit_to("main", "cmd", "updating");
+    u.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    app.restart();
+}
+
+/// Comprueba actualizaciones 30 s después de arrancar y luego cada 3 horas.
 fn start_update_loop(app: AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(30));
         loop {
             let _ = tauri::async_runtime::block_on(check_update(&app));
-            std::thread::sleep(Duration::from_secs(6 * 60 * 60));
+            std::thread::sleep(Duration::from_secs(3 * 60 * 60));
         }
     });
 }
@@ -345,7 +353,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, desktop::desktop_scan, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, desktop::desktop_scan, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

@@ -468,10 +468,16 @@
     wink: { dur: 1.2, eyes: "wink", f(P, k, e) { P.tilt += 8 * e; } },
   };
 
+  const WALK_OK = new Set(["nod", "wink", "teeter"]);
   function act(name, opts = {}) {
     const a = ACTIONS[name];
     if (!a || S.dragging) return;
     A.action = { name, t0: A.t, dur: opts.dur || a.dur, opts };
+    // Los gestos están pensados para hacerse quieto: si va andando, se para, hace el gesto y sigue su camino
+    if (S.mode === "walk" && !S.airborne && !S.fly && !WALK_OK.has(name)) {
+      S.resumeWalk = { targetX: S.targetX, speed: S.speed, then: S.then, at: A.t + A.action.dur + 0.15 };
+      S.mode = "idle"; S.modeUntil = A.t + A.action.dur + 0.3; S.then = null; S.vx = 0;
+    }
     if (name === "stretch") Voice.yawn();
     if (name === "yawn") Voice.yawn();
     if (name === "scratch") setTimeout(() => fx("ask"), 500);
@@ -1126,6 +1132,10 @@
   function update(dt) {
     A.t += dt;
     for (const f of HOOKS.tick) f(dt);
+    if (S.resumeWalk && A.t >= S.resumeWalk.at) {
+      const r = S.resumeWalk; S.resumeWalk = null;
+      if (S.mode === "idle" && !S.dragging && !S.airborne && !S.fly && !A.action && !S.sleeping) { S.mode = "walk"; S.targetX = r.targetX; S.speed = r.speed; S.then = r.then; S.modeUntil = A.t + 30; }
+    }
     let fy = groundY();
     S.prevX = S.x; S.prevY = S.y;
     if (S.pendingHop && A.t >= S.pendingHop.at && !S.dragging) {
@@ -1934,7 +1944,7 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
-    setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
+    talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon,
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },

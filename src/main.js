@@ -54,7 +54,7 @@
   const TXT = {
     es: {
       hello: ["¡Holi!", "¡Ya estoy de vuelta!", "¿Qué estamos haciendo hoy?"],
-      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!"],
+      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!", "¡Hop!", "¡Cosquillas no!", "¿Jugamos?", "¡Boing!", "Clic derecho y te enseño mis cosas", "¡Hola, hola!", "Estaba pensando en mis cosas…", "¡Eh, que me despeinas!", "¿Necesitas algo?", "¡Sorpresa!"],
       pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!"],
       pet: ["Esto es mejor que una actualización", "Qué gustitito", "No pares, porfa"],
       drop: ["¡Mis piernitas!", "Diez de diez en el aterrizaje", "Avisa la próxima vez", "¿Eso es todo?", "Ni un rasguño", "Otra, otra"],
@@ -85,6 +85,8 @@
       winBye: ["¡Adiós, ventanita!", "Una menos"],
       winMin: ["¿A dónde ha ido?", "Se ha escondido…"],
       fall: ["¡Eh, que estaba ahí!", "¡Uy!"],
+      dblGo: ["¡Voy!", "¿Qué hay ahí?", "¡A ver, a ver!", "¡Ahí voy!"],
+      folderOpen: [(n) => `¿«${n}»? ¿Qué guardas ahí?`, (n) => `Uy, «${n}»… ¡déjame mirar!`, (n) => `«${n}». Qué ordenadito… o no`],
       flyDown: ["¡Abajo voy!", "¡Aterrizaje heroico!", "¡Capa, al suelo!"],
       stumble: ["¡Uy, uy, uy…!", "¡Ay, que me caigo!", "¿Esto se acaba aquí?"],
       climb: ["¡Arriba!", "Desde aquí se ve todo"],
@@ -134,6 +136,8 @@
       winBye: ["Bye, little window!", "One less"],
       winMin: ["Where did it go?", "It's hiding…"],
       fall: ["Hey, I was up there!", "Oops!"],
+      dblGo: ["Coming!", "What's there?"],
+      folderOpen: [(n) => `"${n}"? What do you keep there?`],
       flyDown: ["Coming down!", "Heroic landing!"],
       stumble: ["Whoa, whoa, whoa…!", "I'm falling!"],
       climb: ["Up we go!", "Great view from here"],
@@ -1867,21 +1871,30 @@
         const lvl = A.dizzy;
         DRAG.dizzyLanding = lvl;
       } else setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
-    } else if (performance.now() - downT < 350) {
-      // Clic = menú; doble clic = saltito. Se espera un instante para distinguirlos.
-      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; poke(); }
-      else clickTimer = setTimeout(() => { clickTimer = 0; tap(); }, 260);
+    } else if (performance.now() - downT < 350 && downBtn === 0) {
+      // Clic = salta y dice algo (el menú va con el botón derecho)
+      tap();
     }
   }
   hit.addEventListener("pointerup", release);
   hit.addEventListener("pointercancel", release);
 
-  let clickTimer = 0;
+  let downBtn = 0;
   function tap() {
     if (A.hidden) return;              // durante el bautizo Eko aún no ha nacido
-    if (window.EkoMenu && !S.sleeping) window.EkoMenu.toggle();
-    else poke();
+    // si estaba escondido (travesura) o hay una actualización pendiente, el clic sirve para eso
+    if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) return;
+    if (window.EkoMenu && window.EkoMenu.isOpen && window.EkoMenu.isOpen()) { window.EkoMenu.close(); return; }
+    if (window.EkoMenu && window.EkoMenu.tapClick && window.EkoMenu.tapClick()) return;
+    poke();
   }
+  // Botón derecho sobre Eko = su menú
+  hit.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (A.hidden || S.dragging) return;
+    if (S.sleeping) { wakeUp(); return; }
+    if (window.EkoMenu) window.EkoMenu.toggle();
+  });
 
   const pokes = [];
   function poke() {
@@ -1904,7 +1917,34 @@
     else if (r < 0.45) setTimeout(() => act("wink"), 350);
     else if (r < 0.6) setTimeout(() => act("nod"), 350);
     express(pick(["curioso", "sorprendido", "divertido", "picaro"]), 2.2);
-    if (Math.random() < 0.6) say(pick(TXT.poke));
+    if (Math.random() < 0.85) say(pickNew(TXT.poke), 2200, true);
+  }
+
+  // ---------- Doble clic en cualquier sitio: va hacia allí (y comenta si abres una carpeta) ----------
+  function onDblClick(p) {
+    if (!p || A.hidden || S.sleeping || S.dragging || S.fly || discreet() || window.Eko.quiet) return;
+    const cx = S.x + W / 2, feet = S.y + H;
+    if (Math.abs(p.x - cx) < 70 && p.y > S.y + H - 160 && p.y < feet + 10) return;     // ha sido sobre el propio Eko
+    const before = window.Eko.lastSenses || {};
+    setTimeout(() => commentOpen(before), 1500);
+    if (cfgNow().walk === false || S.airborne || A.action || S.sulking) return;
+    if (S.perch) {
+      if (p.x > S.perch.x + 30 && p.x < S.perch.x + S.perch.w - 30) { S.mode = "walk"; S.speed = 120; S.targetX = clamp(p.x - W / 2, loX(), hiX()); S.then = null; S.modeUntil = A.t + 20; }
+      else getDown("hop");
+      return;
+    }
+    S.mode = "walk"; S.speed = Math.abs(p.x - cx) > 450 ? 190 : 130; S.targetX = clamp(p.x - W / 2, minX(), maxX()); S.then = "curious"; S.modeUntil = A.t + 30;
+    if (cool("dblGo", 25) && Math.random() < 0.5) say(pick(TXT.dblGo), 1500, true);
+  }
+  // Si con ese doble clic se ha abierto una carpeta, la comenta
+  function commentOpen(before) {
+    const now = window.Eko.lastSenses || {};
+    const app = String(now.app || "").toLowerCase(), title = String(now.title || "").trim();
+    if (!title || title === before.title) return;
+    if (/explorer/.test(app) && cool("folderOpen", 40)) {
+      const n = title.length > 28 ? title.slice(0, 26) + "…" : title;
+      express("curioso", 2.5); setTimeout(() => say(pick(TXT.folderOpen)(n), 3000, true), 300);
+    }
   }
 
   // ---------- Caricias ----------
@@ -1946,7 +1986,7 @@
     setDance(v) { A.dance = !!v; },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
-    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon,
+    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
@@ -2029,6 +2069,7 @@
       sendHitbox();
       invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
       listen("cursor", (e) => onCursor(e.payload));
+      listen("dblclick", (e) => onDblClick(e.payload));
       listen("win", (e) => onWin(e.payload));
       listen("winev", (e) => onWinEv(e.payload));
       listen("eko-reset", () => location.reload());

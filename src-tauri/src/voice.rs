@@ -49,7 +49,7 @@ mod imp {
     use windows::core::HSTRING;
     use windows::Foundation::{TimeSpan, TypedEventHandler};
     use windows::Media::SpeechRecognition::{
-        SpeechContinuousRecognitionResultGeneratedEventArgs, SpeechContinuousRecognitionSession, SpeechRecognitionListConstraint, SpeechRecognitionResultStatus,
+        SpeechContinuousRecognitionCompletedEventArgs, SpeechContinuousRecognitionResultGeneratedEventArgs, SpeechContinuousRecognitionSession, SpeechRecognitionListConstraint, SpeechRecognitionResultStatus,
         SpeechRecognizer, SpeechRecognizerState, SpeechRecognizerStateChangedEventArgs,
     };
     use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
@@ -97,18 +97,30 @@ mod imp {
         session.ResultGenerated(&TypedEventHandler::<SpeechContinuousRecognitionSession, SpeechContinuousRecognitionResultGeneratedEventArgs>::new(move |_, args| {
             if let Some(a) = args.as_ref() {
                 let r = a.Result()?;
-                if r.Status()? == SpeechRecognitionResultStatus::Success {
-                    let conf = r.Confidence()?.0;
+                let conf = r.Confidence()?.0;
+                if r.Status()? == SpeechRecognitionResultStatus::Success && conf < 3 {
                     emit(&a2, "cmd", r.Text()?.to_string(), conf);
+                } else {
+                    // te ha oído pero no ha entendido una orden
+                    emit(&a2, "nomatch", String::new(), conf);
                 }
             }
+            Ok(())
+        }))?;
+        // Si la sesión termina sola (silencio largo, error de audio…), se vuelve a arrancar
+        let restart = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let r2 = restart.clone();
+        session.Completed(&TypedEventHandler::<SpeechContinuousRecognitionSession, SpeechContinuousRecognitionCompletedEventArgs>::new(move |_, _| {
+            r2.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(())
         }))?;
         session.StartAsync()?.join()?;
         // Mientras siga activo: si la sesión se para sola, la vuelve a arrancar
         while alive(gen) {
-            std::thread::sleep(Duration::from_millis(1500));
-            if alive(gen) && rec.State()? == SpeechRecognizerState::Idle {
+            std::thread::sleep(Duration::from_millis(1000));
+            let idle = rec.State().map(|s| s == SpeechRecognizerState::Idle).unwrap_or(false);
+            if alive(gen) && (idle || restart.swap(false, std::sync::atomic::Ordering::SeqCst)) {
+                std::thread::sleep(Duration::from_millis(300));
                 let _ = session.StartAsync().and_then(|op| op.join());
             }
         }

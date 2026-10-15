@@ -264,7 +264,7 @@
   }
 
   // Lo que dice Eko encima de las burbujas en cada nivel
-  let capText = "";
+  let capText = "", greetNext = false;
   const CAP = ES ? {
     root: ["¿Qué más te apetece?", "Todo lo que sé hacer"], treats: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
     rest: ["¿Descansamos?"], remind: ["¿Cuándo te aviso?"], shortcuts: ["Atajos rápidos"], rps: ["¡Elige! Sin trampas"],
@@ -274,7 +274,8 @@
     menu.innerHTML = "";
     capText = "";
     const items = levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId];
-    if (!capText) capText = levelId === "smart" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
+    if (!capText) capText = (levelId === "smart" || (levelId === "root" && greetNext)) ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
+    greetNext = false;
     const pos = layout(items.length);
     const all = [...items];
     if (levelId !== "root" && levelId !== "smart" && levelId !== "ask" && levelId !== "update") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
@@ -332,7 +333,8 @@
     const today = new Date().toDateString();
     const askNow = cfgS.menuAsk !== false && store.get("eko-menu-asked") !== today && Math.random() < 0.35;
     if (askNow) store.set("eko-menu-asked", today);
-    E.keepInside(() => { if (open) render(askNow ? "ask" : "smart"); });
+    greetNext = true;
+    E.keepInside(() => { if (open) render(askNow ? "ask" : "root"); });
   }
   function openAt(levelId) {
     if (!open) {
@@ -872,6 +874,11 @@
     },
     close,
     propose: (force) => propose(force),
+    tapClick: () => {
+      if (hideGame) { document.dispatchEvent(new Event("eko-tap")); return true; }
+      if (!open && updPending()) { openAt("update"); return true; }
+      return false;
+    },
     announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };

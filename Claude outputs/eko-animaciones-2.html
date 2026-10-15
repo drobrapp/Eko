@@ -580,7 +580,7 @@ body.light #taskbar{background:rgba(240,242,246,.9);border-top:1px solid rgba(0,
 <script>setInterval(()=>{const c=window.Eko&&Eko.careState;if(c)document.getElementById('careV').textContent=`días regados ${c.days.length} (brotecito 3, planta 12)${c.wilted?' · MUSTIO':''}`},500)</script>
   <div class="grp"><b>Bautizo</b><button data-reborn>Repetir el bautizo</button><button onclick="EkoMenu.announceUpdate('0.8.3')">Simular actualización</button></div>
   <div class="grp"><b>Voz (simulación)</b><button onclick="EkoVoice.hear()">Le hablas</button><button onclick="EkoVoice.simulate('eko baila')">«Eko, baila»</button><button onclick="EkoVoice.simulate('eko qué hora es')">«Eko, ¿qué hora es?»</button><button onclick="EkoVoice.simulate('eko ven aquí')">«Eko, ven aquí»</button><button onclick="EkoVoice.simulate('eko a dormir')">«Eko, a dormir»</button><button onclick="EkoVoice.simulate('eko despierta')">«Eko, despierta»</button><button onclick="EkoVoice.simulate('eko te quiero')">«Eko, te quiero»</button><button onclick="EkoVoice.simulate('gracias eko')">«Gracias, Eko»</button><button onclick="EkoVoice.simulate('eko')">«Eko»</button><button data-propose>Eko propone un juego</button></div>
-  <div class="tip"><b style="width:auto;color:#c0533a">Nuevo:</b> el bautizo arranca solo la primera vez. Menú:  haz <b style="width:auto;color:#3b2f2a">clic en Eko</b> para abrir su menú (doble clic = saltito). Mueve el ratón por la pantalla (también por arriba) y mira cómo te sigue. Arrástralo, lánzalo fuerte, haz clic o acarícialo pasando el ratón despacio por encima.</div>
+  <div class="tip"><b style="width:auto;color:#c0533a">Nuevo:</b> el bautizo arranca solo la primera vez. Menú: <b style="width:auto;color:#3b2f2a">clic derecho en Eko</b> (clic normal = salta y dice algo). Doble clic en cualquier sitio de la pantalla = Eko va hacia allí. Mueve el ratón por la pantalla (también por arriba) y mira cómo te sigue. Arrástralo, lánzalo fuerte, haz clic o acarícialo pasando el ratón despacio por encima.</div>
 </div>
 <div id="taskbar"></div>
 <div id="stage" data-eyes="open" data-brows="none" data-mood="normal">
@@ -1133,7 +1133,7 @@ window.EkoSettings = (() => {
   const TXT = {
     es: {
       hello: ["¡Holi!", "¡Ya estoy de vuelta!", "¿Qué estamos haciendo hoy?"],
-      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!"],
+      poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!", "¡Hop!", "¡Cosquillas no!", "¿Jugamos?", "¡Boing!", "Clic derecho y te enseño mis cosas", "¡Hola, hola!", "Estaba pensando en mis cosas…", "¡Eh, que me despeinas!", "¿Necesitas algo?", "¡Sorpresa!"],
       pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!"],
       pet: ["Esto es mejor que una actualización", "Qué gustitito", "No pares, porfa"],
       drop: ["¡Mis piernitas!", "Diez de diez en el aterrizaje", "Avisa la próxima vez", "¿Eso es todo?", "Ni un rasguño", "Otra, otra"],
@@ -1164,6 +1164,8 @@ window.EkoSettings = (() => {
       winBye: ["¡Adiós, ventanita!", "Una menos"],
       winMin: ["¿A dónde ha ido?", "Se ha escondido…"],
       fall: ["¡Eh, que estaba ahí!", "¡Uy!"],
+      dblGo: ["¡Voy!", "¿Qué hay ahí?", "¡A ver, a ver!", "¡Ahí voy!"],
+      folderOpen: [(n) => `¿«${n}»? ¿Qué guardas ahí?`, (n) => `Uy, «${n}»… ¡déjame mirar!`, (n) => `«${n}». Qué ordenadito… o no`],
       flyDown: ["¡Abajo voy!", "¡Aterrizaje heroico!", "¡Capa, al suelo!"],
       stumble: ["¡Uy, uy, uy…!", "¡Ay, que me caigo!", "¿Esto se acaba aquí?"],
       climb: ["¡Arriba!", "Desde aquí se ve todo"],
@@ -1213,6 +1215,8 @@ window.EkoSettings = (() => {
       winBye: ["Bye, little window!", "One less"],
       winMin: ["Where did it go?", "It's hiding…"],
       fall: ["Hey, I was up there!", "Oops!"],
+      dblGo: ["Coming!", "What's there?"],
+      folderOpen: [(n) => `"${n}"? What do you keep there?`],
       flyDown: ["Coming down!", "Heroic landing!"],
       stumble: ["Whoa, whoa, whoa…!", "I'm falling!"],
       climb: ["Up we go!", "Great view from here"],
@@ -2946,21 +2950,30 @@ window.EkoSettings = (() => {
         const lvl = A.dizzy;
         DRAG.dizzyLanding = lvl;
       } else setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
-    } else if (performance.now() - downT < 350) {
-      // Clic = menú; doble clic = saltito. Se espera un instante para distinguirlos.
-      if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; poke(); }
-      else clickTimer = setTimeout(() => { clickTimer = 0; tap(); }, 260);
+    } else if (performance.now() - downT < 350 && downBtn === 0) {
+      // Clic = salta y dice algo (el menú va con el botón derecho)
+      tap();
     }
   }
   hit.addEventListener("pointerup", release);
   hit.addEventListener("pointercancel", release);
 
-  let clickTimer = 0;
+  let downBtn = 0;
   function tap() {
     if (A.hidden) return;              // durante el bautizo Eko aún no ha nacido
-    if (window.EkoMenu && !S.sleeping) window.EkoMenu.toggle();
-    else poke();
+    // si estaba escondido (travesura) o hay una actualización pendiente, el clic sirve para eso
+    if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) return;
+    if (window.EkoMenu && window.EkoMenu.isOpen && window.EkoMenu.isOpen()) { window.EkoMenu.close(); return; }
+    if (window.EkoMenu && window.EkoMenu.tapClick && window.EkoMenu.tapClick()) return;
+    poke();
   }
+  // Botón derecho sobre Eko = su menú
+  hit.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (A.hidden || S.dragging) return;
+    if (S.sleeping) { wakeUp(); return; }
+    if (window.EkoMenu) window.EkoMenu.toggle();
+  });
 
   const pokes = [];
   function poke() {
@@ -2983,7 +2996,34 @@ window.EkoSettings = (() => {
     else if (r < 0.45) setTimeout(() => act("wink"), 350);
     else if (r < 0.6) setTimeout(() => act("nod"), 350);
     express(pick(["curioso", "sorprendido", "divertido", "picaro"]), 2.2);
-    if (Math.random() < 0.6) say(pick(TXT.poke));
+    if (Math.random() < 0.85) say(pickNew(TXT.poke), 2200, true);
+  }
+
+  // ---------- Doble clic en cualquier sitio: va hacia allí (y comenta si abres una carpeta) ----------
+  function onDblClick(p) {
+    if (!p || A.hidden || S.sleeping || S.dragging || S.fly || discreet() || window.Eko.quiet) return;
+    const cx = S.x + W / 2, feet = S.y + H;
+    if (Math.abs(p.x - cx) < 70 && p.y > S.y + H - 160 && p.y < feet + 10) return;     // ha sido sobre el propio Eko
+    const before = window.Eko.lastSenses || {};
+    setTimeout(() => commentOpen(before), 1500);
+    if (cfgNow().walk === false || S.airborne || A.action || S.sulking) return;
+    if (S.perch) {
+      if (p.x > S.perch.x + 30 && p.x < S.perch.x + S.perch.w - 30) { S.mode = "walk"; S.speed = 120; S.targetX = clamp(p.x - W / 2, loX(), hiX()); S.then = null; S.modeUntil = A.t + 20; }
+      else getDown("hop");
+      return;
+    }
+    S.mode = "walk"; S.speed = Math.abs(p.x - cx) > 450 ? 190 : 130; S.targetX = clamp(p.x - W / 2, minX(), maxX()); S.then = "curious"; S.modeUntil = A.t + 30;
+    if (cool("dblGo", 25) && Math.random() < 0.5) say(pick(TXT.dblGo), 1500, true);
+  }
+  // Si con ese doble clic se ha abierto una carpeta, la comenta
+  function commentOpen(before) {
+    const now = window.Eko.lastSenses || {};
+    const app = String(now.app || "").toLowerCase(), title = String(now.title || "").trim();
+    if (!title || title === before.title) return;
+    if (/explorer/.test(app) && cool("folderOpen", 40)) {
+      const n = title.length > 28 ? title.slice(0, 26) + "…" : title;
+      express("curioso", 2.5); setTimeout(() => say(pick(TXT.folderOpen)(n), 3000, true), 300);
+    }
   }
 
   // ---------- Caricias ----------
@@ -3025,7 +3065,7 @@ window.EkoSettings = (() => {
     setDance(v) { A.dance = !!v; },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
-    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon,
+    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
@@ -3108,6 +3148,7 @@ window.EkoSettings = (() => {
       sendHitbox();
       invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
       listen("cursor", (e) => onCursor(e.payload));
+      listen("dblclick", (e) => onDblClick(e.payload));
       listen("win", (e) => onWin(e.payload));
       listen("winev", (e) => onWinEv(e.payload));
       listen("eko-reset", () => location.reload());
@@ -3566,6 +3607,7 @@ window.EkoSettings = (() => {
     { p: ["abre el menú", "menú"], run: () => M().toggle && M().toggle() },
     { p: ["silencio", "calla", "cállate"], run: () => M().muteHour && M().muteHour() },
     { p: ["me quieres", "te quiero"], run: () => { E.act("hug"); E.blush(2.5); E.fx("heart", 3); E.say(pick(["¡Muchísimo!", "¡Más que a mi brote!"]), 2400, true); } },
+    { p: ["qué sabes hacer", "qué puedes hacer", "ayuda"], run: () => { E.act("point", { dir: 1 }); E.say(`Dime «${name()}» y luego: baila, salta, vuela, ven aquí, a dormir, ¿qué hora es?, recuérdame en diez minutos, juguemos, escóndete, cuéntame algo…`, 7000, true); } },
     { p: ["cuéntame algo", "dime algo"], run: () => E.say(pick(["¿Sabías que los champiñones son primos de los humanos? Más que de las plantas", "Hoy he contado los píxeles de tu pantalla. Me perdí en el 3", "Si me riegas, crezco. Si no, me pongo mustio. Así de simple"]), 4200, true) },
     { p: ["recuérdame en cinco minutos"], run: () => remind(5, "cinco minutos") },
     { p: ["recuérdame en diez minutos"], run: () => remind(10, "diez minutos") },
@@ -3583,10 +3625,16 @@ window.EkoSettings = (() => {
     { p: (n) => [`hola ${n}`, `buenas ${n}`], run: () => { E.act("wave"); E.express("feliz", 2); E.say(pick(["¡Holi!", "¡Hola, hola!"]), 1800, true); } },
     { p: (n) => [n, `oye ${n}`], run: () => { E.express("curioso", 2.5); E.act("curious", { dir: 1 }); E.say(pick(["¿Sí?", "¿Me llamabas?", "¡Dime!"]), 1800, true); } },
   ];
+  // Variantes de cómo suena el nombre (en español «Eko» se oye como «eco»)
+  const variants = (n) => { const v = new Set([n]); v.add(n.replace(/k/g, "c")); v.add(n.replace(/c(?=[aou])/g, "k")); return [...v]; };
   function phrases() {
-    const n = name().toLowerCase(), map = new Map();
-    for (const c of CMDS) for (const p of c.p) map.set(`${n} ${p}`, c.run);
-    for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
+    const map = new Map();
+    // Responde a su nombre (el que le pusiste) y también a «Eko»
+    const names = new Set([...variants(name().toLowerCase()), ...variants("eko")]);
+    for (const n of names) {
+      for (const c of CMDS) for (const p of c.p) map.set(`${n} ${p}`, c.run);
+      for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
+    }
     return map;
   }
   let MAP = phrases(), on = false, paused = false, lastLook = 0, lastCmd = 0;
@@ -3598,8 +3646,12 @@ window.EkoSettings = (() => {
     if (v.kind === "speech") {
       // Te oye hablar: te mira, sin interrumpir lo que hace (como mucho cada 10 s)
       const now = performance.now();
-      if (now - lastLook > 10000 && now - lastCmd > 4000 && !E.S.sleeping && !E.busy()) { lastLook = now; E.express("curioso", 1.6); E.act("curious", { dir: 1 }); }
-    } else if (v.kind === "cmd" && v.conf <= 1) {
+      if (now - lastLook > 8000 && now - lastCmd > 4000 && !E.S.sleeping && !E.S.dragging) { lastLook = now; E.express("curioso", 1.6); E.act("curious", { dir: 1 }); }
+    } else if (v.kind === "nomatch") {
+      // te ha oído pero no ha entendido: pone cara de duda (sin agobiar)
+      const now = performance.now();
+      if (now - lastLook > 6000 && !E.S.sleeping) { lastLook = now; E.fx("ask", 1); E.express("confundido", 1.6); if (Math.random() < 0.3) E.say(pick(["¿Cómo?", "¿Eh? No te he pillado", "Repite, porfa"]), 1600, true); }
+    } else if (v.kind === "cmd" && v.conf <= 2) {
       const fn = MAP.get(norm(v.text).replace(/,/g, ""));
       if (!fn) return;
       lastCmd = performance.now();
@@ -3895,7 +3947,7 @@ window.EkoSettings = (() => {
   }
 
   // Lo que dice Eko encima de las burbujas en cada nivel
-  let capText = "";
+  let capText = "", greetNext = false;
   const CAP = ES ? {
     root: ["¿Qué más te apetece?", "Todo lo que sé hacer"], treats: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
     rest: ["¿Descansamos?"], remind: ["¿Cuándo te aviso?"], shortcuts: ["Atajos rápidos"], rps: ["¡Elige! Sin trampas"],
@@ -3905,7 +3957,8 @@ window.EkoSettings = (() => {
     menu.innerHTML = "";
     capText = "";
     const items = levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId];
-    if (!capText) capText = levelId === "smart" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
+    if (!capText) capText = (levelId === "smart" || (levelId === "root" && greetNext)) ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
+    greetNext = false;
     const pos = layout(items.length);
     const all = [...items];
     if (levelId !== "root" && levelId !== "smart" && levelId !== "ask" && levelId !== "update") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
@@ -3963,7 +4016,8 @@ window.EkoSettings = (() => {
     const today = new Date().toDateString();
     const askNow = cfgS.menuAsk !== false && store.get("eko-menu-asked") !== today && Math.random() < 0.35;
     if (askNow) store.set("eko-menu-asked", today);
-    E.keepInside(() => { if (open) render(askNow ? "ask" : "smart"); });
+    greetNext = true;
+    E.keepInside(() => { if (open) render(askNow ? "ask" : "root"); });
   }
   function openAt(levelId) {
     if (!open) {
@@ -4503,6 +4557,11 @@ window.EkoSettings = (() => {
     },
     close,
     propose: (force) => propose(force),
+    tapClick: () => {
+      if (hideGame) { document.dispatchEvent(new Event("eko-tap")); return true; }
+      if (!open && updPending()) { openAt("update"); return true; }
+      return false;
+    },
     announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
@@ -4786,6 +4845,7 @@ on('[data-wopen]',()=>{open=true;max=false;id++;send();});
 on('[data-wdesk]',()=>{open=false;draw();E.onWin({id:999,x:0,y:0,w:0,h:0,max:false,desk:true});});
 on('[data-wclimb]',()=>{if(!open){open=true;send();}setTimeout(()=>E.climb(),100);});
 on('[data-wdown]',()=>E.getDown());
+document.addEventListener('dblclick',e=>{if(e.target.closest('#panel')||e.target.closest('#stage .blob'))return;E.dblclick({x:e.clientX,y:e.clientY});});
 window.deskDemo=()=>{if(document.getElementById('fakeDesk'))return;const fd=document.createElement('div');fd.id='fakeDesk';fd.style.cssText='position:fixed;left:24px;top:560px;z-index:1;display:flex;flex-direction:column;gap:6px;font:11px system-ui;color:#fff;text-align:center';
 const L=[['Fotos Granada','folder',230,214],['factura_octubre.pdf','file',0,0,'pdf'],['Photoshop','shortcut'],['Papelera de reciclaje','recycle']];
 L.forEach((d,k)=>{const e=document.createElement('div');e.style.cssText='width:76px;height:70px;display:flex;flex-direction:column;align-items:center;gap:4px';e.innerHTML='<div style="width:40px;height:34px;border-radius:6px;background:'+['#e9c46a','#e76f51','#2a9d8f','#9aa5b1'][k]+'"></div><span>'+d[0]+'</span>';fd.appendChild(e);});

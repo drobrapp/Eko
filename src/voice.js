@@ -26,6 +26,7 @@
     { p: ["abre el menú", "menú"], run: () => M().toggle && M().toggle() },
     { p: ["silencio", "calla", "cállate"], run: () => M().muteHour && M().muteHour() },
     { p: ["me quieres", "te quiero"], run: () => { E.act("hug"); E.blush(2.5); E.fx("heart", 3); E.say(pick(["¡Muchísimo!", "¡Más que a mi brote!"]), 2400, true); } },
+    { p: ["qué sabes hacer", "qué puedes hacer", "ayuda"], run: () => { E.act("point", { dir: 1 }); E.say(`Dime «${name()}» y luego: baila, salta, vuela, ven aquí, a dormir, ¿qué hora es?, recuérdame en diez minutos, juguemos, escóndete, cuéntame algo…`, 7000, true); } },
     { p: ["cuéntame algo", "dime algo"], run: () => E.say(pick(["¿Sabías que los champiñones son primos de los humanos? Más que de las plantas", "Hoy he contado los píxeles de tu pantalla. Me perdí en el 3", "Si me riegas, crezco. Si no, me pongo mustio. Así de simple"]), 4200, true) },
     { p: ["recuérdame en cinco minutos"], run: () => remind(5, "cinco minutos") },
     { p: ["recuérdame en diez minutos"], run: () => remind(10, "diez minutos") },
@@ -43,10 +44,16 @@
     { p: (n) => [`hola ${n}`, `buenas ${n}`], run: () => { E.act("wave"); E.express("feliz", 2); E.say(pick(["¡Holi!", "¡Hola, hola!"]), 1800, true); } },
     { p: (n) => [n, `oye ${n}`], run: () => { E.express("curioso", 2.5); E.act("curious", { dir: 1 }); E.say(pick(["¿Sí?", "¿Me llamabas?", "¡Dime!"]), 1800, true); } },
   ];
+  // Variantes de cómo suena el nombre (en español «Eko» se oye como «eco»)
+  const variants = (n) => { const v = new Set([n]); v.add(n.replace(/k/g, "c")); v.add(n.replace(/c(?=[aou])/g, "k")); return [...v]; };
   function phrases() {
-    const n = name().toLowerCase(), map = new Map();
-    for (const c of CMDS) for (const p of c.p) map.set(`${n} ${p}`, c.run);
-    for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
+    const map = new Map();
+    // Responde a su nombre (el que le pusiste) y también a «Eko»
+    const names = new Set([...variants(name().toLowerCase()), ...variants("eko")]);
+    for (const n of names) {
+      for (const c of CMDS) for (const p of c.p) map.set(`${n} ${p}`, c.run);
+      for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
+    }
     return map;
   }
   let MAP = phrases(), on = false, paused = false, lastLook = 0, lastCmd = 0;
@@ -58,8 +65,12 @@
     if (v.kind === "speech") {
       // Te oye hablar: te mira, sin interrumpir lo que hace (como mucho cada 10 s)
       const now = performance.now();
-      if (now - lastLook > 10000 && now - lastCmd > 4000 && !E.S.sleeping && !E.busy()) { lastLook = now; E.express("curioso", 1.6); E.act("curious", { dir: 1 }); }
-    } else if (v.kind === "cmd" && v.conf <= 1) {
+      if (now - lastLook > 8000 && now - lastCmd > 4000 && !E.S.sleeping && !E.S.dragging) { lastLook = now; E.express("curioso", 1.6); E.act("curious", { dir: 1 }); }
+    } else if (v.kind === "nomatch") {
+      // te ha oído pero no ha entendido: pone cara de duda (sin agobiar)
+      const now = performance.now();
+      if (now - lastLook > 6000 && !E.S.sleeping) { lastLook = now; E.fx("ask", 1); E.express("confundido", 1.6); if (Math.random() < 0.3) E.say(pick(["¿Cómo?", "¿Eh? No te he pillado", "Repite, porfa"]), 1600, true); }
+    } else if (v.kind === "cmd" && v.conf <= 2) {
       const fn = MAP.get(norm(v.text).replace(/,/g, ""));
       if (!fn) return;
       lastCmd = performance.now();

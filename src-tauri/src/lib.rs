@@ -4,6 +4,7 @@
 //! - Icono en la bandeja, arranque con Windows, atajo de pánico y una sola instancia.
 
 mod actions;
+mod clicks;
 mod desktop;
 mod voice;
 mod senses;
@@ -362,6 +363,7 @@ pub fn run() {
             start_cursor_loop(app.handle().clone());
             winwatch::start(app.handle().clone());
             start_update_loop(app.handle().clone());
+            clicks::start(app.handle().clone());
             senses::start(app.handle().clone());
             Ok(())
         })

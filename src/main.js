@@ -388,7 +388,14 @@
       else { P.eyes = "happy"; P.aL = lerp(P.aL, 100, e); P.aR = lerp(P.aR, -100, e); P.front = true; P.tilt += Math.sin(A.t * 7) * 6 * e; P.eyeY -= 4 * e; }
       if (k > 0.33 && !o.done) { o.done = true; o.apply && o.apply(); }
     } },
-    flip: { dur: 0.9, f(P, k) { P.spin = 360 * (k < 0.15 ? 0 : Math.min(1, (k - 0.15) / 0.7)); P.aL = 70; P.aR = -70; P.eyes = "closed"; } },
+    // Truco «¡Ta-chán!»: se agacha, salta con los brazos arriba y aterriza posando
+    tada: { dur: 1.9, f(P, k, e, o) {
+      if (k < 0.18) { const m = k / 0.18; P.sy *= 1 - 0.1 * m; P.sx *= 1 + 0.06 * m; P.nod += 4 * m; P.aR = lerp(P.aR, -18, m); P.aL = lerp(P.aL, 18, m); return; }
+      if (!o.up) { o.up = true; hop(-620); fx("spark", 3); }
+      const m = clamp((k - 0.18) / 0.12, 0, 1);
+      P.aR = lerp(-18, -68, m); P.aL = -P.aR; P.eyes = "happy"; P.brows = "up"; P.mouth = Math.max(P.mouth, 0.35 * m);
+      if (k > 0.6) { const w = Math.sin((k - 0.6) * 18) * (1 - k) * 2; P.tilt += 6 + w * 4; P.aR += w * 6; P.aL += w * 6; }
+    } },
     hug: { dur: 2.6, eyes: "happy", f(P, k, e) {
       const open = k < 0.4 ? e : 0;
       const close = k >= 0.4 ? e : 0;

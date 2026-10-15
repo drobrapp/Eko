@@ -198,18 +198,19 @@
       start() { say(pick(["Mmm… sí, sí… jeje", "Y entonces le dije… jajaja", "Hmm… ¿dónde lo dejé?"]), pick(["Mmm… yes, yes… hehe", "And then I said… haha"]), 3000); },
       pose(P, t) { P.eyeX = -4; P.tilt += Math.sin(t * 2) * 5; if (t > 3) { P.eyes = "happy"; P.lift += Math.abs(Math.sin(t * 14)) * 2; } },
     },
-    // 30. Se aburre: suspira, se tumba y rueda
+    // 30. Se aburre: suspira, se sienta con la cara apoyada en las manos y tamborilea con los pies
     bored: {
-      dur: 10, when: () => onFloor(),
-      start(c) { E.express("triste", 2.5); E.Voice.sigh && E.Voice.sigh(); say("Me abuuurro…", "So booored…", 1800); c.dir = Math.random() < 0.5 ? -1 : 1; },
-      tick(dt, t) { if (t > 5 && t < 8.2) S.x = clamp(S.x + Math.sin((t - 5) * 2) * 70 * dt, E.minX(), E.maxX()); },
-      pose(P, t, c) {
-        if (t < 2) { P.nod += 5; P.sy *= 0.97; }
-        else if (t < 9) {
-          const down = ease(seg(t, 2, 2.8)) * (1 - ease(seg(t, 8.4, 9)));
-          const roll = t > 5 && t < 8.2 ? Math.sin((t - 5) * 2) * 70 : 0;
-          P.spin = c.dir * 82 * down + roll * down; P.eyes = "half"; P.aL = 20; P.aR = -20;
-        }
+      dur: 8, when: () => onFloor(),
+      start() { E.express("triste", 2.5); E.Voice.sigh && E.Voice.sigh(); say("Me abuuurro…", "So booored…", 1800); },
+      pose(P, t) {
+        if (t < 1.6) { const k = ease(seg(t, 0, 1.6)); P.nod += 6 * k; P.sy *= 1 - 0.05 * k; P.eyeY = 2 * k; return; }
+        const k = ease(seg(t, 1.6, 2.3)) * (1 - ease(seg(t, 7.2, 8)));
+        // apoyo: brazos hacia la cara, cuerpo algo hundido, se balancea despacio
+        P.sy *= 1 - 0.1 * k; P.sx *= 1 + 0.05 * k; P.lift -= 6 * k;
+        P.aR = lerp(P.aR, 62, k); P.aL = lerp(P.aL, -62, k); P.front = true;
+        P.nod += 7 * k; P.eyes = "half"; P.brows = "sad";
+        P.sway += Math.sin(t * 1.6) * 4 * k; P.eyeX = Math.sin(t * 0.8) * 4 * k;
+        if (t > 4.5 && t < 6.5) P.lift += Math.abs(Math.sin(t * 9)) * 1.5 * k;   // tamborileo
       },
     },
     // 31. Pide atención: golpea el «cristal» de la pantalla y saluda

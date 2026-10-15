@@ -49,7 +49,7 @@
   const svg = (k, color) => `<svg viewBox="0 0 24 24" ${color ? `style="color:${color}"` : ""}>${I[k] || ""}</svg>`;
 
   const L = ES ? {
-    letsPlay: "¿Jugamos?", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
+    letsPlay: "¿Jugamos?", stowBall: "Guardar pelota", ballTip: "(Doble clic en la pelota para guardarla)", treats: "Mimos", play: "Jugar", util: "Útil", wardrobe: "Armario", rest: "Descanso", settings: "Ajustes",
     ball: "Pelota", snack: "Snack", games: "Juegos", trick: "Truco",
     rps: "Piedra, papel…", hand: "¿Qué mano?", hide: "Escondite",
     rock: "Piedra", paper: "Papel", scissors: "Tijera", lefth: "Izquierda", righth: "Derecha",
@@ -62,7 +62,7 @@
     soon: "Ajustes: nombre, cumpleaños, sonido, apps por categoría… ¡muy pronto!",
     onlyApp: "Eso solo funciona en la app",
   } : {
-    letsPlay: "Let's play?", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
+    letsPlay: "Let's play?", stowBall: "Put ball away", ballTip: "(Double-click the ball to put it away)", treats: "Treats", play: "Play", util: "Useful", wardrobe: "Wardrobe", rest: "Rest", settings: "Settings",
     ball: "Ball", snack: "Snack", games: "Games", trick: "Trick",
     rps: "Rock, paper…", hand: "Which hand?", hide: "Hide & seek",
     rock: "Rock", paper: "Paper", scissors: "Scissors", lefth: "Left", righth: "Right",
@@ -78,13 +78,13 @@
   const SAY = ES ? {
     snack: ["¡Ñam!", "Qué rico", "¿Hay más?"], win: ["¡Gané!", "¡Toma ya!"], lose: ["Vaaale, has ganado", "¡Revancha!"], tie: ["¡Empate!"],
     rpsPick: ["¡Piedra, papel o tijera!"], handAsk: ["¿En qué mano está?"], handYes: ["¡Bien visto!", "¡Correcto!"], handNo: ["¡Nop!", "Era la otra"],
-    hide: ["¡A que no me encuentras!"], found: ["¡Me has pillado!", "¡Jo, qué rápido!"], ball: ["¡Lánzamela!", "¡Otra vez!"], fetch: ["¡Aquí tienes!", "¡Otra, otra!"],
+    hide: ["¡A que no me encuentras!"], found: ["¡Me has pillado!", "¡Jo, qué rápido!"], ball: ["¡Lánzamela!", "¡Otra vez!"], fetch: ["¡Aquí tienes!", "¡Otra, otra!"], stow: ["¡Vale, la guardo!", "¡A su sitio!"],
     remindSet: (m) => `Vale, te aviso en ${m}`, pomoStart: ["¡A concentrarse! 25 minutos"], pomoBreak: ["¡Descanso! 5 minutos para estirarte"], pomoEnd: ["¡Otra ronda cuando quieras!"],
     noted: ["Apuntado", "Lo guardo"], done: ["¡Una menos!", "¡Bien hecho!"], empty: ["No tienes tareas pendientes"], muted: ["Me callo una horita"], discreetOn: ["Modo discreto"], discreetOff: ["Vuelvo a hablar"],
   } : {
     snack: ["Yum!", "Delicious", "Is there more?"], win: ["I win!", "Yes!"], lose: ["Fine, you win", "Rematch!"], tie: ["Tie!"],
     rpsPick: ["Rock, paper, scissors!"], handAsk: ["Which hand is it in?"], handYes: ["Well spotted!", "Correct!"], handNo: ["Nope!", "It was the other one"],
-    hide: ["Bet you can't find me!"], found: ["You found me!", "That was fast!"], ball: ["Throw it!", "Again!"], fetch: ["Here you go!", "Again, again!"],
+    hide: ["Bet you can't find me!"], found: ["You found me!", "That was fast!"], ball: ["Throw it!", "Again!"], fetch: ["Here you go!", "Again, again!"], stow: ["Okay, putting it away!", "Back it goes!"],
     remindSet: (m) => `OK, I'll remind you in ${m}`, pomoStart: ["Focus time! 25 minutes"], pomoBreak: ["Break! 5 minutes to stretch"], pomoEnd: ["Another round whenever you want!"],
     noted: ["Noted", "Saved"], done: ["One less!", "Well done!"], empty: ["No pending tasks"], muted: ["I'll be quiet for an hour"], discreetOn: ["Discreet mode"], discreetOff: ["I'll talk again"],
   };
@@ -98,7 +98,7 @@
   ];
   const TREE = {
     root: [
-      { id: "letsplay", icon: "play", label: L.letsPlay, run: () => propose(true) },
+      { id: "letsplay", icon: "play", label: L.letsPlay, run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : L.letsPlay) },
       { id: "treats", icon: "cookie", label: L.treats, go: "treats" },
       { id: "util", icon: "util", label: L.util, go: "util" },
       { id: "wardrobe", icon: "hanger", label: L.wardrobe, go: "wardrobe" },
@@ -271,10 +271,10 @@
     setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);
   }
   function trick() {
-    const t = pick(["dance", "fly", "flip", "flip", "dance"]);
+    const t = pick(["dance", "fly", "tada", "tada", "dance"]);
     if (t === "dance") { E.setDance(true); setTimeout(() => E.setDance(false), 8500); }
     else if (t === "fly") E.fly();
-    else { E.hop(-700); setTimeout(() => E.act("flip"), 80); }
+    else { E.act("tada"); E.express && E.express("emocionado", 2.2); setTimeout(() => E.say("¡Ta-chán!", 1600, true), 700); }
   }
 
   // ---------- Piedra, papel o tijera ----------
@@ -388,84 +388,122 @@
   }, 30000);
 
   // ---------- Pelota ----------
-  let ball = null;
+  // En la app la pelota tiene su propia ventanita (puede llegar a los bordes de la pantalla);
+  // en la vista previa se dibuja dentro del escenario.
+  const BALLWIN = !!(invoke && E.native);
+  let ball = null, ballTips = 0;
   const ballEl = document.createElement("div");
   ballEl.id = "ball";
   ballEl.innerHTML = '<svg viewBox="-12 -12 24 24"><circle r="11" fill="#f05d5e"/><path d="M-11,-2 C-4,2 4,2 11,-2" stroke="#fff" stroke-width="2.4" fill="none"/><circle cx="-4" cy="-5" r="3" fill="#fff" opacity=".5"/></svg>';
   stage.appendChild(ballEl);
+  const R = 13; // radio de la pelota
 
   function startBall() {
     const cx = E.S.x + E.W / 2;
-    ball = { x: cx + 60, y: E.S.y + 200, vx: 0, vy: 0, held: false, grabbed: false, rot: 0, chasing: false, idleSince: performance.now() };
-    ballEl.classList.add("in");
+    ball = { x: cx + 60, y: E.S.y + 200, vx: 0, vy: 0, held: false, grabbed: false, rot: 0, chasing: false, idleSince: performance.now(), wx: NaN, wy: NaN };
+    if (BALLWIN) invoke("ball_show", { x: ball.x - 20, y: ball.y - 20 }).catch(() => {});
+    else ballEl.classList.add("in");
     E.setHitFull(true);
     E.say(pick(SAY.ball), 2400, true);
+    if (ballTips < 2) { ballTips++; setTimeout(() => ball && E.say(L.ballTip, 3200, true), 2800); }
   }
   function endBall() {
-    ball = null;
+    ball = null; drag = null;
+    if (BALLWIN) invoke("ball_hide").catch(() => {});
     ballEl.classList.remove("in");
     if (!open) E.setHitFull(false);
   }
+  // Guardarla: Eko va a por ella, la coge y desaparece en un «pop»
+  function stowBall() {
+    if (!ball || ball.stowing) return;
+    ball.stowing = true; ball.grabbed = false; drag = null;
+    E.say(pick(SAY.stow), 2000, true);
+    const fin = () => { if (!ball) return; E.act("nod"); E.express && E.express("contento", 2); endBall(); };
+    if (Math.abs(ball.x - (E.S.x + E.W / 2)) < 120 || E.S.airborne) setTimeout(fin, 500);
+    else ball.stowAt = performance.now();
+  }
   let drag = null;
-  ballEl.addEventListener("pointerdown", (e) => {
-    if (!ball) return;
-    ballEl.setPointerCapture(e.pointerId);
-    drag = { px: e.screenX, py: e.screenY, t: performance.now(), vx: 0, vy: 0 };
+  function ballDown(sx, sy) {
+    if (!ball || ball.stowing) return;
+    drag = { px: sx, py: sy, t: performance.now(), vx: 0, vy: 0 };
     ball.grabbed = true; ball.held = false; ball.chasing = false;
-  });
-  ballEl.addEventListener("pointermove", (e) => {
+  }
+  function ballMove(sx, sy) {
     if (!drag || !ball) return;
     const now = performance.now(), dt = Math.max(1, now - drag.t) / 1000;
-    const dx = e.screenX - drag.px, dy = e.screenY - drag.py;
+    const dx = sx - drag.px, dy = sy - drag.py;
     ball.x += dx; ball.y += dy;
     drag.vx = drag.vx * 0.4 + (dx / dt) * 0.6; drag.vy = drag.vy * 0.4 + (dy / dt) * 0.6;
-    drag.px = e.screenX; drag.py = e.screenY; drag.t = now;
-  });
-  ballEl.addEventListener("pointerup", () => {
+    drag.px = sx; drag.py = sy; drag.t = now;
+  }
+  function ballUp() {
     if (!drag || !ball) return;
     ball.grabbed = false;
-    ball.vx = E.clamp(drag.vx, -1600, 1600); ball.vy = E.clamp(drag.vy, -1600, 900);
+    ball.vx = E.clamp(drag.vx, -2200, 2200); ball.vy = E.clamp(drag.vy, -1800, 1000);
     if (Math.hypot(ball.vx, ball.vy) < 60) { ball.vx = (Math.random() < 0.5 ? -1 : 1) * 500; ball.vy = -500; }
     drag = null;
     ball.idleSince = performance.now();
     E.act("surprise");
+  }
+  ballEl.addEventListener("pointerdown", (e) => { if (e.button) return; ballEl.setPointerCapture(e.pointerId); ballDown(e.screenX, e.screenY); });
+  ballEl.addEventListener("pointermove", (e) => ballMove(e.screenX, e.screenY));
+  ballEl.addEventListener("pointerup", ballUp);
+  ballEl.addEventListener("dblclick", stowBall);
+  ballEl.addEventListener("contextmenu", (e) => { e.preventDefault(); stowBall(); });
+  if (BALLWIN) E.listen("ball-in", (e) => {
+    const p = e.payload || {};
+    if (p.t === "down") ballDown(p.x, p.y);
+    else if (p.t === "move") ballMove(p.x, p.y);
+    else if (p.t === "up") ballUp();
+    else if (p.t === "stow") stowBall();
   });
+  if (BALLWIN) E.listen("cmd", (e) => { if (e.payload === "stowball" && ball) endBall(); });
 
   function ballStep(dt) {
     if (!ball) return;
-    const S = E.S, W = E.W, H = E.H;
-    const floor = S.y + H - 14;
+    const S = E.S, W = E.W, H = E.H, wd = E.world;
+    // límites: la pantalla entera (en la vista previa, el escenario)
+    const lo = wd.left + R, hi = wd.left + wd.width - R, top = wd.top + R;
+    const floor = Math.max(S.y + H - 14, top + 40);
     const pet = S.x + W / 2;
     if (ball.held) {
       ball.x = pet + 34; ball.y = S.y + H - 70;
     } else if (!ball.grabbed) {
       ball.vy += 1800 * dt;
       ball.x += ball.vx * dt; ball.y += ball.vy * dt;
-      ball.rot += ball.vx * dt * 2;
-      // paredes: la ventana de Eko (la pelota no se pierde de vista)
-      const lo = S.x + 16, hi = S.x + W - 16;
+      ball.rot += ball.vx * dt * 4.4;
       if (ball.x < lo) { ball.x = lo; ball.vx = Math.abs(ball.vx) * 0.6; }
       if (ball.x > hi) { ball.x = hi; ball.vx = -Math.abs(ball.vx) * 0.6; }
+      if (ball.y < top) { ball.y = top; ball.vy = Math.abs(ball.vy) * 0.5; }
       if (ball.y > floor) { ball.y = floor; ball.vy = -Math.abs(ball.vy) * 0.55; ball.vx *= 0.82; if (Math.abs(ball.vy) < 60) ball.vy = 0; }
       const resting = ball.vy === 0 && Math.abs(ball.vx) < 20 && ball.y >= floor - 1;
-      // Eko va a por ella
-      if (Math.abs(ball.x - pet) > 26 && !S.airborne && !S.dragging) {
-        E.walkTo(ball.x, 150);
+      const d = Math.abs(ball.x - pet);
+      // ¿la alcanza? (cerca, o pegada a un borde donde Eko ya no puede avanzar más)
+      const reach = d < 26 || (d < 110 && (S.x <= E.minX() + 2 || S.x >= E.maxX() - 2));
+      if (!reach && !S.airborne && !S.dragging) {
+        E.walkTo(ball.x, ball.stowing ? 190 : 150);
         ball.chasing = true;
-      } else if (resting && ball.chasing) {
+      } else if (reach && (resting || ball.stowing) && (ball.chasing || ball.stowing)) {
+        if (ball.stowing) { E.act("nod"); endBall(); return; }
         ball.chasing = false; ball.held = true;
         E.hold(2.5);
-        setTimeout(() => {           // te la devuelve: salto y la suelta delante
-          if (!ball) return;
-          ball.held = false; ball.vx = (Math.random() < 0.5 ? -1 : 1) * 140; ball.vy = -420;
+        setTimeout(() => {           // te la devuelve: salto y la lanza hacia el centro
+          if (!ball || !ball.held) return;
+          const toMid = ball.x < wd.left + wd.width / 2 ? 1 : -1;
+          ball.held = false; ball.vx = toMid * (140 + Math.random() * 120); ball.vy = -420;
           E.hop(-360);
           E.say(pick(SAY.fetch), 2200);
           ball.idleSince = performance.now();
         }, 900);
       }
     }
-    ballEl.style.transform = `translate(${(ball.x - S.x - 13).toFixed(1)}px, ${(ball.y - S.y - 13).toFixed(1)}px) rotate(${ball.rot.toFixed(0)}deg)`;
-    if (performance.now() - ball.idleSince > 45000 && !ball.held) endBall();
+    if (BALLWIN) {
+      const wx = Math.round(ball.x - 20), wy = Math.round(ball.y - 20);
+      if (wx !== ball.wx || wy !== ball.wy) { ball.wx = wx; ball.wy = wy; invoke("ball_pos", { x: wx, y: wy }).catch(() => {}); }
+    } else {
+      ballEl.style.transform = `translate(${(ball.x - S.x - R).toFixed(1)}px, ${(ball.y - S.y - R).toFixed(1)}px) rotate(${ball.rot.toFixed(0)}deg)`;
+    }
+    if (ball && performance.now() - ball.idleSince > 45000 && !ball.held && !ball.stowing) stowBall();
   }
 
   // ---------- Recordatorios ----------
@@ -600,6 +638,7 @@
     },
     close,
     propose: (force) => propose(force),
+    startGame: (g) => startGame(g), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

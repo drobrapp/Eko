@@ -199,6 +199,7 @@ fn apply_discretion(app: &AppHandle, should_hide: bool) {
     if should_hide {
         if !state.user_hidden.load(Ordering::Relaxed) && win.is_visible().unwrap_or(false) {
             let _ = win.hide();
+            crate::put_ball_away(app);
             state.auto_hidden.store(true, Ordering::Relaxed);
         }
     } else if state.auto_hidden.swap(false, Ordering::Relaxed) && !state.user_hidden.load(Ordering::Relaxed) {

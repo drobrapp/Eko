@@ -89,6 +89,53 @@ fn show_settings(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// ---------- Pelota: ventanita propia para que pueda recorrer toda la pantalla ----------
+#[tauri::command]
+async fn ball_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    let pos = tauri::LogicalPosition::new(x, y);
+    if let Some(w) = app.get_webview_window("ball") {
+        let _ = w.set_position(pos);
+        let _ = w.show();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(&app, "ball", tauri::WebviewUrl::App("ball.html".into()))
+        .title("Eko · pelota")
+        .inner_size(40.0, 40.0)
+        .position(x, y)
+        .transparent(true)
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .shadow(false)
+        .focused(false)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Si Eko se esconde, la pelota se guarda con él
+pub(crate) fn put_ball_away(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("ball") {
+        let _ = w.hide();
+    }
+    let _ = app.emit_to("main", "cmd", "stowball");
+}
+
+#[tauri::command]
+fn ball_pos(app: AppHandle, x: f64, y: f64) {
+    if let Some(w) = app.get_webview_window("ball") {
+        let _ = w.set_position(tauri::LogicalPosition::new(x, y));
+    }
+}
+
+#[tauri::command]
+fn ball_hide(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("ball") {
+        let _ = w.hide();
+    }
+}
+
 #[tauri::command]
 fn get_autostart(app: AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
@@ -144,6 +191,7 @@ fn toggle_visible(app: &AppHandle) {
         } else {
             state.user_hidden.store(true, Ordering::Relaxed);
             let _ = w.hide();
+            put_ball_away(app);
         }
     }
 }
@@ -296,7 +344,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, get_autostart, set_autostart, app_version, check_update_now, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

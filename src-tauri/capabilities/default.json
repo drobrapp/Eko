@@ -4,7 +4,8 @@
   "description": "Permisos de la ventana de Eko",
   "windows": [
     "main",
-    "settings"
+    "settings",
+    "ball"
   ],
   "permissions": [
     "core:default",

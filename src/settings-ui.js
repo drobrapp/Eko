@@ -136,6 +136,33 @@
       .catch(() => { $("#updState").textContent = "No se ha podido comprobar"; });
   });
 
+  // Prueba del micrófono: muestra en vivo lo que oye Eko
+  const VS = {
+    speech: () => "🎙 Te oigo hablar",
+    end: () => "· fin de la frase",
+    cmd: (e) => `✅ Entendido: «${e.text}» (confianza ${["alta", "media", "baja", "muy baja"][e.conf] || "?"})`,
+    unknown: (e) => `🤔 Ha oído «${e.text}» pero no es una orden`,
+    nomatch: () => "❓ Te ha oído pero no ha entendido ninguna orden",
+    "ignored-music": () => "⏸ Te oye, pero no hace caso: está sonando música",
+    "ignored-call": () => "⏸ Te oye, pero no hace caso: estás en una llamada",
+    "ignored-quiet": () => "⏸ Te oye, pero está en modo discreto",
+    "ignored-hidden": () => "⏸ Te oye, pero está escondido",
+    error: (e) => `⚠ Error: ${e.text || "no puede usar el micrófono"} — revisa Windows → Hora e idioma → Voz`,
+  };
+  let vlog = [];
+  $("#voiceTest").addEventListener("click", () => {
+    const pre = $("#voiceLog");
+    pre.hidden = false;
+    if (!S.get().listen) { S.set("listen", true); fill(); }
+    vlog = ["Escuchando… di «" + (S.get().petName || "Eko") + ", ¿qué hora es?»"];
+    pre.textContent = vlog.join("\n");
+    says("¡Háblame! Te digo lo que oigo");
+  });
+  if (T && T.event) {
+    const add = (line) => { const pre = $("#voiceLog"); if (pre.hidden) return; vlog.push(line); vlog = vlog.slice(-12); pre.textContent = vlog.join("\n"); pre.scrollTop = 1e6; };
+    T.event.listen("voice-status", (e) => { const f = VS[e.payload.state]; if (f) add(f(e.payload)); });
+  }
+
   // Privacidad
   $("#wipe").addEventListener("mouseenter", () => says(pick(["No, no, no…", "Ese botón me da miedo", "¿Seguro que quieres tocar eso?"])));
   $("#showData").addEventListener("click", () => {

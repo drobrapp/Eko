@@ -55,7 +55,7 @@ mod imp {
     use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
 
     fn emit(app: &AppHandle, kind: &str, text: String, conf: i32) {
-        let _ = app.emit_to("main", "voice", VoiceEv { kind: kind.into(), text, conf });
+        let _ = app.emit("voice", VoiceEv { kind: kind.into(), text, conf });
     }
 
     pub fn run(app: AppHandle, phrases: Vec<String>, gen: u64) {

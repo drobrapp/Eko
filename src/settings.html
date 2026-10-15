@@ -23,6 +23,7 @@
     .htxt { min-width: 0; }
     .says { position: relative; display: inline-block; margin-top: 7px; padding: 6px 11px; border-radius: 14px 14px 14px 4px; background: #fff; color: #5a463d; font-size: 12.5px; line-height: 1.35; box-shadow: 0 1px 4px rgba(60,40,30,.12); max-width: 380px; opacity: 0; transform: translateY(4px) scale(.96); transform-origin: 0 100%; transition: opacity .2s, transform .25s cubic-bezier(.3,1.6,.5,1); }
     .says.in { opacity: 1; transform: none; }
+    #voiceLog { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: #2b2320; color: #f3e6dc; font: 12px/1.5 Consolas, monospace; white-space: pre-wrap; max-height: 180px; overflow: auto; }
     #floatSay { position: fixed; left: 16px; bottom: 16px; z-index: 5; display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 6px; pointer-events: none; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .3s cubic-bezier(.3,1.6,.5,1); }
     #floatSay.in { opacity: 1; transform: none; }
     #floatSay svg { width: 38px; height: 44px; }
@@ -115,6 +116,8 @@
       <div class="row"><label for="fly">Volar de vez en cuando</label><label class="switch"><input type="checkbox" id="fly" data-k="fly" /><span></span></label></div>
       <div class="row"><label for="follow">Seguir el ratón con la mirada</label><label class="switch"><input type="checkbox" id="follow" data-k="follow" /><span></span></label></div>
       <div class="row"><label for="listen">Escuchar tu voz<small>Me miras cuando hablas y entiendo órdenes cortas con mi nombre delante: «Eko, baila», «Eko, a dormir», «Eko, ¿qué hora es?», «Eko, recuérdame en diez minutos»… Uso el reconocimiento de voz de Windows en tu PC: no grabo ni envío nada. Solo reacciono a voz (no a ruidos) y dejo de escuchar en llamadas y con música.</small></label><label class="switch"><input type="checkbox" id="listen" data-k="listen" /><span></span></label></div>
+      <div class="row"><div class="lab">Probar el micrófono<small>Activa «Escuchar tu voz», pulsa Probar y háblale: aquí verás lo que oye y por qué reacciona o no</small></div><button class="btn ghost" id="voiceTest">Probar</button></div>
+      <pre id="voiceLog" hidden></pre>
       <div class="row"><label for="desktop">Dejar que Eko curiosee el escritorio<small>Mira los nombres de tus iconos y cuántas cosas hay en las carpetas para comentarlos. Nunca abre archivos y nada sale de tu PC.</small></label><label class="switch"><input type="checkbox" id="desktop" data-k="desktop" /><span></span></label></div>
       <div class="row"><label for="hideCall">Esconderse en llamadas<small>Cuando una app usa el micrófono</small></label><label class="switch"><input type="checkbox" id="hideCall" data-k="hideCall" /><span></span></label></div>
       <div class="row"><label for="hideRecord">Esconderse al grabar la pantalla<small>OBS, Bandicam, Camtasia, Loom…</small></label><label class="switch"><input type="checkbox" id="hideRecord" data-k="hideRecord" /><span></span></label></div>

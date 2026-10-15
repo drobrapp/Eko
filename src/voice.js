@@ -51,17 +51,24 @@
     // Responde a su nombre (el que le pusiste) y también a «Eko»
     const names = new Set([...variants(name().toLowerCase()), ...variants("eko")]);
     for (const n of names) {
-      for (const c of CMDS) for (const p of c.p) map.set(`${n} ${p}`, c.run);
+      for (const c of CMDS) for (const p of c.p) { map.set(`${n} ${p}`, c.run); map.set(`oye ${n} ${p}`, c.run); }
       for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
     }
     return map;
   }
   let MAP = phrases(), on = false, paused = false, lastLook = 0, lastCmd = 0;
 
+  // Diagnóstico: lo que oye y por qué reacciona o no (lo muestra Ajustes → «Probar»)
+  const status = (state, text = "", conf = -1) => { try { T && T.event.emit("voice-status", { state, text, conf, t: Date.now() }); } catch (_) {} };
+  const why = () => { const s = E.lastSenses || {}; return s.in_call ? "call" : (s.music && s.music.playing) ? "music" : E.quiet ? "quiet" : E.A.hidden ? "hidden" : ""; };
   const norm = (t) => String(t || "").toLowerCase().replace(/[¿?¡!.]/g, "").replace(/\s+/g, " ").trim();
   function onVoice(ev) {
     const v = ev || {};
-    if (!on || paused || E.quiet || E.A.hidden) return;
+    if (!on) return;
+    const w = why();
+    if (v.kind === "error") status("error", v.text);
+    else if (w) { status("ignored-" + w, v.text, v.conf); return; }
+    else status(v.kind, v.text, v.conf);
     if (v.kind === "speech") {
       // Te oye hablar: te mira, sin interrumpir lo que hace (como mucho cada 10 s)
       const now = performance.now();
@@ -72,7 +79,7 @@
       if (now - lastLook > 6000 && !E.S.sleeping) { lastLook = now; E.fx("ask", 1); E.express("confundido", 1.6); if (Math.random() < 0.3) E.say(pick(["¿Cómo?", "¿Eh? No te he pillado", "Repite, porfa"]), 1600, true); }
     } else if (v.kind === "cmd" && v.conf <= 2) {
       const fn = MAP.get(norm(v.text).replace(/,/g, ""));
-      if (!fn) return;
+      if (!fn) { status("unknown", v.text, v.conf); return; }
       lastCmd = performance.now();
       if (E.S.sleeping && !/despierta|arriba|buenos días/.test(norm(v.text))) { E.wakeUp(); setTimeout(fn, 1600); return; }
       fn();
@@ -85,13 +92,12 @@
   function stop() { if (!on) return; on = false; if (invoke) invoke("voice_stop").catch(() => {}); }
   if (E.listen) E.listen("voice", (e) => onVoice(e.payload));
 
-  // Encendido según Ajustes; se calla en llamadas y cuando suena música (para no confundirse)
+  // Encendido según Ajustes. Mientras hay llamada o música sigue escuchando pero no hace caso
+  // (antes se paraba y arrancaba cada vez, y en ese hueco no oía nada)
   function sync() {
-    const s = E.lastSenses || {};
     const want = !!cfg().listen;
-    paused = !!(s.in_call || (s.music && s.music.playing));
     const newMap = phrases();
-    if (want && !paused) {
+    if (want) {
       if (on && [...newMap.keys()].join() !== [...MAP.keys()].join()) { stop(); MAP = newMap; }
       MAP = newMap; start();
     } else stop();

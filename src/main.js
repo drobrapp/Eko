@@ -16,7 +16,7 @@
   const el = {
     pet: $("#pet"), upper: $("#upper"), head: $("#head"), body: $("#body"), eyes: $("#eyes"),
     legs: $("#legs"), legL: $("#legL"), legR: $("#legR"), armL: $("#armL"), armR: $("#armR"),
-    shadow: $("#shadow"), hl: $("#hl"), mouth: $("#mouth"), bridge: $("#bridge"), hat: $("#hat"),
+    shadow: $("#shadow"), hl: $("#hl"), mouth: $("#mouth"), bridge: $("#bridge"), hat: $("#hat"), tipHats: [...document.querySelectorAll(".tipflip")],
     accFace: $("#accFace"), snack: $("#snack"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"), accFront: $("#accFront"), heldBox: $("#heldBox"), ghostEyes: [...document.querySelectorAll("#ghostEyes ellipse")],
     accEls: [...document.querySelectorAll("[data-acc]")],
     flyEls: [...document.querySelectorAll("[data-fly]")], cape: $("#cape"),
@@ -89,6 +89,7 @@
       huntMiss: ["¡Casi!", "¡Se me ha escapado!"],
       huntCaught: ["¡Te pillé!", "¡Mío!"],
       huntHigh: ["Uf, está muy alto", "No llego…"],
+      dapper: ["Me he puesto elegante, ¿te gusta?", "Hoy toca ir de gala, ¿qué tal estoy?", "Pajarita puesta. ¿A que estoy guapo?"],
       evolve: ["¡Mira! ¡Me ha salido una hojita!", "¡Otra hoja! Estoy creciendo", "¡Me ha salido un capullo! Algo se viene…", "¡Un año juntos! Mira qué flor"],
       hats: { auto: "Complemento automático", witch: "Bruja", pumpkin: "Calabaza", vampire: "Vampiro", ghost: "Fantasma", santa: "Papá Noel", reindeer: "Reno", elf: "Elfo", scarf: "Bufanda", party: "Fiesta", crown: "Corona", none: "Sin complemento" },
     },
@@ -129,6 +130,7 @@
       huntMiss: ["So close!", "It got away!"],
       huntCaught: ["Got you!", "Mine!"],
       huntHigh: ["Too high up there", "Can't reach…"],
+      dapper: ["I dressed up a bit, do you like it?", "Feeling fancy today. How do I look?"],
       evolve: ["Look! I grew a little leaf!", "Another leaf! I'm growing", "A bud! Something's coming…", "One year together! Look at this flower"],
       hats: { auto: "Automatic accessory", witch: "Witch", pumpkin: "Pumpkin", vampire: "Vampire", ghost: "Ghost", santa: "Santa", reindeer: "Reindeer", elf: "Elf", scarf: "Scarf", party: "Party", crown: "Crown", none: "No accessory" },
     },
@@ -793,7 +795,7 @@
   const PROP_DEF = {
     headphones: { wear: "head" }, nightcap: { wear: "head" }, readglasses: { wear: "face" },
     mug: { hand: true }, camera: { two: true }, brush: { hand: true }, umbrella: { hand: true, walk: true },
-    popcorn: { two: true, sit: true }, book: { two: true, glasses: true },
+    popcorn: { two: true, sit: true }, book: { two: true, glasses: true }, bowtie: { wear: "neck" },
   };
   const PROP = { cur: null, until: 0, t0: 0, cd: {}, shown: null };
   function useProp(name, secs = 120, cooldownMin = 20) {
@@ -814,6 +816,15 @@
     if (d.sit && !busy()) { S.mode = "sit"; S.modeUntil = A.t + Math.min(secs, 90); }
     return true;
   }
+  // De vez en cuando se pone pajarita porque sí (≈ una vez cada pocas horas de uso)
+  function dressUp(force) {
+    if (!force && (S.sleeping || A.hidden || PROP.cur || busy() || currentAcc() === "scarf" || currentAcc() === "ghost")) return false;
+    if (!useProp("bowtie", force ? 600 : rnd(900, 1800), force ? 0 : 240)) return false;
+    express("orgulloso", 2.5);
+    setTimeout(() => say(pick(TXT.dapper), 3200, true), 500);
+    return true;
+  }
+  setInterval(() => { if (Math.random() < 1 / 150) dressUp(false); }, 60000);
   function dropProp(name) { if (!name || PROP.cur === name) PROP.until = 0; if (!name || PROP.extra === name) PROP.extraUntil = 0; }
   // Qué se ve ahora mismo (se guardan las cosas de la mano al andar, volar o si lo coges)
   function propsVisible() {
@@ -1422,6 +1433,11 @@
     el.head.setAttribute("transform", `translate(${(4 * th + A.lag).toFixed(2)} ${headDrop.toFixed(2)}) rotate(${(A.tilt + P.tilt).toFixed(2)} 0 40) scale(${(1 - 0.05 * ath).toFixed(4)} 1)`);
     el.hl.setAttribute("transform", `translate(${(5 * th).toFixed(2)} ${(P.nod * 0.5).toFixed(2)})`);
     el.hat.setAttribute("transform", `translate(${(10 * th).toFixed(2)} 0)`);
+    // Gorros con punta: la punta y el pompón quedan detrás, al lado contrario de hacia donde va Eko (se dan la vuelta con suavidad)
+    A.capS = A.capS ?? 1;
+    A.capS += ((S.facing > 0 ? -1 : 1) - A.capS) * 0.16;
+    const capT = `scale(${(Math.abs(A.capS) < 0.04 ? 0.04 * Math.sign(A.capS || 1) : A.capS).toFixed(3)} 1)`;
+    for (const g of el.tipHats) g.setAttribute("transform", capT);
 
     const ex = P.eyeX != null ? P.eyeX : A.eyeX;
     const ey = (P.eyeY != null ? P.eyeY : A.eyeY) + P.nod * 0.9;
@@ -1451,7 +1467,7 @@
       el.ghostSheet.setAttribute("d", ghostPath(walking || S.fly ? t : 0));
       el.accFront.setAttribute("transform", `translate(0 ${(sitDrop * 0.4).toFixed(2)}) rotate(${((A.tilt + P.tilt) * 0.4).toFixed(2)} 0 40)`);
     }
-    if (shownAcc === "pumpkin") {
+    if (shownAcc === "pumpkin" && el.carveMouth) {
       el.carves.forEach((c, i) => c.setAttribute("transform", `translate(${(pos[i][0] * 1.15 + ex).toFixed(2)} ${(-4 + ey).toFixed(2)}) scale(${(pos[i][1] * 1.75).toFixed(3)} ${(A.blink < 1 ? 0.3 : 1.75)})`));
       el.carveMouth.setAttribute("transform", `translate(${(th * 26 + ex * 0.6).toFixed(2)} ${(-6 + ey * 0.6).toFixed(2)}) scale(${(1.35 * (1 - 0.3 * ath)).toFixed(3)} 1.35)`);
     }
@@ -1774,7 +1790,7 @@
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
     setDance(v) { A.dance = !!v; },
-    setEvo, evo: EVO, celebrateStage, express, useProp, dropProp, prop: PROP,
+    setEvo, evo: EVO, celebrateStage, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
     onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: () => { if (S.perch) hopDown(false); },
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },

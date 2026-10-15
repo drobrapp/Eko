@@ -15,7 +15,8 @@ window.EkoSettings = (() => {
     follow: true,
     hideCall: true,          // esconderse en llamadas
     desktop: false,
-    menuAsk: true,           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
+    menuAsk: true,
+    listen: false,           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
     hideRecord: true,        // esconderse al grabar la pantalla
     hideFull: true,          // esconderse en pantalla completa
     size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande

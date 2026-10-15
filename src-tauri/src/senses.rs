@@ -376,10 +376,15 @@ fn mic_in_use() -> bool {
         matches!(k.get_value::<u64, _>("LastUsedTimeStop"), Ok(0))
             && matches!(k.get_value::<u64, _>("LastUsedTimeStart"), Ok(v) if v > 0)
     }
+    // El propio Eko (cuando te escucha) no cuenta como «llamada»
+    let me = std::env::current_exe().map(|p| p.to_string_lossy().replace('\\', "#").to_lowercase()).unwrap_or_default();
     for name in root.enum_keys().flatten() {
         let Ok(k) = root.open_subkey(&name) else { continue };
         if name == "NonPackaged" {
             for sub in k.enum_keys().flatten() {
+                if !me.is_empty() && sub.to_lowercase() == me {
+                    continue;
+                }
                 if let Ok(k2) = k.open_subkey(&sub) {
                     if active(&k2) {
                         return true;

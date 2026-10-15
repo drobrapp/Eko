@@ -47,6 +47,7 @@
     walk: (v) => yes(v) ? "¡A pasear!" : "¿Quieto? Bueno, haré yoga",
     fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
     follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
+    listen: (v) => yes(v) ? "¡Te escucho! Llámame por mi nombre" : "Vale, me tapo las orejas",
     desktop: (v) => yes(v) ? "¡Bien! Me encanta curiosear. Prometo no abrir nada" : "Vale, no toco tu escritorio",
     hideCall: (v) => yes(v) ? "En llamadas, desaparezco" : "¿Puedo salir en tus llamadas? ¡Hola a todos!",
     hideRecord: (v) => yes(v) ? "Si grabas, me escondo" : "¡Voy a salir en tu vídeo!",

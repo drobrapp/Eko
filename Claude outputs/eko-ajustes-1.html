@@ -114,6 +114,7 @@
       <div class="row"><label for="walk">Pasear por la barra de tareas</label><label class="switch"><input type="checkbox" id="walk" data-k="walk" /><span></span></label></div>
       <div class="row"><label for="fly">Volar de vez en cuando</label><label class="switch"><input type="checkbox" id="fly" data-k="fly" /><span></span></label></div>
       <div class="row"><label for="follow">Seguir el ratón con la mirada</label><label class="switch"><input type="checkbox" id="follow" data-k="follow" /><span></span></label></div>
+      <div class="row"><label for="listen">Escuchar tu voz<small>Me miras cuando hablas y entiendo órdenes cortas con mi nombre delante: «Eko, baila», «Eko, a dormir», «Eko, ¿qué hora es?», «Eko, recuérdame en diez minutos»… Uso el reconocimiento de voz de Windows en tu PC: no grabo ni envío nada. Solo reacciono a voz (no a ruidos) y dejo de escuchar en llamadas y con música.</small></label><label class="switch"><input type="checkbox" id="listen" data-k="listen" /><span></span></label></div>
       <div class="row"><label for="desktop">Dejar que Eko curiosee el escritorio<small>Mira los nombres de tus iconos y cuántas cosas hay en las carpetas para comentarlos. Nunca abre archivos y nada sale de tu PC.</small></label><label class="switch"><input type="checkbox" id="desktop" data-k="desktop" /><span></span></label></div>
       <div class="row"><label for="hideCall">Esconderse en llamadas<small>Cuando una app usa el micrófono</small></label><label class="switch"><input type="checkbox" id="hideCall" data-k="hideCall" /><span></span></label></div>
       <div class="row"><label for="hideRecord">Esconderse al grabar la pantalla<small>OBS, Bandicam, Camtasia, Loom…</small></label><label class="switch"><input type="checkbox" id="hideRecord" data-k="hideRecord" /><span></span></label></div>
@@ -178,7 +179,8 @@ window.EkoSettings = (() => {
     follow: true,
     hideCall: true,          // esconderse en llamadas
     desktop: false,
-    menuAsk: true,           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
+    menuAsk: true,
+    listen: false,           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
     hideRecord: true,        // esconderse al grabar la pantalla
     hideFull: true,          // esconderse en pantalla completa
     size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande
@@ -273,6 +275,7 @@ window.EkoSettings = (() => {
     walk: (v) => yes(v) ? "¡A pasear!" : "¿Quieto? Bueno, haré yoga",
     fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
     follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
+    listen: (v) => yes(v) ? "¡Te escucho! Llámame por mi nombre" : "Vale, me tapo las orejas",
     desktop: (v) => yes(v) ? "¡Bien! Me encanta curiosear. Prometo no abrir nada" : "Vale, no toco tu escritorio",
     hideCall: (v) => yes(v) ? "En llamadas, desaparezco" : "¿Puedo salir en tus llamadas? ¡Hola a todos!",
     hideRecord: (v) => yes(v) ? "Si grabas, me escondo" : "¡Voy a salir en tu vídeo!",

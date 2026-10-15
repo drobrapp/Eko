@@ -1005,7 +1005,7 @@ checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
 name = "eko"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "active-win-pos-rs",
  "notify",
@@ -1019,6 +1019,8 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "windows 0.62.2",
+ "windows-collections 0.3.2",
+ "windows-future 0.3.2",
  "winreg",
 ]
 

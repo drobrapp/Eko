@@ -36,10 +36,9 @@
     history = history.slice(-12);
     E.act("think");
     E.express("curioso", 3);
-    // que se vea que está pensando (la primera vez tarda más: Ollama carga el modelo)
-    E.say("…", 120000, true);
-    const slow1 = setTimeout(() => { if (thinking) E.say("Mmm… déjame pensar…", 120000, true); }, 8000);
-    const slow2 = setTimeout(() => { if (thinking) E.say("La primera vez tardo más, estoy despertando mi cerebro…", 120000, true); }, 25000);
+    // mientras piensa, solo su propia burbujita de pensar (se repite hasta que responde)
+    const thinkLoop = setInterval(() => { if (thinking) E.act("think"); }, 3300);
+    const stopThink = () => { clearInterval(thinkLoop); E.stage && E.stage.classList.remove("thinking"); };
     let reply = "";
     try {
       if (!invoke) { await new Promise((r) => setTimeout(r, 900)); reply = `[divertido] Esto es la vista previa: en tu PC te respondería la IA de verdad. ¡Has dicho «${text.slice(0, 30)}»! {salta}`; }
@@ -53,7 +52,7 @@
         reply = (JSON.parse(raw).message || {}).content || "";
       }
     } catch (e) {
-      clearTimeout(slow1); clearTimeout(slow2);
+      stopThink();
       thinking = false;
       window.EkoChat.lastError = String(e || "");
       const msg = String(e || "");
@@ -61,7 +60,7 @@
       E.say(/offline/.test(msg) ? "No encuentro mi cerebro… ¿está Ollama abierto?" : /404|not found/i.test(msg) ? "Me falta descargar mi cerebro (el modelo). Mira en Ajustes" : /timed out|tiempo|10060|os error/i.test(msg) ? "He tardado demasiado en pensar… prueba otra vez o activa «Usar solo el procesador»" : "Uy, se me ha cruzado un cable: " + msg.slice(0, 80), 5000, true);
       return;
     }
-    clearTimeout(slow1); clearTimeout(slow2);
+    stopThink();
     thinking = false;
     show(reply);
   }

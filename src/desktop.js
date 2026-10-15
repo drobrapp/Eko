@@ -55,7 +55,7 @@
     try { return await invoke("desktop_scan"); } catch (_) { return null; }
   }
   const free = () => !E.busy() && !E.S.perch && !E.S.fly && !E.A.hidden && !E.quiet && !(window.EkoAntics && window.EkoAntics.current);
-  const onScreen = (i) => i.w > 10 && i.y > E.world.top + 20 && i.x > E.world.left - 10 && i.x < E.world.left + E.world.width;
+  const onScreen = (i) => i.visible !== false && i.w > 10 && i.y > E.world.top + 20 && i.x > E.world.left - 10 && i.x < E.world.left + E.world.width;
 
   // Va hasta el icono, se posa encima, comenta y se queda sentado un rato
   function visit(icon, line, extra) {

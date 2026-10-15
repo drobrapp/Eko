@@ -619,8 +619,9 @@
     const prev = WIN.cur;
     WIN.cur = c;
     if (S.perch && S.perch.icon) {
-      // sentado en un icono del escritorio: las ventanas no le afectan… salvo que una lo tape todo
-      if (c && c.max && !S.dragging) getDown("hop");
+      // sentado en un icono del escritorio: si una ventana lo tapa (o se maximiza), se baja
+      const pc = S.perch.x + S.perch.w / 2, py = S.perch.y + 10;
+      if (c && !c.desk && !S.dragging && (c.max || (pc > c.x && pc < c.x + c.w && py > c.y && py < c.y + c.h))) getDown("hop");
     } else if (S.perch) {
       if (!c || c.id !== S.perch.id) fallOff(true);
       else if (c.max) { S.perch = c; hopDown(true); }

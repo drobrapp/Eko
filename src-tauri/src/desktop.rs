@@ -17,6 +17,8 @@ pub struct DeskIcon {
     pub count: i64,
     /// cuántos son fotos (carpetas)
     pub images: i64,
+    /// false si alguna ventana lo tapa (Eko no va a por iconos que no se ven)
+    pub visible: bool,
 }
 
 #[derive(Serialize, Clone, Debug, Default)]
@@ -85,7 +87,53 @@ mod imp {
         IEnumIDList, IFolderView, IShellBrowser, IShellFolder, IShellWindows, SHQueryRecycleBinW, ShellWindows, StrRetToStrW, SHGDNF, SHGDN_FORPARSING,
         SHGDN_NORMAL, SHQUERYRBINFO, SID_STopLevelBrowser, SVGIO_ALLVIEW, SWC_DESKTOP, SWFO_NEEDDISPATCH,
     };
-    use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
+    use windows::Win32::Foundation::LPARAM;
+    use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS};
+    use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetClassNameW, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible};
+
+    /// Ventanas visibles por encima del escritorio (en orden de arriba abajo), en píxeles físicos
+    struct Cover {
+        me: u32,
+        rects: Vec<RECT>,
+    }
+    unsafe extern "system" fn collect(h: HWND, lp: LPARAM) -> windows::core::BOOL {
+        unsafe {
+            let c = &mut *(lp.0 as *mut Cover);
+            let mut buf = [0u16; 64];
+            let n = GetClassNameW(h, &mut buf);
+            let cls = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
+            if cls == "Progman" || cls == "WorkerW" {
+                return false.into(); // llegamos al escritorio: lo que queda está debajo
+            }
+            if !IsWindowVisible(h).as_bool() || IsIconic(h).as_bool() {
+                return true.into();
+            }
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(h, Some(&mut pid as *mut u32));
+            if pid == c.me {
+                return true.into(); // las ventanas de Eko no tapan nada
+            }
+            let mut cloak: u32 = 0;
+            if DwmGetWindowAttribute(h, DWMWA_CLOAKED, &mut cloak as *mut u32 as *mut core::ffi::c_void, 4).is_ok() && cloak != 0 {
+                return true.into();
+            }
+            if matches!(cls.as_str(), "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" | "Windows.UI.Core.CoreWindow" | "Progman") {
+                return true.into();
+            }
+            let mut r = RECT::default();
+            let ok = DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, &mut r as *mut RECT as *mut core::ffi::c_void, core::mem::size_of::<RECT>() as u32).is_ok()
+                || GetWindowRect(h, &mut r).is_ok();
+            if ok && r.right - r.left > 40 && r.bottom - r.top > 40 {
+                c.rects.push(r);
+            }
+            true.into()
+        }
+    }
+    fn covered(rects: &[RECT], x: i32, y: i32, w: i32, h: i32) -> bool {
+        // tapado si el centro del icono queda dentro de alguna ventana
+        let (cx, cy) = (x + w / 2, y + h / 3);
+        rects.iter().any(|r| cx >= r.left && cx < r.right && cy >= r.top && cy < r.bottom)
+    }
 
     pub fn scan(scale: f64) -> Result<DeskInfo, String> {
         unsafe {
@@ -138,6 +186,8 @@ mod imp {
             // la lista de iconos usa coordenadas relativas a la ventana del escritorio
             let mut r = RECT::default();
             let _ = GetWindowRect(HWND(hwnd as isize as *mut core::ffi::c_void), &mut r);
+            let mut cover = Cover { me: std::process::id(), rects: Vec::new() };
+            let _ = EnumWindows(Some(collect), LPARAM(&mut cover as *mut Cover as isize));
             let items: IEnumIDList = fv.Items(SVGIO_ALLVIEW)?;
             let mut out = DeskInfo::default();
             loop {
@@ -153,6 +203,7 @@ mod imp {
                 let path = display(&folder, pidl, SHGDN_FORPARSING);
                 CoTaskMemFree(Some(pidl as *const core::ffi::c_void));
                 let (kind, ext, count, images) = classify(&path);
+                let visible = !covered(&cover.rects, r.left + pos.x, r.top + pos.y, cw as i32, ch as i32);
                 out.icons.push(DeskIcon {
                     name,
                     x: (r.left + pos.x) as f64 / scale,
@@ -163,6 +214,7 @@ mod imp {
                     ext,
                     count,
                     images,
+                    visible,
                 });
                 if out.icons.len() >= 300 {
                     break;

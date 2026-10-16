@@ -386,7 +386,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

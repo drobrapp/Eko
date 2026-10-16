@@ -22,7 +22,8 @@ window.EkoSettings = (() => {
     ai: false,               // PRUEBA: hablar con Eko usando una IA local (Ollama)
     aiModel: "gemma3:4b",
     aiCpu: false,
-    aiBar: true,             // barra para hablar con Eko en el escritorio            // usar solo el procesador (si la gráfica da problemas)           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
+    aiBar: true,
+    pcActions: true,         // que la IA pueda hacer cosas en el PC (música, abrir programas, buscar…)             // barra para hablar con Eko en el escritorio            // usar solo el procesador (si la gráfica da problemas)           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
     hideRecord: true,        // esconderse al grabar la pantalla
     hideFull: true,          // esconderse en pantalla completa
     size: 1,                 // 0.8 pequeño, 1 normal, 1.2 grande

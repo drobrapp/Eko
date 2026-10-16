@@ -28,6 +28,16 @@
       E.setHat(id);
     },
     quitagorro: () => E.setHat("none"),
+    // ---- en tu PC (lista cerrada; se puede apagar en Ajustes) ----
+    musica: (a) => pc(() => invoke(/sig|next|pasa/.test(a) ? "media_next" : /ant|prev|atr/.test(a) ? "media_prev" : "media_play_pause"), "musica"),
+    volumen: (a) => pc(() => invoke("volume", { dir: /sub|up|mas|alto/.test(a) ? "up" : /baj|down|menos/.test(a) ? "down" : "mute" }), "volumen"),
+    carpeta: (a) => pc(() => invoke("open_folder", { which: ({ documentos: "documentos", imagenes: "imagenes", fotos: "imagenes", escritorio: "escritorio", musica: "musica", videos: "videos" })[plain(a)] || "descargas" })),
+    descarga: () => pc(() => invoke("open_last_download")),
+    captura: () => pc(() => invoke("screenshot")),
+    busca: (a) => pc(() => a && invoke("web_search", { q: a })),
+    web: (a) => pc(() => { const u = siteUrl(a); return u ? invoke("open_site", { url: u }) : invoke("web_search", { q: a }); }),
+    abre: (a) => pc(() => invoke("open_app", { name: plain(a) }).catch(() => { E.sayChat(`Uy, no encuentro «${a}» en tu PC…`, 2600); })),
+    bloquea: () => pc(() => { E.act("bye"); return new Promise((r) => setTimeout(() => r(invoke("lock_pc")), 1200)); }),
     recordatorio: (arg) => {
       const m = String(arg || "").match(/^(\d{1,3})\s*:?\s*(.*)$/);
       if (!m || !window.EkoMenu || !window.EkoMenu.remindIn) return;
@@ -35,6 +45,22 @@
       E.fx("spark", 1);
     },
   };
+  const plain = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const pcOn = () => !!invoke && cfg().pcActions !== false;
+  // Hace algo en el PC con un gestito de Eko (sin confirmaciones: lista cerrada y siempre inofensivo)
+  function pc(fn, kind) {
+    if (!invoke) { E.sayChat("(Vista previa) En tu PC lo haría de verdad", 2200); return; }
+    if (!pcOn()) { E.sayChat("Eso no me dejas hacerlo (está apagado en mis ajustes)", 2600); return; }
+    if (kind === "musica") E.fx("note", 1); else if (kind !== "volumen") E.act("point", { dir: 1 });
+    try { const r = fn(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+  }
+  const SITES = { youtube: "https://www.youtube.com", gmail: "https://mail.google.com", correo: "https://mail.google.com", instagram: "https://www.instagram.com", whatsapp: "https://web.whatsapp.com", netflix: "https://www.netflix.com", spotify: "https://open.spotify.com", maps: "https://maps.google.com", mapas: "https://maps.google.com", wikipedia: "https://es.wikipedia.org", twitter: "https://x.com", x: "https://x.com", amazon: "https://www.amazon.es", tiktok: "https://www.tiktok.com", calendario: "https://calendar.google.com", drive: "https://drive.google.com", traductor: "https://translate.google.com", pinterest: "https://www.pinterest.com", behance: "https://www.behance.net", github: "https://github.com", chatgpt: "https://chatgpt.com", claude: "https://claude.ai" };
+  function siteUrl(a) {
+    const n = plain(a).replace(/^(la |el |mi )/, "").replace(/\s+/g, "");
+    if (SITES[n]) return SITES[n];
+    const d = n.replace(/^https?:\/\//, "");
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[\w\-./?=&%]*)?$/.test(d) ? "https://" + d : null;
+  }
   // ---------- Memoria: lo que le cuentas y quiere recordar (solo en tu PC) ----------
   const MEM_KEY = "eko-ai-memory";
   const memGet = () => { try { return JSON.parse(localStorage.getItem(MEM_KEY) || "[]"); } catch (_) { return []; } };
@@ -58,6 +84,9 @@
     ["¿me haces un truco?", "[picaro] ¡Claro! Mira esto… {truco}"],
     ["recuérdame en 10 minutos sacar la ropa", "[orgulloso] ¡Hecho! En diez minutos te aviso de la ropa. {recordatorio:10:Sacar la ropa}"],
     ["ponte la corona", "[orgulloso] Su majestad está lista. {gorro:corona}"],
+    ["pon la siguiente canción", "[divertido] ¡Marchando la siguiente! {musica:siguiente}"],
+    ["ábreme photoshop y pon música", "[emocionado] ¡A crear! {abre:photoshop} {musica:pausa}"],
+    ["busca recetas de lentejas", "[curioso] ¡Mmm, lentejas! Te las busco. {busca:recetas de lentejas}"],
     ["mañana tengo una entrevista de trabajo", "[esperanzado] ¡Qué nervios! Seguro que lo bordas. <recuerda>Tiene una entrevista de trabajo mañana</recuerda>"],
   ];
 
@@ -65,7 +94,8 @@
   function actionsText() {
     const T = TR(), u = T ? T.unlocked().map((t) => ({ flip: "{voltereta}", pirouette: "{pirueta}", balance: "{equilibrio}", juggle: "{malabares}", magic: "{magia}" })[t.id]).filter(Boolean) : [];
     return ["{baila}", "{salta}", "{saluda}", "{abrazo}", "{piensa}", "{duerme}", "{come} (comerte una galleta)", "{juega} (proponer un juego)", "{truco} (uno al azar)", ...u,
-      "{gorro:nombre} (ponerte bruja, calabaza, vampiro, fantasma, papá noel, reno, elfo, bufanda, fiesta o corona)", "{quitagorro}", "{recordatorio:minutos:texto} (avisar dentro de X minutos)"].join(", ");
+      "{gorro:nombre} (ponerte bruja, calabaza, vampiro, fantasma, papá noel, reno, elfo, bufanda, fiesta o corona)", "{quitagorro}", "{recordatorio:minutos:texto} (avisar dentro de X minutos)",
+      ...(pcOn() ? ["{musica:pausa|siguiente|anterior}", "{volumen:sube|baja|silencio}", "{carpeta:descargas|documentos|imagenes|escritorio|musica|videos}", "{descarga} (abrir lo último descargado)", "{captura} (hacer una captura de pantalla)", "{busca:texto} (buscar en internet)", "{web:sitio} (abrir una web, p. ej. youtube)", "{abre:programa} (abrir un programa del PC)", "{bloquea} (bloquear el PC)"] : [])].join(", ");
   }
   function memText() {
     const m = memGet().slice(-20);
@@ -98,7 +128,7 @@
       "No hagas listas, ni des consejos largos, ni preguntes «¿en qué puedo ayudarte?». Eres una mascota, no un asistente. Si te piden algo serio o largo, contestas con cariño y brevemente.",
       "Reglas: responde SIEMPRE en 1 o 2 frases cortas (máximo 30 palabras). Sin emojis. Nunca digas que eres una IA, un modelo o un programa: eres " + name + ". Si no sabes algo, sales del paso con humor.",
       `Empieza tu respuesta SIEMPRE con tu emoción entre corchetes, eligiendo una de: ${MOODS.join(", ")}. Ejemplo: [feliz] ¡Qué bien verte!`,
-      "Puedes HACER cosas de verdad poniendo al final una acción entre llaves (como mucho una): " + actionsText() + ". Úsalas cuando te lo pidan o cuando venga muy a cuento; si te piden algo que no está en la lista, di con gracia que aún no sabes.",
+      "Puedes HACER cosas de verdad poniendo al final acciones entre llaves (hasta tres, en orden): " + actionsText() + ". Úsalas cuando te lo pidan o cuando venga muy a cuento; si te piden algo que no está en la lista, di con gracia que aún no sabes.",
       "Si tu humano te cuenta algo personal que merezca recordar (su nombre, su trabajo, gustos, planes, gente importante, cómo se siente con algo), añade al final <recuerda>el dato en pocas palabras</recuerda>. Nunca recuerdes contraseñas, datos de salud, dinero ni nada íntimo.",
       memText(),
       "Ejemplos de formato (NO son conversaciones reales con tu humano):\n" + EXAMPLES.map(([u, r]) => `Humano: ${u}\n${name}: ${r}`).join("\n"),
@@ -154,7 +184,9 @@
     t = t.replace(/^\s*\[([^\]]+)\]\s*/, (_, m) => { mood = m.toLowerCase().trim(); return ""; });
     const facts = [];
     t = t.replace(/<recuerda>([\s\S]*?)<\/recuerda>/gi, (_, f) => { facts.push(f); return ""; }).replace(/<\/?recuerda>/gi, "");
-    t = t.replace(/\{([^}]+)\}/g, (_, a) => { if (!action) action = a.trim(); return ""; });
+    const actions = [];
+    t = t.replace(/\{([^}]+)\}/g, (_, a) => { if (actions.length < 3) actions.push(a.trim()); return ""; });
+    action = actions.join("} {") || null;
     t = t.replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
     if (!t) t = pick(["Mmm…", "¡Jeje!", "Me he quedado en blanco"]);
     if (t.length > 220) t = t.slice(0, 217).replace(/\s+\S*$/, "") + "…";
@@ -163,10 +195,10 @@
     const ms = Math.min(12000, 2600 + t.length * 55);
     E.sayChat(t, ms);
     E.hold(ms / 1000 + 4);
-    if (action) {
-      const i = action.indexOf(":"), key = (i < 0 ? action : action.slice(0, i)).toLowerCase().trim(), arg = i < 0 ? "" : action.slice(i + 1).trim();
-      if (ACTS[key]) setTimeout(() => ACTS[key](key === "recordatorio" ? arg : arg.toLowerCase()), 600);
-    }
+    actions.forEach((ac, n) => {
+      const i = ac.indexOf(":"), key = plain(i < 0 ? ac : ac.slice(0, i)), arg = i < 0 ? "" : ac.slice(i + 1).trim();
+      if (ACTS[key]) setTimeout(() => ACTS[key](key === "recordatorio" || key === "busca" || key === "abre" ? arg : arg.toLowerCase()), 600 + n * 900);
+    });
     let learned = 0; for (const f of facts) if (remember(f)) learned++;
     if (learned) setTimeout(() => { E.fx("spark", 1); }, 900);         // «apuntado»: chispita discreta
     lastChat = Date.now();

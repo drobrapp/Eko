@@ -176,7 +176,7 @@
     try {
       const j = JSON.parse(await invoke("ai_status"));
       const names = (j.models || []).map((m) => m.name);
-      const want = (S.get().aiModel || "qwen2.5:7b").trim();
+      const want = (S.get().aiModel || "gemma3:4b").trim();
       const has = names.some((n) => n === want || n === want + ":latest" || n.split(":")[0] === want);
       if (has) {
         st.textContent = `✅ Ollama funciona y tienes «${want}». Probando a hablar… (la primera vez puede tardar hasta un minuto)`;
@@ -228,4 +228,20 @@
     try { localStorage.setItem("eko-missions-replay", String(Date.now())); } catch (_) {}
     says && says("¡Vale! Mira, que te enseño");
   });
+  // ---------- Páginas (una a la vista) y opciones que dependen de otras ----------
+  const pages = $$("section[data-p]"), navB = $$("nav button[data-p]");
+  function go(p) {
+    pages.forEach((x) => x.classList.toggle("on", x.dataset.p === p));
+    navB.forEach((b) => b.classList.toggle("on", b.dataset.p === p));
+    try { localStorage.setItem("eko-settings-page", p); } catch (_) {}
+    const m = $("main"); if (m) m.scrollTop = 0;
+  }
+  navB.forEach((b) => b.addEventListener("click", () => go(b.dataset.p)));
+  let first = "you"; try { first = localStorage.getItem("eko-settings-page") || "you"; } catch (_) {}
+  go(navB.some((b) => b.dataset.p === first) ? first : "you");
+  // Lo que solo tiene sentido con otra opción encendida se esconde (menos ruido)
+  function deps() { const s = S.get(); $$("[data-dep]").forEach((r) => { r.hidden = !s[r.dataset.dep]; }); }
+  document.addEventListener("change", () => setTimeout(deps, 0));
+  document.addEventListener("click", () => setTimeout(deps, 0));
+  deps();
 })();

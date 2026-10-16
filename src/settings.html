@@ -5,79 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Eko · Ajustes</title>
   <style>
+    /* Ventana de ajustes: barra lateral con Eko y categorías, una página a la vista */
     :root {
-      --bg: #f8f1eb; --card: #fffaf6; --ink: #3b2f2a; --soft: #8a7468; --line: #eadbd0;
-      --accent: #6b5348; --accent-2: #e8a07a; --ok: #6fb38a;
+      --bg: #fbf6f2; --side: #f3e8e0; --card: #fffdfb; --ink: #3b2f2a; --soft: #8f786c; --line: #efe2d8;
+      --accent: #6b5348; --hot: #d0795a; --ok: #6fb38a; --field: #fff;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #201b19; --side: #181412; --card: #2a2421; --ink: #f2e8e1; --soft: #b09d92; --line: #3a322e; --accent: #e8c2a8; --hot: #e8987a; --field: #1f1a18; color-scheme: dark; }
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
-    header { display: flex; align-items: center; gap: 14px; padding: 18px 22px 10px; }
-    header svg { width: 54px; height: 62px; flex: none; }
-    header h1 { margin: 0; font-size: 20px; }
-    header p { margin: 0; color: var(--soft); font-size: 12.5px; }
-    header svg { transform-origin: 50% 100%; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
+    .app { display: flex; height: 100%; }
+    aside { flex: 0 0 210px; display: flex; flex-direction: column; gap: 14px; padding: 18px 12px; background: var(--side); overflow-y: auto; }
+    header { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; padding: 0 6px; }
+    header svg { width: 44px; height: 52px; transform-origin: 50% 100%; }
     header svg.hop { animation: mhop .45s cubic-bezier(.3,1.6,.5,1); }
-    @keyframes mhop { 0% { transform: scale(1, 1); } 30% { transform: translateY(-6px) scale(.94, 1.08); } 60% { transform: scale(1.06, .94); } 100% { transform: none; } }
+    @keyframes mhop { 30% { transform: translateY(-6px) scale(.94, 1.08); } 60% { transform: scale(1.06, .94); } }
     #mEyes { transform-box: fill-box; transform-origin: 50% 50%; animation: mblink 4.2s infinite; transition: translate .25s; }
     @keyframes mblink { 0%, 92%, 100% { scale: 1 1; } 95% { scale: 1 .1; } }
-    .htxt { min-width: 0; }
-    .says { position: relative; display: inline-block; margin-top: 7px; padding: 6px 11px; border-radius: 14px 14px 14px 4px; background: #fff; color: #5a463d; font-size: 12.5px; line-height: 1.35; box-shadow: 0 1px 4px rgba(60,40,30,.12); max-width: 380px; opacity: 0; transform: translateY(4px) scale(.96); transform-origin: 0 100%; transition: opacity .2s, transform .25s cubic-bezier(.3,1.6,.5,1); }
+    header h1 { margin: 0; font-size: 15px; line-height: 1.2; }
+    header p { margin: 0; color: var(--soft); font-size: 11.5px; }
+    .says { grid-column: 1 / -1; margin-top: 10px; padding: 8px 11px; border-radius: 4px 14px 14px 14px; background: var(--card); color: var(--ink); font-size: 12.5px; line-height: 1.35; box-shadow: 0 1px 4px rgba(60,40,30,.1); opacity: 0; transform: translateY(-4px); transition: opacity .25s, transform .35s cubic-bezier(.3,1.6,.5,1); min-height: 0; }
+    .says:empty { display: none; }
     .says.in { opacity: 1; transform: none; }
-    #voiceLog { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: #2b2320; color: #f3e6dc; font: 12px/1.5 Consolas, monospace; white-space: pre-wrap; max-height: 180px; overflow: auto; }
-    #floatSay { position: fixed; left: 16px; bottom: 16px; z-index: 5; display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 6px; pointer-events: none; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .3s cubic-bezier(.3,1.6,.5,1); }
-    #floatSay.in { opacity: 1; transform: none; }
-    #floatSay svg { width: 38px; height: 44px; }
-    #floatSay .says { opacity: 1; transform: none; margin: 0 0 18px; border-radius: 14px 14px 14px 4px; box-shadow: 0 3px 12px rgba(60,40,30,.2); }
-    nav { position: sticky; top: 0; z-index: 2; display: flex; gap: 6px; overflow-x: auto; padding: 8px 22px 10px; background: linear-gradient(var(--bg) 80%, transparent); }
-    nav a { flex: none; padding: 5px 12px; border-radius: 999px; background: var(--card); color: var(--accent); text-decoration: none; font-size: 12.5px; font-weight: 600; box-shadow: 0 1px 3px rgba(60,40,30,.12); }
-    nav a:hover { background: #fff; }
-    main { padding: 4px 22px 30px; }
-    section { background: var(--card); border-radius: 20px 22px 18px 24px; padding: 14px 18px 6px; margin: 0 0 14px; box-shadow: 0 2px 10px rgba(60,40,30,.08); }
-    section h2 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-    section h2 i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
-    section h2 + .row { border-top: none; }
-    .help { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 4px 0 10px; font-size: 13px; }
-    .help dt { font-weight: 700; color: var(--accent); white-space: nowrap; }
-    .help dd { margin: 0; color: var(--soft); }
+    #floatSay { display: none; }
+    nav { display: flex; flex-direction: column; gap: 2px; }
+    nav button { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: none; border-radius: 12px; background: none; color: var(--soft); font: 600 13px inherit; text-align: left; cursor: pointer; transition: background .15s, color .15s; }
+    nav button:hover { background: color-mix(in srgb, var(--card) 60%, transparent); color: var(--ink); }
+    nav button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(60,40,30,.1); }
+    nav button.on svg { color: var(--hot); }
+    nav svg, .lead svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    main { flex: 1; min-width: 0; overflow-y: auto; padding: 24px 26px 40px; }
+    section { display: none; max-width: 560px; animation: pageIn .3s ease both; }
+    section.on { display: block; }
+    @keyframes pageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    h2 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+    .lead { margin: 2px 0 18px; color: var(--soft); }
+    .grp { background: var(--card); border-radius: 16px; padding: 4px 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(60,40,30,.07); }
+    .grp h3 { margin: 12px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 50px; padding: 9px 0; border-top: 1px solid var(--line); }
+    .grp h3 + .row { border-top: none; }
+    .row[hidden] { display: none; }
     .row > label, .row > .lab { flex: 1; min-width: 0; }
     .row > label.switch { flex: none; }
     .row small { display: block; color: var(--soft); font-size: 12px; }
-    input[type=text], input[type=time], select, textarea {
-      font: inherit; color: inherit; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; outline: none;
-    }
-    input[type=text]:focus, textarea:focus, select:focus, input[type=time]:focus { border-color: #c9a48f; }
+    .pair { display: flex; gap: 6px; align-items: center; }
+    input[type=text], input[type=time], select, textarea { font: inherit; color: inherit; background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; outline: none; }
+    input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--hot); outline-offset: 2px; }
     input[type=text] { width: 170px; }
     textarea { width: 100%; min-height: 44px; resize: vertical; font-size: 12.5px; }
-    .seg { display: inline-flex; background: #f1e6dd; border-radius: 999px; padding: 3px; gap: 2px; }
-    .seg button { border: none; background: none; font: 600 12.5px inherit; color: var(--soft); padding: 4px 11px; border-radius: 999px; cursor: pointer; }
-    .seg button.on { background: #fff; color: var(--accent); box-shadow: 0 1px 3px rgba(60,40,30,.15); }
+    .seg { display: inline-flex; flex-wrap: wrap; background: var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+    .seg button { border: none; background: none; font: 600 12.5px inherit; color: var(--soft); padding: 5px 11px; border-radius: 999px; cursor: pointer; }
+    .seg button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(60,40,30,.15); }
     .switch { position: relative; width: 44px; height: 26px; flex: none; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .switch span { position: absolute; inset: 0; border-radius: 999px; background: #e3d5ca; transition: .2s; cursor: pointer; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: .2s; pointer-events: none; }
     .switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: .25s cubic-bezier(.3,1.5,.5,1); }
-    .switch input:checked + span { background: var(--accent-2); }
+    .switch input:checked + span { background: var(--hot); }
     .switch input:checked + span::after { transform: translateX(18px); }
-    input[type=range] { width: 150px; accent-color: var(--accent-2); }
-    .btn { border: none; border-radius: 12px; padding: 7px 13px; font: 600 12.5px inherit; background: var(--accent); color: #fff; cursor: pointer; }
-    .btn.ghost { background: #f1e6dd; color: var(--accent); }
-    .btn.danger { background: #c9584c; }
-    .apps label { display: block; padding: 8px 0 2px; font-weight: 600; font-size: 12.5px; }
-    .apps label small { display: inline; font-weight: 400; }
-    pre { white-space: pre-wrap; word-break: break-word; font-size: 11.5px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; max-height: 220px; overflow: auto; }
+    .switch input:focus-visible + span { outline: 2px solid var(--hot); outline-offset: 2px; }
+    input[type=range] { width: 140px; accent-color: var(--hot); }
+    .btn { border: none; border-radius: 10px; padding: 7px 13px; font: 600 12.5px inherit; background: var(--accent); color: var(--bg); cursor: pointer; }
+    .btn.ghost { background: var(--line); color: var(--ink); }
+    .btn.danger { background: #c9584c; color: #fff; }
+    kbd { font: 600 12px inherit; padding: 3px 8px; border-radius: 7px; background: var(--line); }
+    .help { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 12px 0; font-size: 13px; }
+    .help dt { font-weight: 700; white-space: nowrap; }
+    .help dd { margin: 0; color: var(--soft); }
+    details.apps { padding: 12px 16px; }
+    details.apps summary { cursor: pointer; font-weight: 600; }
+    .apps label { display: block; padding: 8px 0 3px; font-weight: 600; font-size: 12.5px; }
+    pre { white-space: pre-wrap; word-break: break-word; font-size: 11.5px; background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; max-height: 220px; overflow: auto; }
+    #voiceLog { margin: 0 0 10px; background: #2b2320; color: #f3e6dc; font: 12px/1.5 Consolas, monospace; max-height: 180px; }
+    .muted { color: var(--soft); font-size: 12.5px; margin: 10px 0; }
     .saved { position: fixed; right: 18px; bottom: 16px; padding: 6px 12px; border-radius: 999px; background: var(--ok); color: #fff; font-weight: 600; font-size: 12.5px; opacity: 0; transform: translateY(8px); transition: .25s; pointer-events: none; }
     .saved.show { opacity: 1; transform: none; }
-    .muted { color: var(--soft); font-size: 12px; }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #1f1a18; --card: #2a2421; --ink: #f2e8e1; --soft: #b09d92; --line: #3a322e; --accent: #e8c2a8; }
-      input[type=text], input[type=time], select, textarea, pre { background: #1f1a18; }
-      .seg { background: #1f1a18; } .seg button.on { background: #3a322e; }
-      .switch span { background: #4a403a; } .btn { color: #2a2421; } .btn.ghost { background: #3a322e; color: var(--accent); }
+    /* Ventana estrecha: categorías arriba, en fila */
+    @media (max-width: 620px) {
+      .app { flex-direction: column; }
+      aside { flex: none; gap: 10px; padding: 12px 12px 8px; overflow: visible; }
+      header svg { width: 34px; height: 40px; }
+      nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+      nav button { flex: none; height: 32px; }
+      main { padding: 16px 14px 32px; }
+      input[type=text] { width: 140px; }
     }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
-  <header>
+  <div class="app">
+    <aside>
+      <header>
     <svg viewBox="-110 -110 220 290" aria-hidden="true">
       <defs><radialGradient id="c" cx="35%" cy="28%" r="85%"><stop offset="0" stop-color="#fffaf5"/><stop offset=".55" stop-color="#efe2d8"/><stop offset="1" stop-color="#c7b0a2"/></radialGradient></defs>
       <rect x="-36" y="118" width="30" height="58" rx="15" fill="url(#c)"/><rect x="6" y="118" width="30" height="58" rx="15" fill="url(#c)"/>
@@ -85,114 +105,16 @@
       <path d="M-100,8 C-100,-80 -50,-104 0,-104 C50,-104 100,-80 100,8 C100,44 70,58 0,58 C-70,58 -100,44 -100,8Z" fill="url(#c)"/>
       <g id="mEyes"><circle cx="-32" cy="20" r="7" fill="#1d1614"/><circle cx="32" cy="20" r="7" fill="#1d1614"/></g>
     </svg>
-    <div class="htxt"><h1 id="title">Ajustes de Eko</h1><p id="ver">Todo se guarda solo en tu PC</p><div id="says" class="says"></div></div>
-  </header>
-
-  <nav>
-    <a href="#s-you">Eko y tú</a><a href="#s-pers">Cómo soy</a><a href="#s-beh">Qué hago</a>
-    <a href="#s-well">Te cuido</a><a href="#s-apps">Lo que comento</a><a href="#s-help">Qué sé hacer</a><a href="#s-sys">Lo técnico</a><a href="#s-priv">Tus datos</a>
-  </nav>
-
-  <main>
-    <section id="s-you">
-      <h2><i></i>Eko y tú</h2>
-      <div class="row"><label for="petName">Su nombre<small>Así se presenta y así aparece en la app</small></label><input type="text" id="petName" maxlength="20" data-k="petName" /></div>
-      <div class="row"><label for="userName">Tu nombre<small>Para saludarte de vez en cuando</small></label><input type="text" id="userName" maxlength="24" data-k="userName" placeholder="Opcional" /></div>
-      <div class="row"><div class="lab">Tu cumpleaños<small>Ese día se pone el gorro de fiesta</small></div>
-        <div><select id="bday-d"></select> <select id="bday-m"></select></div></div>
-      <div class="row"><label for="bedtime">Hora de irte a dormir<small>A partir de aquí te avisa de que es tarde</small></label><input type="time" id="bedtime" data-k="bedtime" /></div>
-    </section>
-
-    <section id="s-pers">
-      <h2><i></i>Cómo soy</h2>
-      <div class="row"><div class="lab">Cuánto comenta<small>Comentarios sobre lo que haces en el PC</small></div>
-        <div class="seg" data-k="chatty"><button data-v="0">Nada</button><button data-v="1">Poco</button><button data-v="2">Normal</button><button data-v="3">Mucho</button></div></div>
-      <div class="row"><label for="menuAsk">Preguntarte cosas al abrir mi menú<small>A veces, en vez de opciones, te pregunto qué tal estás. Como mucho una vez al día</small></label><label class="switch"><input type="checkbox" id="menuAsk" data-k="menuAsk" /><span></span></label></div>
-      <div class="row"><label for="needs">Tengo necesidades<small>Hambre, sueño, ganas de jugar y de mimos. Se me nota en cómo me porto. Nunca enfermo ni me pasa nada malo</small></label><label class="switch"><input type="checkbox" id="needs" data-k="needs" /><span></span></label></div>
-      <div class="row"><div class="lab">Cuánto te necesito<small>Lo rápido que me entra hambre, sueño o aburrimiento</small></div>
-        <div class="seg" data-k="needsMode"><button data-v="relax">Relajado</button><button data-v="normal">Normal</button><button data-v="hard">Exigente</button></div></div>
-      <div class="row"><label for="voice">Su voz<small>Farfulla en su idioma al hablar</small></label><label class="switch"><input type="checkbox" id="voice" data-k="voice" /><span></span></label></div>
-      <div class="row"><div class="lab">Tono de voz<small>Más grave o más agudo</small></div>
-        <div><input type="range" id="pitch" min="320" max="900" step="20" data-k="pitch" /> <button class="btn ghost" id="tryVoice">Probar</button></div></div>
-    </section>
-
-    <section id="s-beh">
-      <h2><i></i>Qué hago</h2>
-      <div class="row"><label for="walk">Pasear por la barra de tareas</label><label class="switch"><input type="checkbox" id="walk" data-k="walk" /><span></span></label></div>
-      <div class="row"><label for="fly">Volar de vez en cuando</label><label class="switch"><input type="checkbox" id="fly" data-k="fly" /><span></span></label></div>
-      <div class="row"><label for="follow">Seguir el ratón con la mirada</label><label class="switch"><input type="checkbox" id="follow" data-k="follow" /><span></span></label></div>
-      <div class="row"><label for="listen">Escuchar tu voz<small>Me miras cuando hablas y entiendo órdenes cortas con mi nombre delante: «Eko, baila», «Eko, a dormir», «Eko, ¿qué hora es?», «Eko, recuérdame en diez minutos»… Uso el reconocimiento de voz de Windows en tu PC: no grabo ni envío nada. Solo reacciono a voz (no a ruidos) y dejo de escuchar en llamadas y con música.</small></label><label class="switch"><input type="checkbox" id="listen" data-k="listen" /><span></span></label></div>
-      <div class="row"><div class="lab">Probar el micrófono<small>Activa «Escuchar tu voz», pulsa Probar y háblale: aquí verás lo que oye y por qué reacciona o no</small></div><button class="btn ghost" id="voiceTest">Probar</button></div>
-      <pre id="voiceLog" hidden></pre>
-      <div class="row"><label for="ai">Hablar conmigo con IA (prueba)<small>Clic derecho en mí → «Habla conmigo». Uso una IA que funciona en tu propio PC con Ollama: gratis y sin internet. Necesitas instalar Ollama y descargar el modelo</small></label><label class="switch"><input type="checkbox" id="ai" data-k="ai" /><span></span></label></div>
-      <div class="row"><label for="aiBar">Barra para hablar en el escritorio<small>Una barrita que puedes arrastrar adonde quieras para escribirme sin abrir mi menú</small></label><label class="switch"><input type="checkbox" id="aiBar" data-k="aiBar" /><span></span></label></div>
-      <div class="row"><label for="aiModel">Modelo de IA<small>El que hayas descargado en Ollama</small></label><input type="text" id="aiModel" maxlength="40" data-k="aiModel" /></div>
-      <div class="row"><label for="aiCpu">Usar solo el procesador<small>Más lento, pero no usa la tarjeta gráfica</small></label><label class="switch"><input type="checkbox" id="aiCpu" data-k="aiCpu" /><span></span></label></div>
-      <div class="row"><div class="lab">Comprobar la IA<small id="aiState">¿Está Ollama funcionando y el modelo descargado?</small></div><button class="btn ghost" id="aiCheck">Comprobar</button></div>
-      <div class="row"><label for="desktop">Dejar que Eko curiosee el escritorio<small>Mira los nombres de tus iconos y cuántas cosas hay en las carpetas para comentarlos. Nunca abre archivos y nada sale de tu PC.</small></label><label class="switch"><input type="checkbox" id="desktop" data-k="desktop" /><span></span></label></div>
-      <div class="row"><label for="hideCall">Esconderse en llamadas<small>Cuando una app usa el micrófono</small></label><label class="switch"><input type="checkbox" id="hideCall" data-k="hideCall" /><span></span></label></div>
-      <div class="row"><label for="hideRecord">Esconderse al grabar la pantalla<small>OBS, Bandicam, Camtasia, Loom…</small></label><label class="switch"><input type="checkbox" id="hideRecord" data-k="hideRecord" /><span></span></label></div>
-      <div class="row"><label for="hideFull">Esconderse en pantalla completa<small>Juegos, vídeos y presentaciones</small></label><label class="switch"><input type="checkbox" id="hideFull" data-k="hideFull" /><span></span></label></div>
-      <div class="row"><div class="lab">Tamaño</div>
-        <div class="seg" data-k="size"><button data-v="0.8">Pequeño</button><button data-v="1">Normal</button><button data-v="1.2">Grande</button></div></div>
-    </section>
-
-    <section id="s-well">
-      <h2><i></i>Te cuido</h2>
-      <div class="row"><label for="breaks">Proponer pausas<small>Si llevas mucho rato seguido en la misma app</small></label><label class="switch"><input type="checkbox" id="breaks" data-k="breaks" /><span></span></label></div>
-      <div class="row"><div class="lab">Pausa cada</div>
-        <div class="seg" data-k="breakMinutes"><button data-v="45">45 min</button><button data-v="60">1 h</button><button data-v="90">1 h 30</button><button data-v="120">2 h</button></div></div>
-      <div class="row"><div class="lab">Aviso de scroll en redes<small>Tras este tiempo seguido en Instagram, TikTok…</small></div>
-        <div class="seg" data-k="scrollMinutes"><button data-v="10">10 min</button><button data-v="20">20 min</button><button data-v="40">40 min</button><button data-v="0">Nunca</button></div></div>
-    </section>
-
-    <section id="s-apps" class="apps">
-      <h2><i></i>Lo que comento</h2>
-      <p class="muted">Nombres de programa separados por comas (sin «.exe»). Sirven para que sepa si estás editando, trabajando o de ocio.</p>
-      <label>Foto y diseño</label><textarea data-app="creative"></textarea>
-      <label>Programación</label><textarea data-app="code"></textarea>
-      <label>Oficina</label><textarea data-app="office"></textarea>
-      <label>Navegadores</label><textarea data-app="browser"></textarea>
-      <label>Música y vídeo</label><textarea data-app="media"></textarea>
-      <label>Ignorar <small>(ni comenta ni cuenta para nada)</small></label><textarea data-app="ignore" placeholder="p. ej. keepass"></textarea>
-      <div style="height:10px"></div>
-    </section>
-
-    <section id="s-help">
-      <h2><i></i>Qué sé hacer (chuleta)</h2>
-      <dl class="help">
-        <dt>Clic</dt><dd>Me saludas y doy un saltito. Si me he escondido, me has pillado</dd>
-        <dt>Clic derecho</dt><dd>Mi menú: Para ti, Jugar, Cuidarme, Armario, Te ayudo y Libreta</dd>
-        <dt>Arrastrarme</dt><dd>Me coges y me llevas adonde quieras (también encima de las ventanas)</dd>
-        <dt>Doble clic en la pantalla</dt><dd>Voy corriendo a ese sitio</dd>
-        <dt>Necesidades</dt><dd>Hambre, energía, diversión y cariño. Cuando me falta algo, verás lo que quiero en un bocadillo</dd>
-        <dt>Amistad</dt><dd>Cada vez que me haces caso subimos de nivel (hasta el 20) y aprendo cosas nuevas: juegos, trucos, accesorios…</dd>
-        <dt>Logros</dt><dd>Retos que se guardan en mi libreta. Algunos desbloquean ropa para el armario</dd>
-        <dt>Regarme</dt><dd>Mi brote crece si me riegas en días distintos, y se mustia si pasan dos días sin agua</dd>
-        <dt>Voz</dt><dd>Si activas «Te escucho», di mi nombre y una orden: «baila», «ven aquí», «a dormir», «qué sabes hacer»…</dd>
-        <dt>Hablar conmigo</dt><dd>Con la IA activada, escríbeme en la barrita del escritorio</dd>
-        <dt>Escritorio</dt><dd>Si me dejas, visito tus iconos y comento las carpetas que abres</dd>
-        <dt>Me escondo</dt><dd>En llamadas, grabaciones y pantalla completa me quito de en medio</dd>
-      </dl>
-      <div class="row"><div class="lab">Misiones de bienvenida<small>Te enseño lo básico paso a paso</small></div><button class="btn ghost" id="replayMissions">Repetir</button></div>
-    </section>
-    <section id="s-sys">
-      <h2><i></i>Lo técnico (aburrido, pero necesario)</h2>
-      <div class="row"><label for="autostart">Arrancar con Windows</label><label class="switch"><input type="checkbox" id="autostart" /><span></span></label></div>
-      <div class="row"><div class="lab">Atajo para esconderlo<small>Ctrl + Alt + E</small></div></div>
-      <div class="row"><div class="lab">Actualizaciones<small id="updState">Se actualiza solo cada pocas horas</small></div><button class="btn ghost" id="checkUpd">Buscar ahora</button></div>
-    </section>
-
-    <section id="s-priv">
-      <h2><i></i>Tus datos (son tuyos)</h2>
-      <p class="muted">Eko mira qué programa usas, el título de las ventanas, el estado del PC (CPU, batería, conexión), tus descargas y lo que suena. Lo usa solo para reaccionar en el momento y no envía nada a ningún sitio. Guarda tus ajustes, recordatorios y tareas en este ordenador.</p>
-      <div class="row"><div class="lab">Ver todo lo que guarda</div><button class="btn ghost" id="showData">Ver</button></div>
-      <pre id="dataView" hidden></pre>
-      <div class="row"><div class="lab">Borrar todo y empezar de cero<small>Volveré a ser una semilla… </small></div><button class="btn danger" id="wipe">Borrar</button></div>
-    </section>
-  </main>
+        <div class="htxt"><h1 id="title">Ajustes de Eko</h1><p id="ver">Todo se guarda en tu PC</p></div>
+        <div id="says" class="says"></div>
+      </header>
+      <nav><button type="button" data-p="you"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg><span>Eko y tú</span></button><button type="button" data-p="pers"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.2 5 5.3.5-4 3.6 1.2 5.3L12 15.2l-4.7 2.7 1.2-5.3-4-3.6 5.3-.5L12 3.5Z"/></svg><span>Personalidad</span></button><button type="button" data-p="care"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="9.5" r="1.1" fill="currentColor"/><circle cx="14.5" cy="11" r="1.1" fill="currentColor"/><circle cx="10.5" cy="15" r="1.1" fill="currentColor"/></svg><span>Cuidados</span></button><button type="button" data-p="move"><svg viewBox="0 0 24 24"><path d="M8 20c-1.7 0-3-1.6-3-4 0-2.5 1.5-4 3-4s2.5 1.5 2.5 4-1 4-2.5 4ZM16.5 14c-1.4 0-2.5-1.5-2.5-3.6S15 6 16.5 6 19 7.6 19 10s-1 4-2.5 4Z"/></svg><span>Comportamiento</span></button><button type="button" data-p="talk"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span>Voz e IA</span></button><button type="button" data-p="help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.7 2.2c-.8.4-1.3 1-1.3 1.9v.4"/><circle cx="12" cy="17" r=".8" fill="currentColor"/></svg><span>Ayuda</span></button><button type="button" data-p="adv"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Avanzado</span></button></nav>
+    </aside>
+    <main>
+      <section data-p="you"><h2>Eko y tú</h2><p class="lead">Lo básico para conocernos.</p><div class="grp"><h3>Nombres</h3><div class="row"><label for="petName">Su nombre<small>Así se presenta</small></label><input type="text" id="petName" maxlength="20" data-k="petName" /></div><div class="row"><label for="userName">Tu nombre<small>Para saludarte</small></label><input type="text" id="userName" maxlength="24" data-k="userName" placeholder="Opcional" /></div></div><div class="grp"><h3>Fechas y horas</h3><div class="row"><div class="lab">Tu cumpleaños<small>Ese día lo celebramos</small></div><div class="pair"><select id="bday-d" aria-label="Día"></select><select id="bday-m" aria-label="Mes"></select></div></div><div class="row"><label for="bedtime">Hora de irte a dormir<small>A partir de aquí te aviso de que es tarde</small></label><input type="time" id="bedtime" data-k="bedtime" /></div></div></section><section data-p="pers"><h2>Personalidad</h2><p class="lead">Cómo habla, cómo suena y cómo de grande es.</p><div class="grp"><h3>Cómo habla</h3><div class="row"><div class="lab">Cuánto comenta<small>Sobre lo que haces en el PC</small></div><div class="seg" data-k="chatty"><button data-v="0">Nada</button><button data-v="1">Poco</button><button data-v="2">Normal</button><button data-v="3">Mucho</button></div></div><div class="row"><label for="menuAsk">Preguntarte cosas al abrir su menú<small>Como mucho una vez al día</small></label><label class="switch"><input type="checkbox" id="menuAsk" data-k="menuAsk" /><span></span></label></div><div class="row"><label for="voice">Su voz<small>Farfulla en su idioma al hablar</small></label><label class="switch"><input type="checkbox" id="voice" data-k="voice" /><span></span></label></div><div class="row" data-dep="voice"><div class="lab">Tono de voz</div><div class="pair"><input type="range" id="pitch" min="320" max="900" step="20" data-k="pitch" aria-label="Tono de voz" /><button class="btn ghost" id="tryVoice">Probar</button></div></div></div><div class="grp"><h3>Aspecto</h3><div class="row"><div class="lab">Tamaño</div><div class="seg" data-k="size"><button data-v="0.8">Pequeño</button><button data-v="1">Normal</button><button data-v="1.2">Grande</button></div></div></div></section><section data-p="care"><h2>Cuidados</h2><p class="lead">Lo que él necesita y lo que te recuerda a ti.</p><div class="grp"><h3>Sus necesidades</h3><div class="row"><label for="needs">Tiene necesidades<small>Hambre, sueño, ganas de jugar y de mimos. Nunca enferma</small></label><label class="switch"><input type="checkbox" id="needs" data-k="needs" /><span></span></label></div><div class="row" data-dep="needs"><div class="lab">Cuánto te necesita<small>Lo rápido que le entra hambre o sueño</small></div><div class="seg" data-k="needsMode"><button data-v="relax">Relajado</button><button data-v="normal">Normal</button><button data-v="hard">Exigente</button></div></div></div><div class="grp"><h3>Las tuyas</h3><div class="row"><label for="breaks">Proponerte pausas<small>Si llevas mucho rato en la misma app</small></label><label class="switch"><input type="checkbox" id="breaks" data-k="breaks" /><span></span></label></div><div class="row" data-dep="breaks"><div class="lab">Pausa cada</div><div class="seg" data-k="breakMinutes"><button data-v="45">45 min</button><button data-v="60">1 h</button><button data-v="90">1 h 30</button><button data-v="120">2 h</button></div></div><div class="row"><div class="lab">Aviso de scroll en redes<small>Tras este rato seguido en Instagram, TikTok…</small></div><div class="seg" data-k="scrollMinutes"><button data-v="10">10 min</button><button data-v="20">20 min</button><button data-v="40">40 min</button><button data-v="0">Nunca</button></div></div></div></section><section data-p="move"><h2>Comportamiento</h2><p class="lead">Por dónde se mueve y cuándo se quita de en medio.</p><div class="grp"><h3>Moverse</h3><div class="row"><label for="walk">Pasear por la barra de tareas</label><label class="switch"><input type="checkbox" id="walk" data-k="walk" /><span></span></label></div><div class="row"><label for="fly">Volar de vez en cuando</label><label class="switch"><input type="checkbox" id="fly" data-k="fly" /><span></span></label></div><div class="row"><label for="follow">Seguir el ratón con la mirada</label><label class="switch"><input type="checkbox" id="follow" data-k="follow" /><span></span></label></div></div><div class="grp"><h3>Escritorio</h3><div class="row"><label for="desktop">Curiosear el escritorio<small>Mira tus iconos para comentarlos. Nunca abre archivos</small></label><label class="switch"><input type="checkbox" id="desktop" data-k="desktop" /><span></span></label></div></div><div class="grp"><h3>Esconderse</h3><div class="row"><label for="hideCall">En llamadas</label><label class="switch"><input type="checkbox" id="hideCall" data-k="hideCall" /><span></span></label></div><div class="row"><label for="hideRecord">Al grabar la pantalla<small>OBS, Loom…</small></label><label class="switch"><input type="checkbox" id="hideRecord" data-k="hideRecord" /><span></span></label></div><div class="row"><label for="hideFull">En pantalla completa<small>Juegos, vídeos y presentaciones</small></label><label class="switch"><input type="checkbox" id="hideFull" data-k="hideFull" /><span></span></label></div></div></section><section data-p="talk"><h2>Voz e IA</h2><p class="lead">Que te escuche y que charle contigo. Todo funciona en tu PC, sin enviar nada.</p><div class="grp"><h3>Escucharte</h3><div class="row"><label for="listen">Escuchar tu voz<small>Di su nombre y una orden: «Eko, baila», «Eko, a dormir»…</small></label><label class="switch"><input type="checkbox" id="listen" data-k="listen" /><span></span></label></div><div class="row" data-dep="listen"><div class="lab">Probar el micrófono<small>Háblale y mira lo que oye</small></div><button class="btn ghost" id="voiceTest">Probar</button></div><pre id="voiceLog" hidden></pre></div><div class="grp"><h3>Charlar con IA (prueba)</h3><div class="row"><label for="ai">Hablar con IA<small>Con Ollama instalado en tu PC: gratis y sin internet</small></label><label class="switch"><input type="checkbox" id="ai" data-k="ai" /><span></span></label></div><div class="row" data-dep="ai"><label for="aiBar">Barra para escribirle en el escritorio</label><label class="switch"><input type="checkbox" id="aiBar" data-k="aiBar" /><span></span></label></div><div class="row" data-dep="ai"><label for="aiModel">Modelo<small>El que hayas descargado en Ollama</small></label><input type="text" id="aiModel" maxlength="40" data-k="aiModel" /></div><div class="row" data-dep="ai"><label for="aiCpu">Usar solo el procesador<small>Más lento, pero no usa la gráfica</small></label><label class="switch"><input type="checkbox" id="aiCpu" data-k="aiCpu" /><span></span></label></div><div class="row" data-dep="ai"><div class="lab">Comprobar<small><span id="aiState">¿Funciona Ollama y está el modelo?</span></small></div><button class="btn ghost" id="aiCheck">Comprobar</button></div></div></section><section data-p="help"><h2>Ayuda</h2><p class="lead">Todo lo que sabe hacer, en una chuleta.</p><div class="grp"><dl class="help"><dt>Clic</dt><dd>Le saludas y da un saltito. Si se ha escondido, lo has pillado</dd><dt>Clic derecho</dt><dd>Su menú, por categorías</dd><dt>Arrastrar</dt><dd>Lo coges y lo llevas adonde quieras</dd><dt>Doble clic</dt><dd>En cualquier sitio de la pantalla: va corriendo allí</dd><dt>Necesidades</dt><dd>Hambre, energía, diversión y cariño. Lo que quiere sale en un bocadillo</dd><dt>Amistad</dt><dd>Cada vez que le haces caso subís de nivel y aprende cosas nuevas</dd><dt>Logros</dt><dd>Retos de su libreta. Algunos desbloquean ropa</dd><dt>Regar</dt><dd>Su brote crece si lo riegas en días distintos</dd><dt>Voz</dt><dd>Di su nombre y una orden: «baila», «ven aquí», «a dormir»…</dd><dt>IA</dt><dd>Escríbele en la barrita del escritorio</dd><dt>Esconderse</dt><dd>En llamadas, grabaciones y pantalla completa</dd></dl></div><div class="grp"><h3>Misiones</h3><div class="row"><div class="lab">Misiones de bienvenida<small>Te enseña lo básico paso a paso</small></div><button class="btn ghost" id="replayMissions">Repetir</button></div></div></section><section data-p="adv"><h2>Avanzado</h2><p class="lead">Lo técnico y tus datos.</p><div class="grp"><h3>Sistema</h3><div class="row"><label for="autostart">Arrancar con Windows</label><label class="switch"><input type="checkbox" id="autostart" /><span></span></label></div><div class="row"><div class="lab">Esconderlo al momento</div><kbd>Ctrl + Alt + E</kbd></div><div class="row"><div class="lab">Actualizaciones<small><span id="updState">Las busca cada pocas horas</span></small></div><button class="btn ghost" id="checkUpd">Buscar ahora</button></div></div><details class="grp apps"><summary>Programas que reconoce</summary><p class="muted">Nombres separados por comas, sin «.exe». Así sabe si estás editando, trabajando o de ocio.</p><label>Foto y diseño</label><textarea data-app="creative"></textarea><label>Programación</label><textarea data-app="code"></textarea><label>Oficina</label><textarea data-app="office"></textarea><label>Navegadores</label><textarea data-app="browser"></textarea><label>Música y vídeo</label><textarea data-app="media"></textarea><label>Ignorar</label><textarea data-app="ignore" placeholder="p. ej. keepass"></textarea></details><div class="grp"><h3>Tus datos</h3><p class="muted">Mira qué programa usas, el título de las ventanas y el estado del PC solo para reaccionar en el momento. No envía nada a ningún sitio.</p><div class="row"><div class="lab">Ver todo lo que guarda</div><button class="btn ghost" id="showData">Ver</button></div><pre id="dataView" hidden></pre><div class="row"><div class="lab">Borrar todo y empezar de cero<small>Volverá a ser una semilla</small></div><button class="btn danger" id="wipe">Borrar</button></div></div></section>
+    </main>
+  </div>
   <div class="saved" id="saved">Guardado</div>
-
   <div id="floatSay"><div class="says" id="floatTxt"></div></div>
   <script src="settings-store.js"></script>
   <script src="settings-ui.js"></script>

@@ -85,7 +85,7 @@ fn show_settings(app: &AppHandle) -> Result<(), String> {
     }
     tauri::WebviewWindowBuilder::new(app, "settings", tauri::WebviewUrl::App("settings.html".into()))
         .title("Eko · Ajustes")
-        .inner_size(560.0, 720.0)
+        .inner_size(720.0, 560.0)
         .min_inner_size(420.0, 480.0)
         .center()
         .build()

@@ -20,7 +20,7 @@ window.EkoSettings = (() => {
     needsMode: "normal",     // relax · normal · hard
     listen: false,
     ai: false,               // PRUEBA: hablar con Eko usando una IA local (Ollama)
-    aiModel: "qwen2.5:7b",
+    aiModel: "gemma3:4b",
     aiCpu: false,
     aiBar: true,             // barra para hablar con Eko en el escritorio            // usar solo el procesador (si la gráfica da problemas)           // escuchar tu voz (órdenes cortas); apagado por defecto           // a veces pregunta cosas al abrir el menú          // curiosear el escritorio (lee nombres de iconos; apagado por defecto)
     hideRecord: true,        // esconderse al grabar la pantalla

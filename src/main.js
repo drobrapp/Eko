@@ -991,6 +991,11 @@
     return true;
   }
   setInterval(() => { if (Math.random() < 1 / 150) dressUp(false); }, 60000);
+  // Armario: accesorios fijos (gafas, pajarita, auriculares)
+  const WEAR_LOCK = { readglasses: "acc:readglasses", bowtie: "acc:bowtie", headphones: "acc:headphones" };
+  let WEAR = {}; try { WEAR = JSON.parse(localStorage.getItem("eko-wear") || "{}") || {}; } catch (_) {}
+  const wearUnlocked = (n) => !window.EkoProgress || window.EkoProgress.has(WEAR_LOCK[n]);
+  function setWear(n, on) { WEAR[n] = !!on; try { localStorage.setItem("eko-wear", JSON.stringify(WEAR)); } catch (_) {} }
   function dropProp(name) { if (!name || PROP.cur === name) PROP.until = 0; if (!name || PROP.extra === name) PROP.extraUntil = 0; }
   // Qué se ve ahora mismo (se guardan las cosas de la mano al andar, volar o si lo coges)
   function propsVisible() {
@@ -1006,6 +1011,15 @@
     }
     if (PROP.cur && A.t > PROP.until) PROP.cur = null;
     if (PROP.extra && A.t > PROP.extraUntil) PROP.extra = null;
+    // lo que le has puesto tú desde el armario (se queda puesto)
+    const acc = currentAcc();
+    for (const n of Object.keys(WEAR)) {
+      if (!WEAR[n] || !wearUnlocked(n) || acc === "ghost") continue;
+      const d = PROP_DEF[n];
+      if (d.wear === "head" && (TALL.has(acc) || out.has("nightcap"))) continue;
+      if (d.wear === "neck" && acc === "scarf") continue;
+      out.add(n);
+    }
     return out;
   }
   function propPose(P, vis) {
@@ -1040,7 +1054,7 @@
       if (k > 0.86) P.aR += Math.sin((k - 0.86) / 0.14 * Math.PI) * -18;
     }
     if (vis.has("umbrella")) { P.aR = -132; P.front = true; }
-    if (vis.has("headphones")) { P.nod += Math.sin(t * 7.5) * 2.2; P.tilt += Math.sin(t * 3.75) * 3; }
+    if (vis.has("headphones") && (PROP.cur === "headphones" || PROP.extra === "headphones" || (((window.Eko || {}).lastSenses || {}).music || {}).playing)) { P.nod += Math.sin(t * 7.5) * 2.2; P.tilt += Math.sin(t * 3.75) * 3; }
     if (vis.has("nightcap") && !S.sleeping && Math.sin(t * 0.4) > 0.97) P.mouth = Math.max(P.mouth, 0.5);
   }
   function renderProps(vis) {
@@ -2044,7 +2058,7 @@
     sayChat: (text, ms = 4000) => { A.chatLock = Math.max(A.chatLock || 0, A.t + ms / 1000 + 5); A.chatBypass = true; try { say(text, ms, true); } finally { A.chatBypass = false; } },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
-    onWin, onWinEv, win: WIN, setMini, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
+    onWin, onWinEv, win: WIN, setMini, setWear, wearing: (n) => !!WEAR[n], climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },

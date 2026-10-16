@@ -5,6 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.24.0": { important: true, lines: ["¡Tengo cámara! Haré fotos de nuestros momentos importantes y las guardo en el álbum de mi libreta", "Y a veces me llegan cartas, te invito a una pausa en mi casa y guardo recuerdos en mi balda"] },
+    "0.23.0": { important: true, lines: ["Ya puedes ponerme gafas, pajarita o auriculares desde el armario y me los dejo puestos", "Y en Ajustes puedes guardar una copia de mí, por si cambias de ordenador"] },
     "0.22.0": { important: true, lines: ["Mi casa tiene ahora su propio botón en el menú", "¡Y hay logros nuevos de la casa! Mira mi libreta"] },
     "0.21.0": { important: true, lines: ["Ahora puedes cogerme aunque esté en mi casa, y mis bocadillos se leen bien aunque sea pequeñito", "Y mi casa… ¡la construiré con magia cuando lleguemos al nivel 6!"] },
     "0.20.0": { important: true, lines: ["¡Mi casa ahora aparece entre nubes cuando voy! Búscala en Armario → Mi casa", "Y cuando gane algo nuevo, me llegará en un paquete. ¡Lo abriremos juntos!"] },

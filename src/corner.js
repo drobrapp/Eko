@@ -36,7 +36,20 @@ window.EkoCorner = (() => {
     { id: "frame", lock: null, name: "Cuadro", src: null, x: 176, w: 54, h: 68, top: 24, z: 1, wall: true, spot: { x: 203, z: 0.95 } },
     { id: "trophy", lock: "deco:trophy", name: "Trofeo", src: "art/deco-trophy.webp", x: 303, w: 40, h: 38, bottom: 104, z: 1, wall: true, spot: { x: 300, z: 0.95 } },
   ];
-  const SHELF = { src: "art/shelf.webp", x: 286, y: TOP + 102, w: 76, h: 18 };
+  const SHELF = { src: "art/shelf.webp", x: 250, y: TOP + 102, w: 114, h: 20 };
+  // Recuerdos: cada logro especial deja un objetito en la balda (llega en paquete, como todo)
+  const achGot = (id) => { try { return !!(PG() && PG().get().ach[id]); } catch (_) { return false; } };
+  const SOUV = [
+    { id: "catch", name: "la medalla de atrapa galletas", src: "art/medal.webp", ok: () => ((window.EkoGames && window.EkoGames.best().catch) || 0) >= 30 },
+    { id: "glutton", name: "una galleta de recuerdo", src: "art/cookie.webp", ok: () => achGot("glutton") },
+    { id: "gardener", name: "mi regadera de jardinero", src: "art/watering-can.webp", ok: () => achGot("gardener") },
+    { id: "rps", name: "una bolita de campeón", src: "art/juggle-ball.webp", ok: () => achGot("rps") },
+    { id: "loyal", name: "un corazón de 30 días juntos", src: "art/fx-heart.webp", ok: () => achGot("loyal") },
+  ];
+  const SLOTS = [{ x: 258, w: 20 }, { x: 282, w: 20 }];                 // a la izquierda del trofeo
+  // Temporada: calabaza en Halloween (llega en paquete y se va al acabar)
+  const season = () => { const d = new Date(), m = d.getMonth() + 1, day = d.getDate(); return (m === 10 && day >= 20) || (m === 11 && day <= 2) ? "pumpkin" : null; };
+  const seasonKey = () => season() ? "season:" + season() + ":" + new Date().getFullYear() : null;
   const PARCEL = { x: 178, w: 44, h: 40, z: 0.42 };
   const PICS = [
     { id: "portrait", name: "Retrato", src: "art/pic-portrait.webp", lv: 6, ar: 212 / 240 },
@@ -50,7 +63,8 @@ window.EkoCorner = (() => {
   const unlockedPics = () => PICS.filter((p) => testAll() || lvl() >= p.lv);
   if (!C.got) { C.got = [...DECO.filter((d) => d.lock && unlockedDeco(d)).map((d) => d.id), ...unlockedPics().map((p) => "pic:" + p.id)]; save(); }   // quien ya tenía cosas no recibe paquetes de lo viejo
   const got = (k) => C.got.includes(k);
-  const pending = () => [...DECO.filter((d) => d.lock && unlockedDeco(d) && !got(d.id)).map((d) => d.id), ...unlockedPics().filter((p) => !got("pic:" + p.id)).map((p) => "pic:" + p.id)];
+  const pending = () => [...DECO.filter((d) => d.lock && unlockedDeco(d) && !got(d.id)).map((d) => d.id), ...unlockedPics().filter((p) => !got("pic:" + p.id)).map((p) => "pic:" + p.id),
+    ...SOUV.filter((v) => v.ok() && !got("sv:" + v.id)).map((v) => "sv:" + v.id), ...(seasonKey() && !got(seasonKey()) ? [seasonKey()] : [])];
   const picsHave = () => PICS.filter((p) => got("pic:" + p.id));
   setTimeout(() => { try { const c = (PG() && PG().get && (PG().get().cnt || {}).pics) || 0; for (let i = c; i < picsHave().length; i++) ev("pics"); } catch (_) {} }, 6000);   // cuadros que ya tenía
   const picNow = () => { const u = picsHave(); return u.find((p) => p.id === C.pic) || u[u.length - 1] || null; };
@@ -68,7 +82,12 @@ window.EkoCorner = (() => {
       const y = TOP + (d.top != null ? d.top : d.bottom - h);
       return { id: d.id, src, x, y, w: iw, h, z: d.z };
     });
-    return { x0, y0, items, shelf: items.some((i) => i.id === "trophy") ? SHELF : null };
+    if (!building) {
+      SOUV.filter((v) => got("sv:" + v.id) && !hidden.has("sv:" + v.id)).slice(-2).forEach((v, i) => items.push({ id: "sv:" + v.id, src: v.src, x: SLOTS[i].x, y: TOP + 103 - SLOTS[i].w, w: SLOTS[i].w, h: SLOTS[i].w, z: 1 }));
+      const sk = seasonKey();
+      if (sk && got(sk) && !hidden.has("season")) items.push({ id: "season", src: "art/hat-pumpkin.webp", x: 70, y: TOP + 188 - 34, w: 36, h: 34, z: 0.03 });
+    }
+    return { x0, y0, items, shelf: items.some((i) => i.id === "trophy" || i.id.startsWith("sv:")) ? SHELF : null };
   }
   const sx = (x) => lay.x0 + x, sy = (y) => lay.y0 + y;    // ventana de la casa → pantalla
 
@@ -77,7 +96,8 @@ window.EkoCorner = (() => {
   function sky() { const h = new Date().getHours() + new Date().getMinutes() / 60; return h >= 21.5 || h < 6.5 ? "night" : h >= 19.5 ? "dusk" : h < 8 ? "dawn" : "day"; }
   function send() {
     if (!TEV || !lay) return;
-    TEV.emit("corner-layout", { top: TOP, room: "art/room.webp", glass: GLASS, shelf: lay.shelf, sky: sky(), tilt: C.tilt, items: lay.items,
+    const mo = new Date().getMonth() + 1;
+    TEV.emit("corner-layout", { weather: mo === 12 || mo <= 2 ? "snow" : mo === 10 || mo === 11 ? "leaves" : "", top: TOP, room: "art/room.webp", glass: GLASS, shelf: lay.shelf, sky: sky(), tilt: C.tilt, items: lay.items,
       parcel: parcel ? { x: PARCEL.x, y: TOP + lerp(184, 146, PARCEL.z) - PARCEL.h, w: PARCEL.w, h: PARCEL.h, state: parcel.state } : null });
   }
   const fx = (id, kind, extra) => TEV && TEV.emit("corner-fx", Object.assign({ id, kind }, extra || {}));
@@ -170,7 +190,7 @@ window.EkoCorner = (() => {
       if (k >= 1) { R.tw = null; tw.done(); }
     }
     S.x = sx(R.x) - E.W / 2;
-    if (!S.sleeping) { S.mode = "idle"; S.modeUntil = A.t + 5; }
+    if (!S.sleeping) { S.mode = R.sit ? "sit" : "idle"; S.modeUntil = A.t + 5; }
     const m = baseMini() * lerp(1, FAR, R.z);
     if (Math.abs((A.mini || 1) - m) > 0.002) E.setMini(m, true);
     E.stage.classList.add("inhome");                                   // sus bocadillos, encima de la casa y a buen tamaño
@@ -356,7 +376,7 @@ window.EkoCorner = (() => {
   } };
 
   // Paquete: baja con globo (si llega ahora) o espera en el suelo; lo abre y coloca lo de dentro
-  const srcOf = (key) => key.startsWith("pic:") ? PICS.find((p) => "pic:" + p.id === key).src : DECO.find((d) => d.id === key).src;
+  const srcOf = (key) => key.startsWith("pic:") ? PICS.find((p) => "pic:" + p.id === key).src : key.startsWith("sv:") ? SOUV.find((v) => "sv:" + v.id === key).src : key.startsWith("season:") ? "art/hat-pumpkin.webp" : DECO.find((d) => d.id === key).src;
   async function deliver(key) {
     const fresh = !parcel;
     parcel = { id: key, state: fresh ? "drop" : "floor" };
@@ -372,10 +392,10 @@ window.EkoCorner = (() => {
     R.held = { src: srcOf(key), t0: A.t, size: 64 };
     parcel = null; send(); fx("parcel", "gone");
     E.express && E.express("emocionado", 2);
-    E.say(key.startsWith("pic:") ? "¡Un cuadro nuevo: " + PICS.find((p) => "pic:" + p.id === key).name.toLowerCase() + "!" : "¡Es " + NAMES[key] + "!", 2200, true);
+    E.say(key.startsWith("pic:") ? "¡Un cuadro nuevo: " + PICS.find((p) => "pic:" + p.id === key).name.toLowerCase() + "!" : key.startsWith("sv:") ? "¡Es " + SOUV.find((v) => "sv:" + v.id === key).name + "! Para mi balda de recuerdos" : key.startsWith("season:") ? "¡Una calabaza! ¡Ya es Halloween!" : "¡Es " + NAMES[key] + "!", 2200, true);
     await wait(1600);
     // lo lleva a su sitio
-    const d = key.startsWith("pic:") ? DECO.find((x) => x.id === "frame") : DECO.find((x) => x.id === key);
+    const d = key.startsWith("pic:") ? DECO.find((x) => x.id === "frame") : key.startsWith("sv:") ? { id: key, spot: { x: 268, z: 0.95 } } : key.startsWith("season:") ? { id: "season", spot: { x: 104, z: 0.08 } } : DECO.find((x) => x.id === key);
     say("placing", 1600);
     await walkIn(d.spot.x, d.spot.z); if (!R) return;
     R.held.up = true;
@@ -442,6 +462,7 @@ window.EkoCorner = (() => {
       else if (t === "frame" || t === "trophy") await doWall(t);
       else if (t === "swap") await swapPic();
       else if (t === "look") await lookAround();
+      else if (t === "tea") await teaBreak();
       else if (t.startsWith("deliver:")) await deliver(t.slice(8));
       else if (t.startsWith("stow:")) await stow(t.slice(5));
       else if (t.startsWith("unstow:")) await unstow(t.slice(7));
@@ -540,6 +561,18 @@ window.EkoCorner = (() => {
     await wait(3300);
     trip = null;
     go(["look", ...pending().map((k) => "deliver:" + k)]);
+  }
+  async function teaBreak() {
+    if (!R) return;
+    await walkIn(200, 0.3); await faceYou(); if (!R) return;
+    R.sit = true; E.useProp && E.useProp("mug", 24, 0);
+    E.say(pick(["Siéntate un ratito conmigo", "Respira hondo… así", "Un sorbito de chocolate caliente"]), 2600, true, "sereno");
+    await wait(9000); if (!R) return;
+    E.say(pick(["¿A que sienta bien parar?", "Mira por la ventana un momento, descansa la vista", "Estira los brazos… ¡arriba!"]), 3000, true);
+    await wait(10000); if (!R) return;
+    R.sit = false;
+    E.say(pick(["¡Listo! Ahora, a seguir con energía", "Gracias por la pausa", "Me ha encantado tu visita"]), 2400, true, "feliz");
+    await wait(1600);
   }
   async function lookAround() {
     if (!R) return;

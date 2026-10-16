@@ -292,6 +292,12 @@
         out.push(it);
       }
       out.push({ id: "nohat", icon: "back", label: L.none, keep: true, run: () => E.setHat("none"), on: () => hatNow() === "none" });
+      // Complementos que se quedan puestos (se combinan con los gorros)
+      for (const [n, img, lab, lv] of [["readglasses", "artGlasses", ES ? "Gafas" : "Glasses", 4], ["bowtie", "artBowtie", ES ? "Pajarita" : "Bow tie", 8], ["headphones", "artHeadphones", ES ? "Auriculares" : "Headphones", 17]]) {
+        const it = { id: "wear-" + n, img, label: lab, keep: true, on: () => !!(E.wearing && E.wearing(n)), run: () => { const on = !(E.wearing && E.wearing(n)); E.setWear && E.setWear(n, on); E.express && E.express(on ? "orgulloso" : "contento", 2); E.say(on ? pick(ES ? ["¿Qué tal me queda?", "¡Elegantísimo!", "Me lo dejo puesto"] : ["How do I look?"]) : pick(ES ? ["Me lo quito un rato", "Vale, al cajón"] : ["Taking it off"]), 1800, true); } };
+        if (P && !P.has("acc:" + n)) { it.locked = true; it.lockText = (ES ? "Nivel " : "Level ") + lv; }
+        out.push(it);
+      }
       return out;
     }
     if (c === "util") return [
@@ -508,7 +514,12 @@
   function notebookCap() { const P = PG(); return P ? `${ES ? "Somos" : "We're"} «${P.title(P.level())}»` : NAMES.notebook; }
   function notebookHTML() {
     const P = PG(), Nd = window.EkoNeeds;
-    const tabs = `<div class="ntabs"><button type="button" data-t="me" class="${nbTab === "me" ? "on" : ""}">${ES ? "Cómo estoy" : "How I am"}</button><button type="button" data-t="ach" class="${nbTab === "ach" ? "on" : ""}">${ES ? "Logros" : "Achievements"}</button></div>`;
+    const tabs = `<div class="ntabs"><button type="button" data-t="me" class="${nbTab === "me" ? "on" : ""}">${ES ? "Cómo estoy" : "How I am"}</button><button type="button" data-t="ach" class="${nbTab === "ach" ? "on" : ""}">${ES ? "Logros" : "Achievements"}</button><button type="button" data-t="album" class="${nbTab === "album" ? "on" : ""}">${ES ? "Álbum" : "Album"}</button></div>`;
+    if (nbTab === "album") {
+      const al = window.EkoLife ? window.EkoLife.album() : [];
+      if (!al.length) return tabs + `<p class="nsub">${ES ? "Aún no hay fotos. Cuando pase algo importante, ¡sacaré mi cámara!" : "No photos yet."}</p>`;
+      return tabs + `<div class="nalbum">${al.map((f, i) => `<button type="button" class="pola" data-i="${i}" style="--r:${((i * 37) % 7) - 3}deg"><span><img src="${artSrc(f.img)}" alt=""></span><em>${f.cap}</em><small>${new Date(f.at).toLocaleDateString(ES ? "es-ES" : "en-GB", { day: "numeric", month: "short" })}</small></button>`).join("")}</div>`;
+    }
     if (nbTab === "ach" && P) {
       const list = P.ACH.filter((a) => !a.when || a.when());
       const got = P.get().ach;
@@ -541,6 +552,7 @@
       love: hug,
     };
     body.querySelectorAll(".nneed").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); close(); setTimeout(act[b.dataset.k], 250); }));
+    body.querySelectorAll(".pola").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const f = window.EkoLife.album()[+b.dataset.i]; if (f) E.say(pick(ES ? [`¿Te acuerdas? ${f.cap}`, `Qué día aquel… ${f.cap}`, `Esta es de mis favoritas: ${f.cap}`] : [f.cap]), 2600, true, "enamorado"); }));
     body.querySelectorAll(".nmed").forEach((b) => b.addEventListener("click", (e) => {
       e.stopPropagation();
       const a = P.ACH.find((x) => x.id === b.dataset.a);

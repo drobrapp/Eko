@@ -15,6 +15,9 @@
 #sky{position:absolute;border-radius:4px;overflow:hidden;transition:background 2s ease}
 #sky i{position:absolute;width:2px;height:2px;border-radius:50%;background:#FFF4E8;opacity:0;transition:opacity 2s}
 #sky.night i{opacity:.9}
+#sky b{position:absolute;top:-6px;width:4px;height:4px;border-radius:50%;background:#fff;opacity:.9;animation:flake 3s linear infinite}
+#sky.leaves b{width:5px;height:3px;border-radius:2px;background:#D0795A;animation-duration:2.4s}
+@keyframes flake{to{transform:translate(8px,56px) rotate(160deg)}}
 .d{position:absolute;user-select:none;pointer-events:none}
 .d img{width:100%;height:100%;display:block;transform-origin:50% 100%}
 .d.wall img{transform-origin:50% 0%;filter:drop-shadow(0 3px 3px rgba(60,35,20,.28))}
@@ -53,7 +56,8 @@
     const bg = $("#bg"); if (bg.getAttribute("src") !== p.room) bg.src = p.room;
     bg.style.top = top + "px"; bg.style.height = "auto";
     const g = p.glass; Object.assign(sky.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px", background: SKY[p.sky] || SKY.day });
-    sky.className = p.sky;   // solo cambia el cielo; la habitación tiene siempre la misma luz
+    sky.className = p.sky + (p.weather ? " " + p.weather : "");
+    if (p.weather !== sky.dataset.w) { sky.dataset.w = p.weather || ""; sky.querySelectorAll("b").forEach((b) => b.remove()); if (p.weather) for (let i = 0; i < 8; i++) { const b = document.createElement("b"); b.style.left = Math.random() * 100 + "%"; b.style.animationDelay = (-Math.random() * 3) + "s"; if (p.weather === "leaves") b.style.background = ["#D0795A", "#E9A93B", "#C9A27A"][i % 3]; sky.appendChild(b); } }   // solo cambia el cielo; la habitación tiene siempre la misma luz
     if (p.shelf) {
       if (!shelfEl) { shelfEl = document.createElement("img"); shelfEl.className = "d"; shelfEl.draggable = false; layer.appendChild(shelfEl); }
       shelfEl.src = p.shelf.src; Object.assign(shelfEl.style, { left: p.shelf.x + "px", top: p.shelf.y + "px", width: p.shelf.w + "px", height: p.shelf.h + "px", zIndex: 1, filter: "drop-shadow(0 3px 3px rgba(60,35,20,.25))" });

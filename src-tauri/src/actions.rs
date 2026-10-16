@@ -252,3 +252,22 @@ pub fn lock_pc() {
         let _ = windows::Win32::System::Shutdown::LockWorkStation();
     }
 }
+
+// ---------- Copia de seguridad de Eko (nivel, logros, casa, recuerdos…) ----------
+/// Guarda la copia en Documentos\Eko y abre la carpeta. Devuelve la ruta del archivo.
+#[tauri::command]
+pub fn backup_save(app: AppHandle, data: String, name: String) -> Result<String, String> {
+    let dir = app.path().document_dir().map_err(|e| e.to_string())?.join("Eko");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let safe: String = name.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_' || *c == '.').collect();
+    let file = dir.join(if safe.is_empty() { "eko-copia.json".to_string() } else { safe });
+    std::fs::write(&file, data).map_err(|e| e.to_string())?;
+    open_path(&dir.to_string_lossy());
+    Ok(file.to_string_lossy().to_string())
+}
+
+/// Reinicia Eko (tras recuperar una copia)
+#[tauri::command]
+pub fn app_restart(app: AppHandle) {
+    app.restart();
+}

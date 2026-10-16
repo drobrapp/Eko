@@ -28,6 +28,18 @@
       E.setHat(id);
     },
     quitagorro: () => E.setHat("none"),
+    // Cosas sobre el propio Eko
+    casa: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") { E.sayChat(C && C.state() === "build" ? "¡Primero tengo que construirla! Mira en el menú: Mi casa" : "Aún no tengo casa… llega en el nivel 6", 2600); return; } C.go(C.pending().map((k) => "deliver:" + k).concat(["frame"])); },
+    cama: () => { const C = window.EkoCorner; if (C && C.state() === "built" && C.go(["bed"])) return; E.goToSleep(); },
+    jugar: (a) => { const g = /galleta|atrapa|cesta/.test(a) ? "catch" : /mano/.test(a) ? "hand" : /brill|toca|reflej/.test(a) ? "glow" : /adivin|piens/.test(a) ? "guess" : /piedra|papel|tijera/.test(a) ? "rps" : /escond/.test(a) ? "hide" : /pelota/.test(a) ? "ball" : null;
+      const P = window.EkoProgress; if (g && P && ["catch", "hand", "glow", "guess", "hide"].includes(g) && !P.has("game:" + g)) { E.sayChat("Ese juego aún no lo tengo desbloqueado", 2400); return; }
+      if (g && window.EkoMenu) window.EkoMenu.startGame(g); else ACTS.juega(); },
+    ponte: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (!n) return; const P = window.EkoProgress; if (P && !P.has("acc:" + n)) { E.sayChat("Eso todavía no lo tengo en el armario", 2200); return; } E.setWear(n, true); },
+    quita: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (n) E.setWear(n, false); },
+    actualiza: () => invoke && invoke("check_update_now").then((r) => E.sayChat(r ? `¡Hay versión nueva (${r})! Me actualizo enseguida` : "Ya estoy en la última versión", 2800)).catch(() => E.sayChat("No he podido mirar si hay actualizaciones", 2400)),
+    libreta: () => window.EkoMenu && window.EkoMenu.openAt("notebook"),
+    menu: () => window.EkoMenu && window.EkoMenu.openAt("home"),
+    ajustes: () => invoke && invoke("open_settings"),
     // ---- en tu PC (lista cerrada; se puede apagar en Ajustes) ----
     musica: (a) => pc(() => invoke(/sig|next|pasa/.test(a) ? "media_next" : /ant|prev|atr/.test(a) ? "media_prev" : "media_play_pause"), "musica"),
     volumen: (a) => pc(() => invoke("volume", { dir: /sub|up|mas|alto/.test(a) ? "up" : /baj|down|menos/.test(a) ? "down" : "mute" }), "volumen"),
@@ -95,6 +107,8 @@
     const T = TR(), u = T ? T.unlocked().map((t) => ({ flip: "{voltereta}", pirouette: "{pirueta}", balance: "{equilibrio}", juggle: "{malabares}", magic: "{magia}" })[t.id]).filter(Boolean) : [];
     return ["{baila}", "{salta}", "{saluda}", "{abrazo}", "{piensa}", "{duerme}", "{come} (comerte una galleta)", "{juega} (proponer un juego)", "{truco} (uno al azar)", ...u,
       "{gorro:nombre} (ponerte bruja, calabaza, vampiro, fantasma, papá noel, reno, elfo, bufanda, fiesta o corona)", "{quitagorro}", "{recordatorio:minutos:texto} (avisar dentro de X minutos)",
+      "{casa} (ir a tu casa)", "{cama} (irte a dormir a tu camita)", "{jugar:juego} (atrapa galletas, qué mano, tócame donde brille, adivina qué pienso, piedra papel tijera, escondite, pelota)",
+      "{ponte:gafas|pajarita|auriculares}", "{quita:gafas|pajarita|auriculares}", "{actualiza} (buscar si hay versión nueva de ti)", "{libreta} (enseñar tu libreta de logros)", "{menu} (abrir tu menú)", "{ajustes} (abrir tus ajustes)",
       ...(pcOn() ? ["{musica:pausa|siguiente|anterior}", "{volumen:sube|baja|silencio}", "{carpeta:descargas|documentos|imagenes|escritorio|musica|videos}", "{descarga} (abrir lo último descargado)", "{captura} (hacer una captura de pantalla)", "{busca:texto} (buscar en internet)", "{web:sitio} (abrir una web, p. ej. youtube)", "{abre:programa} (abrir un programa del PC)", "{bloquea} (bloquear el PC)"] : [])].join(", ");
   }
   function memText() {

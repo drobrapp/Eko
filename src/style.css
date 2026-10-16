@@ -658,3 +658,19 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .mhouse.locked { opacity: .6; filter: grayscale(.4); }
 .mhouse .mci { width: 62px; height: 40px; background: none; }
 .mhouse .mci img { width: 62px; height: 40px; }
+
+/* Álbum de fotos (libreta) */
+.nalbum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 4px 2px 6px; }
+.pola { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 5px 6px; background: #fff; border-radius: 4px; box-shadow: 0 2px 6px rgba(60, 40, 30, .2); transform: rotate(var(--r, 0deg)); transition: transform .2s; }
+.pola:hover { transform: rotate(0) scale(1.06); }
+.pola span { width: 100%; aspect-ratio: 1; display: grid; place-items: center; background: linear-gradient(#F6E7D8, #EAD3C2); border-radius: 2px; }
+.pola img { width: 70%; height: 70%; object-fit: contain; }
+.pola em { font: italic 600 9.5px/1.15 "Segoe Print", "Comic Sans MS", cursive; color: #5A463D; text-align: center; }
+.pola small { font-size: 8.5px; color: #a08a7d; }
+/* Flash de la cámara */
+.flash { position: absolute; inset: 0; background: #fff; pointer-events: none; z-index: 30; animation: flash .45s ease-out forwards; }
+@keyframes flash { from { opacity: .85; } to { opacity: 0; } }
+/* Carta */
+.card .letter { background: repeating-linear-gradient(#FFFDF8 0 17px, #F0E4D6 17px 18px); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; box-shadow: inset 0 0 0 1px #EBDCCB; }
+.card .letter small { display: block; font-size: 10.5px; color: #a08a7d; margin-bottom: 2px; }
+.card .letter p { margin: 0; font: italic 12px/18px "Segoe Print", "Comic Sans MS", cursive; color: #4a3a33; }

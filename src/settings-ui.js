@@ -136,6 +136,39 @@
     invoke("app_version").then((v) => { $("#ver").textContent = `Versión ${v} · todo se guarda solo en tu PC`; }).catch(() => {});
   }
   $("#autostart").addEventListener("change", (e) => { react("autostart", e.target.checked); if (invoke) invoke("set_autostart", { value: e.target.checked }).then(saved); });
+  // ---------- Copia de seguridad ----------
+  {
+    const st = $("#bkState"), inv = window.__TAURI__ ? window.__TAURI__.core.invoke : null;
+    $("#bkSave").addEventListener("click", async () => {
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("eko")) data[k] = localStorage.getItem(k); }
+      const json = JSON.stringify({ app: "eko", v: 1, at: new Date().toISOString(), data });
+      const name = `eko-copia-${new Date().toISOString().slice(0, 10)}.json`;
+      try { const path = inv ? await inv("backup_save", { data: json, name }) : name; st.textContent = "Copia guardada en Documentos › Eko"; void path; }
+      catch (e) { st.textContent = "No he podido guardarla: " + e; }
+    });
+    $("#bkLoad").addEventListener("click", () => $("#bkFile").click());
+    $("#bkFile").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = async () => {
+        try {
+          const j = JSON.parse(r.result);
+          if (!j || j.app !== "eko" || !j.data) throw new Error("no es una copia de Eko");
+          if (!confirmBox(`¿Recuperar la copia del ${new Date(j.at).toLocaleDateString()}? Se sustituye lo que tiene ahora.`)) return;
+          for (const k of Object.keys(localStorage)) if (k.startsWith("eko")) localStorage.removeItem(k);
+          for (const [k, v] of Object.entries(j.data)) localStorage.setItem(k, v);
+          st.textContent = "¡Recuperado! Reiniciando…";
+          setTimeout(() => inv && inv("app_restart"), 900);
+        } catch (err) { st.textContent = "Ese archivo no sirve: " + err.message; }
+      };
+      r.readAsText(f);
+      e.target.value = "";
+    });
+    // confirmación sencilla sin ventanas del sistema: segundo clic en 5 s
+    let armed = 0;
+    function confirmBox(msg) { if (Date.now() - armed < 5000) { armed = 0; return true; } armed = Date.now(); st.textContent = msg + " Vuelve a elegir el archivo para confirmar."; return false; }
+  }
   $("#checkUpd").addEventListener("click", () => {
     $("#updState").textContent = "Buscando…";
     if (!invoke) { setTimeout(() => { $("#updState").textContent = "Solo funciona en la app"; }, 600); return; }

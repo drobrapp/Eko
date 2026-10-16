@@ -6,7 +6,8 @@
     "main",
     "settings",
     "ball",
-    "chatbar"
+    "chatbar",
+    "catch"
   ],
   "permissions": [
     "core:default",

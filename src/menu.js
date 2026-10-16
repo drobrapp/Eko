@@ -269,10 +269,10 @@
         { id: "rps", react: "picaro", img: "artIcRps", icon: "scissors", label: L.rps, run: () => startGame("rps"), keep: true },
         g("hide", "artIcHide", L.hide, () => startGame("hide"), "game:hide"),
         { id: "trick", react: "picaro", img: "artIcTrick", label: ES ? "Trucos" : "Tricks", go: "tricks" },
-        g("hand", "artIcHand", L.hand, null, "game:hand", 1),
-        g("catch", "artCookie", ES ? "Atrapa galletas" : "Cookie catch", null, "game:catch", 1),
-        g("glow", "artIcGlow", ES ? "Tócame donde brille" : "Touch the glow", null, "game:glow", 1),
-        g("guess", "artIcGuess", ES ? "Adivina qué pienso" : "Guess my thought", null, "game:guess", 1),
+        g("hand", "artIcHand", L.hand, () => startGame("hand"), "game:hand"),
+        g("catch", "artIcBasket", ES ? "Atrapa galletas" : "Cookie catch", () => startGame("catch"), "game:catch"),
+        g("glow", "artIcGlow", ES ? "Tócame donde brille" : "Touch the glow", () => startGame("glow"), "game:glow"),
+        g("guess", "artIcGuess", ES ? "Adivina qué pienso" : "Guess my thought", () => startGame("guess"), "game:guess"),
       ];
     }
     if (c === "care") return [
@@ -699,6 +699,10 @@
     ball: ["¿Me lanzas la pelota?", "¡Tengo una pelota! ¿Jugamos?"],
     rps: ["¿Echamos un piedra, papel o tijera?", "Te reto a piedra, papel o tijera"],
     hide: ["¿Jugamos al escondite? ¡Yo me escondo!", "¿Me buscas? ¡Escondite!"],
+    hand: ["Tengo algo en una mano… ¿jugamos a adivinar cuál?", "¿Jugamos a «¿qué mano?»? Tengo un secreto"],
+    catch: ["¡Va a llover galletas! ¿Me ayudas a cogerlas?", "¿Jugamos a atrapar galletas? Tengo la cesta lista"],
+    glow: ["¿Probamos tus reflejos? ¡Toca donde me brille!", "Me pica todo… ¿jugamos a tócame donde brille?"],
+    guess: ["Estoy pensando en algo… ¿lo adivinas?", "¿Jugamos a adivina qué pienso?"],
     bored: ["Me aburro… ", "Oye… "],
     yes: "¡Vamos!", no: "Ahora no",
     accepted: ["¡Bieeen!", "¡Sí!"], declined: ["Vale… otro día", "Jo. Bueno"], timeout: ["Otra vez será"],
@@ -707,12 +711,14 @@
     ball: ["Throw me the ball?", "I've got a ball! Play?"],
     rps: ["Rock, paper, scissors?", "I challenge you: rock, paper, scissors"],
     hide: ["Hide and seek? I'll hide!", "Come find me? Hide and seek!"],
+    hand: ["I've got something in one hand… guess which?"], catch: ["It's raining cookies! Help me catch them?"],
+    glow: ["Test your reflexes? Touch where I glow!"], guess: ["I'm thinking of something… can you guess?"],
     bored: ["I'm bored… ", "Hey… "],
     yes: "Let's go!", no: "Not now",
     accepted: ["Yay!", "Yes!"], declined: ["OK… another day", "Aw. Fine"], timeout: ["Maybe later"],
     rpsGo: ["Pick one!"],
   };
-  const GAMES = ["ball", "rps", "hide"];
+  const GAMES = ["ball", "rps", "hide", "hand", "catch", "glow", "guess"];
   const today = () => new Date().toDateString();
   let gs = store.get("eko-games", {});
   if (gs.day !== today()) gs = { day: today(), count: 0, last: 0, declines: 0, snooze: 0 };
@@ -734,13 +740,13 @@
   function propose(force = false, reason = "") {
     if (!force && !canPropose()) return;
     if (force && (open || ball || hideGame)) close();
-    const games = GAMES.filter((g) => g !== "hide" || !window.EkoProgress || window.EkoProgress.has("game:hide"));
+    const games = GAMES.filter((g) => g === "ball" || g === "rps" || !window.EkoProgress || window.EkoProgress.has("game:" + g)).filter((g) => g !== "catch" || E.native);
     const game = games[Math.floor(Math.random() * games.length)];
     proposing = true;
     if (!force) { gs.count++; gs.last = Date.now(); store.set("eko-games", gs); }
     E.keepInside(() => {
       E.hop(-380);
-      E.act(game === "rps" ? "rps" : game === "ball" ? "wave" : "wink");
+      E.act(game === "rps" ? "rps" : game === "ball" || game === "catch" ? "wave" : game === "guess" ? "think" : "wink");
       const q = (reason === "bored" ? pick(P_TX.bored) : "") + pick(P_TX[game]);
       const c = card(`<p>${q}</p><div class="chips"><button type="button" class="chip main yes">${P_TX.yes}</button><button type="button" class="chip no">${P_TX.no}</button></div>`);
       E.Voice.syllable && [0, 1, 2].forEach((i) => setTimeout(() => E.Voice.syllable(), i * 140));
@@ -762,6 +768,7 @@
   function startGame(game) {
     const Nd = window.EkoNeeds;
     if (Nd) { Nd.give("play"); if (Nd.on() && Nd.get().energy < 20) setTimeout(() => E.say(pick(Nd.L.tired), 2000, true), 900); }
+    if (window.EkoGames && window.EkoGames.start(game)) return;
     if (game === "ball") startBall();
     else if (game === "hide") startHide();
     else { openAt("rps"); E.say(pick(P_TX.rpsGo), 1800, true); }

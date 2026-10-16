@@ -488,5 +488,7 @@ window.EkoTricks = (() => {
     if (u.length) run(u[Math.floor(Math.random() * u.length)].id);
   }, 9 * 60000);
 
-  return { run, LIST, has, unlocked, tumble: (kind = "sit", dir) => play("tumble", { kind, dir }) };
+  // Herramientas para otros módulos (juegos): mismas capas, partículas y manos
+  const kit = { img, place, hands, particle, sparkle, smoke, layer, ground, clear, sm, ease, easeOut, back, lerp, clamp, once, tone, art };
+  return { kit, run, LIST, has, unlocked, tumble: (kind = "sit", dir) => play("tumble", { kind, dir }) };
 })();

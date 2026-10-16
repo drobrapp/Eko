@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.16.0": { important: true, lines: ["¡Tengo juegos nuevos! ¿Qué mano?, atrapa galletas, tócame donde brille y adivina qué pienso", "Se desbloquean subiendo de nivel. ¡Mira en Jugar!"] },
     "0.15.0": { important: true, lines: ["¡Me han actualizado! Ahora te cuento las novedades cuando aprendo algo nuevo, como ahora mismo"] },
     "0.14.0": { important: true, lines: ["Ahora reacciono distinto cada vez que me haces clic: prueba en la cabeza… o en la barriga", "Y ya no se me corta nada al hacer piruetas, ¡palabra!"] },
     "0.13.0": { important: true, lines: ["Si me lo pides en el chat, puedo poner música, abrir programas o buscarte cosas en internet"] },

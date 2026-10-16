@@ -1,0 +1,117 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Eko · galletas</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}*{scrollbar-width:none}*::-webkit-scrollbar{display:none}canvas{position:fixed;inset:0;width:100%;height:100%}</style>
+</head><body><canvas id="c"></canvas>
+<script>
+// Lluvia de galletas a pantalla completa (ventana transparente que deja pasar los clics).
+// Recibe dónde está la cesta de Eko y avisa de cada galleta atrapada.
+(() => {
+  const T = window.__TAURI__; if (!T) return;
+  const ev = T.event;
+  const cv = document.getElementById("c"), cx = cv.getContext("2d");
+  const img = (src) => { const i = new Image(); i.src = src; return i; };
+  const GOOD = img("art/cookie.webp"), BURNT = img("art/cookie-burnt.webp");
+  let W = 0, H = 0, dpr = 1;
+  const resize = () => { dpr = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  addEventListener("resize", resize); resize();
+  const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  let G = null, basket = null, origin = { left: 0, top: 0 }, raf = 0;
+  ev.listen("catch-start", (e) => {
+    ev.emit("catch-ack", 1);
+    if (G && !G.over) return;
+    origin = e.payload || origin;
+    G = { t: -1.6, dur: (e.payload && e.payload.dur) || 45, cookies: [], fx: [], score: 0, good: 0, burnt: 0, missed: 0, next: 0, lvlStep: 0, over: false, endT: 0 };
+    last = performance.now();
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+  });
+  ev.listen("catch-basket", (e) => { const p = e.payload; basket = { x: p.x - origin.left, y: p.y - origin.top, w: p.w }; });
+
+  // Dificultad: sube con las galletas atrapadas y con el tiempo
+  const level = () => clamp(G.good / 28 + Math.max(0, G.t) / G.dur * 0.4, 0, 1);
+  function spawn() {
+    const l = level();
+    const band = Math.min(W * 0.62, 1150), x0 = (W - band) / 2;
+    const burnt = Math.random() < lerp(0.13, 0.34, l);
+    const v = lerp(170, 470, l) * rnd(0.65, 1.4);
+    G.cookies.push({ x: x0 + Math.random() * band, y: -40, vy: v, g: lerp(0, 120, l) * Math.random(), sway: l > 0.35 ? rnd(0, lerp(0, 70, l)) : 0, ph: rnd(0, 6.28), r: rnd(0, 6.28), vr: rnd(-3, 3), burnt, s: rnd(38, 50) });
+  }
+  let last = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    G.t += dt;
+    const l = level();
+    if (!G.over && G.t >= 0) {
+      G.next -= dt;
+      if (G.next <= 0) {
+        spawn(); if (l > 0.5 && Math.random() < 0.25 + l * 0.2) spawn();
+        G.next = lerp(1.05, 0.32, l) * rnd(0.7, 1.3);
+      }
+      const step = Math.floor(l * 4);
+      if (step > G.lvlStep) { G.lvlStep = step; ev.emit("catch-level", step); }
+      if (G.t >= G.dur) { G.over = true; G.endT = G.t; }
+    }
+    for (let i = G.cookies.length - 1; i >= 0; i--) {
+      const c = G.cookies[i];
+      const py = c.y;
+      c.vy += c.g * dt; c.y += c.vy * dt; c.r += c.vr * dt;
+      const x = c.x + Math.sin(G.t * 2.2 + c.ph) * c.sway;
+      if (basket && !G.over && py + c.s * 0.3 < basket.y && c.y + c.s * 0.3 >= basket.y && Math.abs(x - basket.x) < basket.w / 2) {
+        G.cookies.splice(i, 1);
+        if (c.burnt) { G.burnt++; G.score = Math.max(0, G.score - 1); } else { G.good++; G.score++; }
+        G.fx.push({ x, y: basket.y - 10, t: 0, txt: c.burnt ? "−1" : "+1", col: c.burnt ? "#C8553D" : "#5FA88E" });
+        ev.emit("catch-hit", { kind: c.burnt ? "burnt" : "good", score: G.score, good: G.good, burnt: G.burnt });
+        continue;
+      }
+      if (c.y > H + 60) { G.cookies.splice(i, 1); if (!c.burnt) { G.missed++; ev.emit("catch-miss", G.missed); } }
+      c.dx = x;
+    }
+    draw(l);
+    if (G.over && (G.cookies.length === 0 || G.t - G.endT > 3)) {
+      if (!G.sent) { G.sent = true; ev.emit("catch-end", { score: G.score, good: G.good, burnt: G.burnt, missed: G.missed }); }
+      if (G.t - G.endT > 3.4) { cx.clearRect(0, 0, W, H); return; }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function pill(x, y, w, h) { const r = h / 2; cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+  function draw() {
+    cx.clearRect(0, 0, W, H);
+    const fade = G.over ? clamp(1 - (G.t - G.endT - 2.4) / 1, 0, 1) : 1;
+    cx.globalAlpha = fade;
+    for (const c of G.cookies) {
+      cx.save(); cx.translate(c.dx ?? c.x, c.y); cx.rotate(c.r);
+      cx.drawImage(c.burnt ? BURNT : GOOD, -c.s / 2, -c.s / 2, c.s, c.s);
+      cx.restore();
+    }
+    for (let i = G.fx.length - 1; i >= 0; i--) {
+      const f = G.fx[i]; f.t += 1 / 60;
+      if (f.t > 0.8) { G.fx.splice(i, 1); continue; }
+      cx.globalAlpha = fade * (1 - f.t / 0.8);
+      cx.font = "800 22px 'Segoe UI', system-ui, sans-serif"; cx.textAlign = "center";
+      cx.lineWidth = 4; cx.strokeStyle = "#fffaf6"; cx.strokeText(f.txt, f.x, f.y - f.t * 50);
+      cx.fillStyle = f.col; cx.fillText(f.txt, f.x, f.y - f.t * 50);
+    }
+    cx.globalAlpha = fade;
+    // Marcador arriba: galleta + puntos + tiempo restante
+    const w = 168, h = 44, x = (W - w) / 2, y = 18;
+    cx.shadowColor = "rgba(50,30,20,.28)"; cx.shadowBlur = 14; cx.shadowOffsetY = 4;
+    pill(x, y, w, h); cx.fillStyle = "#fffaf6"; cx.fill();
+    cx.shadowColor = "transparent";
+    cx.drawImage(GOOD, x + 10, y + 7, 30, 30);
+    cx.fillStyle = "#3b2f2a"; cx.font = "800 22px 'Segoe UI', system-ui, sans-serif"; cx.textAlign = "left"; cx.textBaseline = "middle";
+    cx.fillText(String(G.score), x + 48, y + h / 2 + 1);
+    const left = clamp(1 - Math.max(0, G.t) / G.dur, 0, 1);
+    cx.beginPath(); cx.lineWidth = 5; cx.strokeStyle = "#efe3da"; cx.arc(x + w - 24, y + h / 2, 12, 0, Math.PI * 2); cx.stroke();
+    cx.beginPath(); cx.strokeStyle = left < 0.2 ? "#C8553D" : "#E9A93B"; cx.arc(x + w - 24, y + h / 2, 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left); cx.stroke();
+    // Cuenta atrás al empezar
+    if (G.t < 0) {
+      const n = Math.ceil(-G.t / 0.55);
+      cx.font = "900 64px 'Segoe UI', system-ui, sans-serif"; cx.textAlign = "center";
+      cx.lineWidth = 8; cx.strokeStyle = "#fffaf6"; cx.strokeText(n > 0 ? String(n) : "", W / 2, H * 0.35);
+      cx.fillStyle = "#D0795A"; cx.fillText(n > 0 ? String(n) : "", W / 2, H * 0.35);
+    }
+    cx.globalAlpha = 1; cx.textBaseline = "alphabetic";
+  }
+})();
+</script>
+</body></html>

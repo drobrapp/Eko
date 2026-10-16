@@ -1857,9 +1857,9 @@
       if (S.sleeping) { S.sleeping = false; setMood("normal"); }
       touched();
       bump(-3);
-      fx("bang");
+      if (!A.gameMode) fx("bang");
       DRAG.t0 = A.t; DRAG.heldSaid = false; DRAG.lastVx = 0; DRAG.lastVy = 0; DRAG.zoomAt = 0;
-      if (Math.random() < 0.65 && A.t > DRAG.nextGrabLine) { DRAG.nextGrabLine = A.t + 6; setTimeout(() => { if (S.dragging && A.dizzy < 0.4) say(pickNew(TXT.grab), 2200, true); }, 250); }
+      if (!A.gameMode && Math.random() < 0.65 && A.t > DRAG.nextGrabLine) { DRAG.nextGrabLine = A.t + 6; setTimeout(() => { if (S.dragging && A.dizzy < 0.4) say(pickNew(TXT.grab), 2200, true); }, 250); }
     }
     if (S.dragging) {
       const now = performance.now();
@@ -1872,7 +1872,7 @@
       // Zarandeo: cada cambio brusco de sentido suma al mareo
       const flipX = Math.sign(S.vx) !== Math.sign(DRAG.lastVx) && Math.abs(S.vx - DRAG.lastVx) > 900;
       const flipY = Math.sign(S.vy) !== Math.sign(DRAG.lastVy) && Math.abs(S.vy - DRAG.lastVy) > 900;
-      if (flipX || flipY) {
+      if ((flipX || flipY) && !A.gameMode) {
         const before = A.dizzy;
         A.dizzy = Math.min(3, A.dizzy + clamp((Math.abs(S.vx - DRAG.lastVx) + Math.abs(S.vy - DRAG.lastVy)) / 5000, 0.08, 0.35));
         bump(-1.5); A.sqxV += 3;
@@ -1880,7 +1880,7 @@
         else if (before < 1.6 && A.dizzy >= 1.6) { say(pickNew(TXT.shake), 1800, true); fx("spark", 2); }
       }
       DRAG.lastVx = S.vx; DRAG.lastVy = S.vy;
-      if (Math.hypot(S.vx, S.vy) > 1700 && A.dizzy < 0.5 && A.t > DRAG.zoomAt) { DRAG.zoomAt = A.t + 8; if (Math.random() < 0.5) say(pickNew(TXT.zoom), 1600, true); }
+      if (!A.gameMode && Math.hypot(S.vx, S.vy) > 1700 && A.dizzy < 0.5 && A.t > DRAG.zoomAt) { DRAG.zoomAt = A.t + 8; if (Math.random() < 0.5) say(pickNew(TXT.zoom), 1600, true); }
     }
   });
 
@@ -1898,7 +1898,7 @@
         // Mareado: al tocar suelo, ojos en espiral, se tambalea un rato y quizá se sienta
         const lvl = A.dizzy;
         DRAG.dizzyLanding = lvl;
-      } else setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
+      } else if (!A.gameMode) setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
     } else if (performance.now() - downT < 450 && downBtn === 0) {
       // Clic = salta y dice algo (el menú va con el botón derecho)
       tap();

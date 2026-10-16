@@ -623,3 +623,23 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .card.chat form { display: flex; gap: 6px; margin: 0; }
 .card.chat input { flex: 1; min-width: 0; }
 .card.chat .x { position: absolute; right: -6px; top: -8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #efe3da; color: #6b5348; font: 700 14px/22px "Segoe UI", system-ui, sans-serif; cursor: pointer; padding: 0; }
+/* ---------- Juegos (fase 4) ---------- */
+.card .gcount { margin: 0 0 2px; font-size: 14px; text-align: center; }
+.card .gcount b { font-size: 30px; font-weight: 800; color: #D0795A; margin-right: 4px; font-variant-numeric: tabular-nums; }
+.card .gsub { margin: 0 0 8px; font-size: 11.5px; color: #8a7468; text-align: center; }
+.card .gmedal { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; animation: gpop .5s cubic-bezier(.3, 1.6, .5, 1); }
+.card .gmedal img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 3px 5px rgba(50, 30, 20, .25)); }
+.card .gmedal b { display: block; font-size: 14px; }
+.card .gmedal span { font-size: 12px; color: #8a7468; }
+.card .gclues { margin: 0 0 8px; padding: 0; max-height: none; overflow: visible; }
+.card .gclues li { cursor: default; padding: 2px 0; font-size: 12.5px; }
+.card .gclues li:hover { background: none; }
+.card .gclues li:last-child { font-weight: 600; animation: gpop .35s ease; }
+.card .gopts { flex-wrap: wrap; margin-bottom: 6px; }
+.card .chip:disabled { opacity: .35; text-decoration: line-through; cursor: default; }
+@keyframes gpop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.gametap { position: absolute; inset: 0; z-index: 12; pointer-events: auto; cursor: pointer; touch-action: none; }
+.ghud { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 8px; border-radius: 16px; background: #fffaf6; box-shadow: 0 4px 14px rgba(50, 30, 20, .25); font: 800 15px "Segoe UI", system-ui, sans-serif; color: #3b2f2a; cursor: default; }
+.ghud img { width: 22px; height: 22px; }
+.ghud .glives { color: #D0795A; font-size: 11px; letter-spacing: 1px; }
+.ghud .gx { width: 22px; height: 22px; border: none; border-radius: 50%; background: #efe3da; color: #6b5348; font: 700 13px "Segoe UI", system-ui, sans-serif; line-height: 22px; padding: 0; cursor: pointer; }

@@ -125,6 +125,44 @@ fn chatbar_hide(app: AppHandle) {
     }
 }
 
+// ---------- Rincón de Eko: muebles en una esquina de la barra de tareas ----------
+#[tauri::command]
+async fn corner_show(app: AppHandle, x: f64, y: f64, w: f64, h: f64) -> Result<(), String> {
+    let win = if let Some(win) = app.get_webview_window("corner") {
+        let _ = win.set_position(tauri::LogicalPosition::new(x, y));
+        let _ = win.set_size(tauri::LogicalSize::new(w, h));
+        let _ = win.show();
+        win
+    } else {
+        tauri::WebviewWindowBuilder::new(&app, "corner", tauri::WebviewUrl::App("corner.html".into()))
+            .title("Eko · rincón")
+            .inner_size(w, h)
+            .position(x, y)
+            .transparent(true)
+            .decorations(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .resizable(false)
+            .shadow(false)
+            .focused(false)
+            .build()
+            .map_err(|e| e.to_string())?
+    };
+    let _ = win.set_ignore_cursor_events(true);
+    if let Some(m) = app.get_webview_window("main") {
+        let _ = m.set_always_on_top(false);
+        let _ = m.set_always_on_top(true);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn corner_hide(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("corner") {
+        let _ = w.hide();
+    }
+}
+
 // ---------- Atrapa galletas: lluvia a pantalla completa que deja pasar los clics ----------
 #[tauri::command]
 async fn catch_show(app: AppHandle, x: f64, y: f64, w: f64, h: f64) -> Result<(), String> {
@@ -427,7 +465,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

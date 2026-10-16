@@ -253,7 +253,7 @@
   const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta" }
                    : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook" };
   const CATS = [["foryou", "sparkle"], ["play", "play"], ["care", "cookie"], ["wardrobe", "hanger"], ["util", "util"], ["notebook", "book"]];
-  const SUBS = { rps: "play", tricks: "play", remind: "util", shortcuts: "util" };
+  const SUBS = { rps: "play", tricks: "play", corner: "wardrobe", remind: "util", shortcuts: "util" };
   const lockLvl = (id) => { const P = PG(); if (!P) return 0; for (const [n, d] of Object.entries(P.LEVELS)) if (d.id === id) return +n; return 0; };
   // Lo que hay en cada categoría
   const HATS = [["witch", "artHatWitch", "halloween"], ["pumpkin", "artHatPumpkin", "halloween"], ["vampire", "artCape", "halloween"], ["ghost", "artPuff", "halloween"],
@@ -282,7 +282,7 @@
       { id: "sleep", react: "yawn", img: "artNightcap", label: L.sleep, run: () => E.goToSleep() },
     ];
     if (c === "wardrobe") {
-      const out = [{ id: "auto", icon: "sparkle", label: L.auto, run: () => E.setHat("auto"), keep: true, on: () => hatNow() === "auto" }];
+      const out = [{ id: "corner", react: "emocionado", img: "artDecoBed", label: ES ? "Mi rincón" : "My corner", go: "corner" }, { id: "auto", icon: "sparkle", label: L.auto, run: () => E.setHat("auto"), keep: true, on: () => hatNow() === "auto" }];
       for (const [id, img, gate] of HATS) {
         const it = { id: "hat-" + id, img, icon: img ? null : "swatch", color: "#c9cedb", label: (COSTUMES.find((x) => x[0] === id) || [])[1] || id, keep: true, run: () => E.setHat(id), on: () => hatNow() === id };
         if (P) {
@@ -313,6 +313,7 @@
       return s.slice(0, 6);
     }
     if (c === "rps") return TREE.rps.map((x) => ({ ...x, keep: false }));
+    if (c === "corner") return window.EkoCorner ? window.EkoCorner.menuItems() : [];
     if (c === "tricks") {
       const T = window.EkoTricks;
       const IMG = { flip: "artSpark", pirouette: "artNote", balance: "artIcDiscreet", juggle: "artJuggle", magic: "artWand", bellyFull: "artCookie" };
@@ -337,7 +338,7 @@
   let capText = "", greetNext = false;
   const CAP = ES ? {
     play: ["¿A qué jugamos?", "¡Elige juego!"], care: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
-    notebook: ["Mi libreta"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"], tricks: ["¿Qué te enseño?", "¡Mira lo que sé hacer!"],
+    notebook: ["Mi libreta"], corner: ["Mi rinconcito", "¿Qué pongo en mi rincón?", "Mi casita en tu escritorio"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"], tricks: ["¿Qué te enseño?", "¡Mira lo que sé hacer!"],
   } : { play: ["What shall we play?"], care: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], notebook: ["My notebook"], remind: ["When?"], rps: ["Pick one!"] };
 
   function panel() {
@@ -395,7 +396,7 @@
     if (!capText) capText = levelId === "home" || levelId === "foryou" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     greetNext = false;
     const cap = p.querySelector(".mcap");
-    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : NAMES[cat]) : cat ? NAMES[cat] : "";
+    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : levelId === "corner" ? (ES ? "Mi rincón" : "My corner") : NAMES[cat]) : cat ? NAMES[cat] : "";
     cap.querySelector("b").textContent = ttl || capText;
     cap.querySelector("em").textContent = ttl ? capText : "";
     E.talk && E.talk(capText);

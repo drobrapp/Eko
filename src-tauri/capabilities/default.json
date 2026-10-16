@@ -7,7 +7,8 @@
     "settings",
     "ball",
     "chatbar",
-    "catch"
+    "catch",
+    "corner"
   ],
   "permissions": [
     "core:default",

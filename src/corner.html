@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Eko · rincón</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.d{position:absolute;transform-origin:50% 100%;filter:drop-shadow(0 3px 4px rgba(40,25,15,.28));user-select:none;pointer-events:none}
+.sp{position:absolute;width:14px;height:14px;pointer-events:none;animation:sp .8s ease-out forwards}
+@keyframes sp{0%{transform:scale(.3);opacity:0}30%{opacity:1}100%{transform:scale(1.1) translateY(-14px);opacity:0}}
+@keyframes wig{0%,100%{transform:rotate(0)}20%{transform:rotate(-5deg) scaleY(.96)}45%{transform:rotate(4deg)}70%{transform:rotate(-2deg)}}
+@keyframes hop{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-6px) scale(1.04,.97)}60%{transform:translateY(0) scale(.97,1.03)}}
+</style></head><body>
+<script>
+// Rincón de Eko: dibuja los muebles y sus pequeños efectos. Las posiciones vienen de la ventana de Eko.
+(() => {
+  const T = window.__TAURI__; if (!T) return;
+  const els = {}; let tilt = 0;
+  const spark = "art/fx-spark.webp", drop = "art/water-drop.webp";
+  T.event.listen("corner-layout", (e) => {
+    const p = e.payload || {}; tilt = p.tilt || 0;
+    const keep = new Set();
+    for (const it of p.items || []) {
+      keep.add(it.id);
+      let el = els[it.id];
+      if (!el) { el = els[it.id] = document.createElement("img"); el.className = "d"; el.draggable = false; document.body.appendChild(el); }
+      if (el.getAttribute("src") !== it.src) el.src = it.src;
+      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px" });
+      if (it.id === "frame" && !el.dataset.anim) el.style.transform = `rotate(${tilt}deg)`;
+    }
+    for (const id in els) if (!keep.has(id)) { els[id].remove(); delete els[id]; }
+  });
+  function sparkles(el, n, src = spark) {
+    const r = el.getBoundingClientRect();
+    for (let i = 0; i < n; i++) setTimeout(() => {
+      const s = document.createElement("img"); s.src = src; s.className = "sp";
+      s.style.left = r.left + Math.random() * (r.width - 14) + "px"; s.style.top = r.top + Math.random() * r.height * 0.6 + "px";
+      document.body.appendChild(s); setTimeout(() => s.remove(), 900);
+    }, i * 120);
+  }
+  T.event.listen("corner-fx", (e) => {
+    const { id, kind } = e.payload || {}; const el = els[id]; if (!el) return;
+    if (kind === "water") { el.style.animation = "none"; void el.offsetWidth; el.style.animation = "wig .7s ease"; }
+    if (kind === "happy") { el.style.animation = "none"; void el.offsetWidth; el.style.animation = "hop .6s ease"; sparkles(el, 4); }
+    if (kind === "shine") sparkles(el, 6);
+    if (kind === "fix") {
+      // vuelve a su sitio con un vaivén amortiguado
+      el.dataset.anim = 1; const a0 = tilt, t0 = performance.now();
+      const step = (now) => { const t = (now - t0) / 1000, a = a0 * Math.exp(-4 * t) * Math.cos(t * 14); el.style.transform = `rotate(${a.toFixed(2)}deg)`;
+        if (t < 1.4) requestAnimationFrame(step); else { el.style.transform = "rotate(0deg)"; delete el.dataset.anim; tilt = 0; } };
+      requestAnimationFrame(step); sparkles(el, 3);
+    }
+  });
+})();
+</script>
+</body></html>

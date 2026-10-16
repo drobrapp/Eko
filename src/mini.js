@@ -100,7 +100,7 @@ window.EkoMini = (() => {
   E.HOOKS.tick.push(() => {
     const m = A.mini || 1;
     if (m >= 0.99 || busy) { offSince = 0; return; }
-    const onIcon = S.perch && S.perch.icon;
+    const onIcon = (S.perch && S.perch.icon) || A.inRoom;
     const travelling = S.fly || (S.mode === "fly");
     if (onIcon || travelling || S.airborne || S.dragging || A.gameMode) { offSince = 0; return; }
     if (!offSince) offSince = A.t;

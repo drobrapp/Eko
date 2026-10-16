@@ -33,7 +33,7 @@ window.EkoProgress = (() => {
     13: { t: "Juego: tócame donde brille", id: "game:glow" },
     14: { t: "Accesorio: corona", id: "acc:crown" },
     15: { t: "Truco: malabares", id: "trick:juggle" },
-    16: { t: "Decoración: cuadro", id: "deco:frame" },
+    16: { t: "Cuadro: Eko dormilón", id: "deco:frame" },
     17: { t: "Accesorio: auriculares", id: "acc:headphones" },
     18: { t: "Juego: adivina qué pienso", id: "game:guess" },
     19: { t: "Truco: magia", id: "trick:magic" },

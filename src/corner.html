@@ -1,49 +1,79 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>Eko · rincón</title>
+<html><head><meta charset="utf-8"><title>Eko · habitación</title>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
-.d{position:absolute;transform-origin:50% 100%;filter:drop-shadow(0 3px 4px rgba(40,25,15,.28));user-select:none;pointer-events:none}
+#room{position:absolute;inset:0;transition:filter 2s ease}
+#room.night{filter:brightness(.62) saturate(.85) hue-rotate(-8deg)}
+#room.dusk{filter:brightness(.88) sepia(.15) saturate(1.1)}
+.bg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;user-select:none}
+#sky{position:absolute;border-radius:4px;overflow:hidden;transition:background 2s ease}
+#sky i{position:absolute;width:2px;height:2px;border-radius:50%;background:#FFF4E8;opacity:0;transition:opacity 2s}
+#sky.night i{opacity:.9}
+.d{position:absolute;user-select:none;pointer-events:none}
+.d img{width:100%;height:100%;display:block;transform-origin:50% 100%}
+.d.wall img{transform-origin:50% 0%;filter:drop-shadow(0 3px 3px rgba(60,35,20,.28))}
+.d.floor::after{content:"";position:absolute;left:8%;right:8%;bottom:-3px;height:9px;border-radius:50%;background:radial-gradient(closest-side,rgba(70,40,20,.38),transparent);z-index:-1}
+#glow{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity 2s;background:radial-gradient(circle at 26% 62%,rgba(255,190,110,.35),transparent 42%)}
+#room.night #glow{opacity:1}
 .sp{position:absolute;width:14px;height:14px;pointer-events:none;animation:sp .8s ease-out forwards}
 @keyframes sp{0%{transform:scale(.3);opacity:0}30%{opacity:1}100%{transform:scale(1.1) translateY(-14px);opacity:0}}
 @keyframes wig{0%,100%{transform:rotate(0)}20%{transform:rotate(-5deg) scaleY(.96)}45%{transform:rotate(4deg)}70%{transform:rotate(-2deg)}}
 @keyframes hop{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-6px) scale(1.04,.97)}60%{transform:translateY(0) scale(.97,1.03)}}
+@keyframes out{to{transform:translateY(-10px) scale(.6);opacity:0}}
+@keyframes in{from{transform:scale(.5);opacity:0}60%{transform:scale(1.08);opacity:1}to{transform:scale(1)}}
 </style></head><body>
+<div id="room"><img class="bg" id="bg" alt="" draggable="false"><div id="sky"></div><div id="layer"></div><div id="glow"></div></div>
 <script>
-// Rincón de Eko: dibuja los muebles y sus pequeños efectos. Las posiciones vienen de la ventana de Eko.
+// Habitación de Eko: fondo, ventana según la hora, muebles con su sombra y pequeños efectos.
 (() => {
   const T = window.__TAURI__; if (!T) return;
-  const els = {}; let tilt = 0;
-  const spark = "art/fx-spark.webp", drop = "art/water-drop.webp";
+  const $ = (s) => document.querySelector(s);
+  const room = $("#room"), sky = $("#sky"), layer = $("#layer");
+  const els = {}; let tilt = 0, shelfEl = null;
+  for (let i = 0; i < 7; i++) { const s = document.createElement("i"); s.style.left = (8 + Math.random() * 84) + "%"; s.style.top = (8 + Math.random() * 70) + "%"; sky.appendChild(s); }
+  const SKY = { day: "linear-gradient(#9CC9EE,#CFE6F7)", dawn: "linear-gradient(#F6C59B,#CFE0EE)", dusk: "linear-gradient(#5C5C9E,#F3A58A)", night: "linear-gradient(#1E2650,#34406B)" };
   T.event.listen("corner-layout", (e) => {
     const p = e.payload || {}; tilt = p.tilt || 0;
+    if ($("#bg").getAttribute("src") !== p.room) $("#bg").src = p.room;
+    const g = p.glass; Object.assign(sky.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px", background: SKY[p.sky] || SKY.day });
+    sky.className = p.sky; room.className = p.sky === "night" ? "night" : p.sky === "dusk" ? "dusk" : "";
+    if (p.shelf) {
+      if (!shelfEl) { shelfEl = document.createElement("img"); shelfEl.className = "d wallshelf"; shelfEl.draggable = false; layer.appendChild(shelfEl); }
+      shelfEl.src = p.shelf.src; Object.assign(shelfEl.style, { left: p.shelf.x + "px", top: p.shelf.y + "px", width: p.shelf.w + "px", height: p.shelf.h + "px", zIndex: 1, filter: "drop-shadow(0 3px 3px rgba(60,35,20,.25))" });
+    } else if (shelfEl) { shelfEl.remove(); shelfEl = null; }
     const keep = new Set();
     for (const it of p.items || []) {
       keep.add(it.id);
       let el = els[it.id];
-      if (!el) { el = els[it.id] = document.createElement("img"); el.className = "d"; el.draggable = false; document.body.appendChild(el); }
-      if (el.getAttribute("src") !== it.src) el.src = it.src;
-      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px" });
-      if (it.id === "frame" && !el.dataset.anim) el.style.transform = `rotate(${tilt}deg)`;
+      if (!el) { el = els[it.id] = document.createElement("div"); el.innerHTML = '<img alt="" draggable="false">'; layer.appendChild(el); }
+      el.className = "d " + (it.id === "frame" ? "wall" : "floor");
+      const img = el.firstChild;
+      if (img.getAttribute("src") !== it.src) img.src = it.src;
+      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.z + 1 });
+      if (it.id === "frame" && !el.dataset.anim) img.style.transform = `rotate(${tilt}deg)`;
     }
     for (const id in els) if (!keep.has(id)) { els[id].remove(); delete els[id]; }
   });
-  function sparkles(el, n, src = spark) {
+  function sparkles(el, n) {
     const r = el.getBoundingClientRect();
     for (let i = 0; i < n; i++) setTimeout(() => {
-      const s = document.createElement("img"); s.src = src; s.className = "sp";
+      const s = document.createElement("img"); s.src = "art/fx-spark.webp"; s.className = "sp";
       s.style.left = r.left + Math.random() * (r.width - 14) + "px"; s.style.top = r.top + Math.random() * r.height * 0.6 + "px";
       document.body.appendChild(s); setTimeout(() => s.remove(), 900);
     }, i * 120);
   }
+  const anim = (img, a) => { img.style.animation = "none"; void img.offsetWidth; img.style.animation = a; };
   T.event.listen("corner-fx", (e) => {
     const { id, kind } = e.payload || {}; const el = els[id]; if (!el) return;
-    if (kind === "water") { el.style.animation = "none"; void el.offsetWidth; el.style.animation = "wig .7s ease"; }
-    if (kind === "happy") { el.style.animation = "none"; void el.offsetWidth; el.style.animation = "hop .6s ease"; sparkles(el, 4); }
+    const img = el.firstChild;
+    if (kind === "water") anim(img, "wig .7s ease");
+    if (kind === "happy") { anim(img, "hop .6s ease"); sparkles(el, 4); }
     if (kind === "shine") sparkles(el, 6);
+    if (kind === "out") { el.dataset.anim = 1; anim(img, "out .45s ease forwards"); }
+    if (kind === "in") { anim(img, "in .55s cubic-bezier(.3,1.5,.5,1) forwards"); img.style.transform = "rotate(0deg)"; setTimeout(() => delete el.dataset.anim, 600); sparkles(el, 5); }
     if (kind === "fix") {
-      // vuelve a su sitio con un vaivén amortiguado
-      el.dataset.anim = 1; const a0 = tilt, t0 = performance.now();
-      const step = (now) => { const t = (now - t0) / 1000, a = a0 * Math.exp(-4 * t) * Math.cos(t * 14); el.style.transform = `rotate(${a.toFixed(2)}deg)`;
-        if (t < 1.4) requestAnimationFrame(step); else { el.style.transform = "rotate(0deg)"; delete el.dataset.anim; tilt = 0; } };
+      el.dataset.anim = 1; img.style.animation = "none"; const a0 = tilt, t0 = performance.now();
+      const step = (now) => { const t = (now - t0) / 1000, a = a0 * Math.exp(-4 * t) * Math.cos(t * 14); img.style.transform = `rotate(${a.toFixed(2)}deg)`;
+        if (t < 1.4) requestAnimationFrame(step); else { img.style.transform = "rotate(0deg)"; delete el.dataset.anim; tilt = 0; } };
       requestAnimationFrame(step); sparkles(el, 3);
     }
   });

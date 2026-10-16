@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.19.0": { important: true, lines: ["¡Ahora tengo mi propia habitación! Con ventana, cuadros que se van desbloqueando y todo", "Me hago pequeñito para entrar. ¡Ven a verme!"] },
     "0.18.0": { important: true, lines: ["¡He aprendido a hacerme pequeñito con mi varita! Así quepo en los iconos del escritorio"] },
     "0.17.0": { important: true, lines: ["¡Ya tengo mi rincón! Cama, maceta, cuadro y trofeo, que se desbloquean subiendo de nivel", "Lo encuentras en Armario → Mi rincón. Iré a dormir, regar y ordenar yo solito"] },
     "0.16.0": { important: true, lines: ["¡Tengo juegos nuevos! ¿Qué mano?, atrapa galletas, tócame donde brille y adivina qué pienso", "Se desbloquean subiendo de nivel. ¡Mira en Jugar!"] },

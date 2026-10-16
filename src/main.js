@@ -1955,12 +1955,13 @@
 
   // ---------- Doble clic en cualquier sitio: va hacia allí (y comenta si abres una carpeta) ----------
   function onDblClick(p) {
-    if (!p || A.hidden || S.sleeping || S.dragging || S.fly || discreet() || window.Eko.quiet) return;
+    // El doble clic lo haces tú: responde siempre (también en llamada o grabando); solo se calla los comentarios
+    if (!p || A.hidden || S.sleeping || S.dragging || S.fly) return;
     const cx = S.x + W / 2, feet = S.y + H;
     if (Math.abs(p.x - cx) < 70 && p.y > S.y + H - 160 && p.y < feet + 10) return;     // ha sido sobre el propio Eko
     if (window.EkoProgress) window.EkoProgress.event("dblclick");
     const before = window.Eko.lastSenses || {};
-    setTimeout(() => commentOpen(before), 1500);
+    if (!discreet()) setTimeout(() => commentOpen(before), 1500);
     if (cfgNow().walk === false || S.airborne || A.action || S.sulking) return;
     if (S.perch) {
       if (p.x > S.perch.x + 30 && p.x < S.perch.x + S.perch.w - 30) { S.mode = "walk"; S.speed = 120; S.targetX = clamp(p.x - W / 2, loX(), hiX()); S.then = null; S.modeUntil = A.t + 20; }

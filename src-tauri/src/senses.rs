@@ -23,6 +23,9 @@ pub static HIDE_FULLSCREEN: AtomicBool = AtomicBool::new(true);
 /// Programas de grabar pantalla (si alguno está abierto, se considera que estás grabando)
 const RECORDERS: &[&str] = &["obs64", "obs32", "obs", "bandicam", "bdcam", "camtasia", "camrec", "loom", "screenrec", "flashbackrecorder", "screencast-o-matic", "screenpresso", "action_x64"];
 
+/// Herramientas que graban pantalla con el micro sin ser una llamada (no ocultan a Eko)
+const CAPTURE_TOOLS: &[&str] = &["snipping", "screenclipping", "gamebar", "xboxgamebar", "broadcastdvr", "clipchamp", "sharex", "nvcontainer", "nvidia share", "radeonsoftware", "obs", "bandicam", "camtasia", "loom", "screenrec", "screenpresso", "action_x64", "flashback", "screencast"];
+
 #[derive(Serialize, Clone, Default)]
 pub struct Music {
     title: String,
@@ -161,7 +164,12 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
 
             let (battery, charging) = power();
             let mic_apps = mic_users();
-            let in_call = !mic_apps.is_empty();
+            // Grabar la pantalla también usa el micro, pero no es una llamada: Eko sigue normal
+            let in_call = mic_apps.iter().any(|a| {
+                let n = a.to_lowercase();
+                let n = n.trim_end_matches(".exe");
+                !RECORDERS.contains(&n) && !CAPTURE_TOOLS.iter().any(|c| n.contains(c))
+            });
             #[cfg(windows)]
             let music = media.current();
             #[cfg(not(windows))]

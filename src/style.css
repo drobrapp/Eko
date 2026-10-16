@@ -643,3 +643,7 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .ghud img { width: 22px; height: 22px; }
 .ghud .glives { color: #D0795A; font-size: 11px; letter-spacing: 1px; }
 .ghud .gx { width: 22px; height: 22px; border: none; border-radius: 50%; background: #efe3da; color: #6b5348; font: 700 13px "Segoe UI", system-ui, sans-serif; line-height: 22px; padding: 0; cursor: pointer; }
+
+/* Eko pequeñito (subido a un icono): los bocadillos bajan con su cabeza */
+#bubble, #thought { translate: 0 calc((1 - var(--sc, 1)) * 140px); }
+#wish { translate: 0 calc((1 - var(--sc, 1)) * 60px); }

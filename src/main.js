@@ -699,6 +699,18 @@
   // Vuela con la capa hasta un icono del escritorio y se posa encima (lo usa desktop.js)
   function visitIcon(ic, then) {
     if (S.fly || S.airborne || S.dragging || S.sleeping || S.sulking) return false;
+    // primero se encoge con la varita para caber en el icono (y luego vuela hasta él)
+    const want = window.EkoMini ? window.EkoMini.sizeFor(ic) : 1;
+    if (window.EkoMini && Math.abs((A.mini || 1) - want) > 0.05 && !visitIcon.magic) {
+      visitIcon.magic = true;
+      const started = window.EkoMini.shrink(want, (ok) => { visitIcon.magic = false; if (ok && !S.dragging && !S.sleeping) flyToIcon(ic, then); });
+      if (started) return true;
+      visitIcon.magic = false;
+    }
+    return flyToIcon(ic, then);
+  }
+  function flyToIcon(ic, then) {
+    if (S.fly || S.airborne || S.dragging || S.sleeping || S.sulking) return false;
     const cx = ic.x + ic.w / 2, top = ic.y + 6;
     const perch = { id: "icon:" + ic.name, icon: true, x: cx - 45, y: top, w: 90, h: ic.h };
     const x1 = cx - W / 2, y1 = top - H + PERCH_SINK;
@@ -2023,7 +2035,7 @@
     sayChat: (text, ms = 4000) => { A.chatLock = Math.max(A.chatLock || 0, A.t + ms / 1000 + 5); A.chatBypass = true; try { say(text, ms, true); } finally { A.chatBypass = false; } },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,
     ACTIONS, HOOKS, el, fxLayer, stage, startPeek, busy: () => busy(), perchRoom: (c) => perchRoom(c), setFlyGear: (k) => setFlyGear(k),
-    onWin, onWinEv, win: WIN, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
+    onWin, onWinEv, win: WIN, setMini, climb: () => { WIN.nextBigAt = 0; if (perchRoom(WIN.cur) && !S.perch) { S.mode = "walk"; S.speed = 58; S.then = "climb"; S.modeUntil = A.t + 30; const c = WIN.cur; S.targetX = clamp(clamp(S.x + W / 2, c.x + 90, c.x + c.w - 90) - W / 2, minX() + 40, maxX() - 40); } }, hunt: startHunt, getDown: (style) => getDown(style), visitIcon, dblclick: (p) => onDblClick(p),
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
@@ -2073,14 +2085,23 @@
   const pod = $("#pod");
   // Única fuente de verdad de la zona clicable: o toda la ventana (menú, tarjetas, juegos) o solo Eko
   let hitFull = false;
+  // Tamaño «mágico» (para subirse a los iconos): escala con los pies como punto fijo
+  function setMini(m) {
+    A.mini = clamp(m, 0.2, 1);
+    pod.style.transition = "transform .5s cubic-bezier(.3, 1.7, .5, 1)";
+    stage.style.setProperty("--sc", A.mini.toFixed(3));
+    applySettings(cfgNow());
+    setTimeout(() => { pod.style.transition = ""; if (NATIVE) sendHitbox(); }, 560);
+  }
   function sendHitbox() {
     if (hitFull) { invoke("set_hitbox", { x: 0, y: 0, w: W, h: H }); return; }
     const r = hit.getBoundingClientRect();
     invoke("set_hitbox", { x: r.left, y: r.top, w: r.width, h: r.height });
   }
   function applySettings(cfg) {
-    pod.style.transform = cfg.size && cfg.size !== 1 ? `scale(${cfg.size})` : "";
-    Voice.base = cfg.pitch || 560;
+    const sc = (cfg.size || 1) * (A.mini || 1);
+    pod.style.transform = sc !== 1 ? `scale(${sc})` : "";
+    Voice.base = (cfg.pitch || 560) * ((A.mini || 1) < 0.95 ? 1.3 : 1);
     Voice.on = !!cfg.voice;
     invoke("set_sound_menu", { value: Voice.on }).catch(() => {});
     invoke("set_discretion", { call: cfg.hideCall !== false, record: cfg.hideRecord !== false, fullscreen: cfg.hideFull !== false }).catch(() => {});

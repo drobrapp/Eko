@@ -413,29 +413,44 @@
       return pr.top - sr.top;
     } catch (_) { return 250; }
   }
-  // El panel nunca tapa a Eko: se apoya encima de su cabeza y, si no cabe, se encoge
+  // El panel nunca tapa a Eko: se apoya encima de su cabeza y, si no cabe, se encoge.
+  // El ancla se fija al abrir (Eko respira y se mueve; el panel no debe bailar con él)
+  // y solo baja si la cara sube de verdad (nunca vuelve a subir mientras está abierto).
+  let anchor = null;
+  function anchorTop() {
+    const t = headTop();
+    if (anchor == null || t < anchor - 10) anchor = t;
+    return anchor;
+  }
   function fitPanel() {
     const p = menu.querySelector(".mpanel"); if (!p) return;
-    const sr = stage.getBoundingClientRect(), top = headTop();
+    const sr = stage.getBoundingClientRect(), top = anchorTop();
     const gap = 16, margin = 6;
-    const avail = Math.max(80, top - gap - margin);
-    p.style.bottom = Math.round(sr.height - (top - gap)) + "px";
-    const hd = p.querySelector(".mhead"), bd = p.querySelector(".mbody");
-    const natural = Math.min(216, (hd ? hd.offsetHeight + 6 : 36) + (bd ? bd.scrollHeight : 160) + 18);
-    const fit = avail >= natural ? 1 : Math.max(0.8, avail / natural);
-    p.style.maxHeight = Math.round(Math.min(216, avail / fit)) + "px";
-    p.style.setProperty("--fit", fit.toFixed(3));
+    const bottomY = top - gap, room = Math.max(80, bottomY - margin);
+    p.style.bottom = Math.round(sr.height - bottomY) + "px";
+    p.style.transformOrigin = "50% 100%";
+    p.style.maxHeight = "216px";
+    const H = p.offsetHeight;                    // altura real (el transform no la cambia)
+    let fit = Math.min(1, room / H);
+    if (fit < 0.8) { fit = 0.8; p.style.maxHeight = Math.floor(room / fit) + "px"; }
+    const f = fit.toFixed(3);
+    if (p.style.getPropertyValue("--fit") !== f) p.style.setProperty("--fit", f);
   }
   // Las tarjetas (preguntas, notas, juegos…) tampoco: si son altas, suben
   function fitCard(c) {
     if (!c) return;
     requestAnimationFrame(() => {
-      const top = headTop(), h = c.offsetHeight;
+      const top = anchorTop(), h = c.offsetHeight;
       c.style.top = Math.round(Math.max(6, Math.min(70, top - 14 - h))) + "px";
       c.style.maxHeight = Math.round(Math.max(90, top - 20)) + "px";
     });
   }
-  setInterval(() => { if (open) fitPanel(); const c = document.querySelector(".card.in"); if (c) fitCard(c); }, 400);
+  setInterval(() => {
+    const c = document.querySelector(".card.in");
+    if (!open && !c) { anchor = null; return; }
+    const before = anchor; anchorTop();
+    if (anchor !== before) { if (open) fitPanel(); if (c) fitCard(c); }
+  }, 400);
   window.EkoFit = { card: fitCard, headTop };
 
   function tile(it, i) {
@@ -562,7 +577,7 @@
   }
   function close() {
     if (!open) return;
-    open = false;
+    open = false; anchor = null;
     stage.classList.remove("menu-open");
     E.setMenuPose(false);
     E.hold(2);

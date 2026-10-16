@@ -59,7 +59,7 @@
       if (!invoke) { await new Promise((r) => setTimeout(r, 900)); reply = `[divertido] Esto es la vista previa: en tu PC te respondería la IA de verdad. ¡Has dicho «${text.slice(0, 30)}»! {salta}`; }
       else {
         const body = {
-          model: cfg().aiModel || "qwen2.5:7b", stream: false, keep_alive: "10m",
+          model: cfg().aiModel || "qwen2.5:7b", stream: false, keep_alive: "3m",
           messages: [{ role: "system", content: system() }, ...EXAMPLES, ...history],
           options: Object.assign({ temperature: 0.7, top_p: 0.9, repeat_penalty: 1.1, num_predict: 110 }, cfg().aiCpu ? { num_gpu: 0 } : {}),
         };

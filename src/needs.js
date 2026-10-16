@@ -67,6 +67,7 @@ window.EkoNeeds = (() => {
     hug:   { love: 12 },
   };
   function give(src) {
+    if (window.EkoProgress) window.EkoProgress.earn(src);
     const g = GIVE[src]; if (!g || !on()) return;
     const now = Date.now();
     N.log = (N.log || []).filter((x) => now - x.t < 1800000);

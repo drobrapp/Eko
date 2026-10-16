@@ -60,6 +60,7 @@
   // Va hasta el icono, se posa encima, comenta y se queda sentado un rato
   function visit(icon, line, extra) {
     if (!E.visitIcon(icon, () => {
+      if (window.EkoProgress) window.EkoProgress.event("iconVisit");
       const sit = rnd(7, 12);
       if (E.S.perch) E.S.perch.until = E.A.t + sit;
       E.S.mode = "sit"; E.S.modeUntil = E.A.t + 2;

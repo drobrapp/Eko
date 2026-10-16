@@ -37,6 +37,9 @@
     section h2 i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
     section h2 + .row { border-top: none; }
+    .help { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 4px 0 10px; font-size: 13px; }
+    .help dt { font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .help dd { margin: 0; color: var(--soft); }
     .row > label, .row > .lab { flex: 1; min-width: 0; }
     .row > label.switch { flex: none; }
     .row small { display: block; color: var(--soft); font-size: 12px; }
@@ -87,7 +90,7 @@
 
   <nav>
     <a href="#s-you">Eko y tú</a><a href="#s-pers">Cómo soy</a><a href="#s-beh">Qué hago</a>
-    <a href="#s-well">Te cuido</a><a href="#s-apps">Lo que comento</a><a href="#s-sys">Lo técnico</a><a href="#s-priv">Tus datos</a>
+    <a href="#s-well">Te cuido</a><a href="#s-apps">Lo que comento</a><a href="#s-help">Qué sé hacer</a><a href="#s-sys">Lo técnico</a><a href="#s-priv">Tus datos</a>
   </nav>
 
   <main>
@@ -155,6 +158,24 @@
       <div style="height:10px"></div>
     </section>
 
+    <section id="s-help">
+      <h2><i></i>Qué sé hacer (chuleta)</h2>
+      <dl class="help">
+        <dt>Clic</dt><dd>Me saludas y doy un saltito. Si me he escondido, me has pillado</dd>
+        <dt>Clic derecho</dt><dd>Mi menú: Para ti, Jugar, Cuidarme, Armario, Te ayudo y Libreta</dd>
+        <dt>Arrastrarme</dt><dd>Me coges y me llevas adonde quieras (también encima de las ventanas)</dd>
+        <dt>Doble clic en la pantalla</dt><dd>Voy corriendo a ese sitio</dd>
+        <dt>Necesidades</dt><dd>Hambre, energía, diversión y cariño. Cuando me falta algo, verás lo que quiero en un bocadillo</dd>
+        <dt>Amistad</dt><dd>Cada vez que me haces caso subimos de nivel (hasta el 20) y aprendo cosas nuevas: juegos, trucos, accesorios…</dd>
+        <dt>Logros</dt><dd>Retos que se guardan en mi libreta. Algunos desbloquean ropa para el armario</dd>
+        <dt>Regarme</dt><dd>Mi brote crece si me riegas en días distintos, y se mustia si pasan dos días sin agua</dd>
+        <dt>Voz</dt><dd>Si activas «Te escucho», di mi nombre y una orden: «baila», «ven aquí», «a dormir», «qué sabes hacer»…</dd>
+        <dt>Hablar conmigo</dt><dd>Con la IA activada, escríbeme en la barrita del escritorio</dd>
+        <dt>Escritorio</dt><dd>Si me dejas, visito tus iconos y comento las carpetas que abres</dd>
+        <dt>Me escondo</dt><dd>En llamadas, grabaciones y pantalla completa me quito de en medio</dd>
+      </dl>
+      <div class="row"><div class="lab">Misiones de bienvenida<small>Te enseño lo básico paso a paso</small></div><button class="btn ghost" id="replayMissions">Repetir</button></div>
+    </section>
     <section id="s-sys">
       <h2><i></i>Lo técnico (aburrido, pero necesario)</h2>
       <div class="row"><label for="autostart">Arrancar con Windows</label><label class="switch"><input type="checkbox" id="autostart" /><span></span></label></div>

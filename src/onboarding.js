@@ -230,6 +230,7 @@
     E.hold(4);
     E.act("hug");
     E.say(TX.end(S.get().userName), 3200, true);
+    setTimeout(() => window.EkoProgress && window.EkoProgress.startMissions(), 5000);
   }
 
   window.EkoOnboarding = { run, pending: () => !done() };

@@ -221,4 +221,11 @@
 
   S.onChange(fill);
   fill();
+  // Repetir las misiones de bienvenida (las arranca la ventana de Eko)
+  const rm = $("#replayMissions");
+  if (rm) rm.addEventListener("click", () => {
+    try { window.__TAURI__ && window.__TAURI__.event.emit("cmd", "missions"); } catch (_) {}
+    try { localStorage.setItem("eko-missions-replay", String(Date.now())); } catch (_) {}
+    says && says("¡Vale! Mira, que te enseño");
+  });
 })();

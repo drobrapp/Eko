@@ -921,6 +921,7 @@
     if (first) CARE.days.push(today);
     CARE.last = Date.now(); CARE.wilted = false; saveCare();
     if (window.EkoNeeds) window.EkoNeeds.give("water");
+    if (window.EkoProgress) window.EkoProgress.event("waterDay", CARE.days.length);
     const st = careStage();
     if (st > before && EVO.shown < st) { setTimeout(() => celebrateStage(st), 900); return "grow"; }
     A.sprPop = 0.55; A.sprPopV = 0;
@@ -970,6 +971,7 @@
   }
   // De vez en cuando se pone pajarita porque sí (≈ una vez cada pocas horas de uso)
   function dressUp(force) {
+    if (window.EkoProgress && !window.EkoProgress.has("acc:bowtie")) return false;      // la pajarita se desbloquea en el nivel 8
     if (!force && (S.sleeping || A.hidden || PROP.cur || busy() || currentAcc() === "scarf" || currentAcc() === "ghost")) return false;
     if (!useProp("bowtie", force ? 600 : rnd(900, 1800), force ? 0 : 240)) return false;
     express("orgulloso", 2.5);
@@ -1811,19 +1813,21 @@
   // ---------- Ratón: coger, lanzar, toquecito ----------
   let downX = 0, downY = 0, offX = 0, offY = 0, downT = 0, prevX = 0, prevY = 0, prevT = 0;
 
+  // En la app, coordenadas de pantalla; en el navegador (vista previa, móvil), las de la página
+  const sxOf = (e) => (NATIVE ? e.screenX : e.clientX), syOf = (e) => (NATIVE ? e.screenY : e.clientY);
   hit.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     hit.setPointerCapture(e.pointerId);
     S.pressed = true;
     Voice.ensure();
-    downX = e.screenX; downY = e.screenY; downT = performance.now();
-    offX = e.screenX - S.x; offY = e.screenY - S.y;
+    downX = sxOf(e); downY = syOf(e); downT = performance.now();
+    offX = sxOf(e) - S.x; offY = syOf(e) - S.y;
     prevX = S.x; prevY = S.y; prevT = downT;
   });
 
   hit.addEventListener("pointermove", (e) => {
     if (!S.pressed) return;
-    if (!S.dragging && Math.hypot(e.screenX - downX, e.screenY - downY) > 5) {
+    if (!S.dragging && Math.hypot(sxOf(e) - downX, syOf(e) - downY) > (e.pointerType === "touch" ? 12 : 5)) {
       S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null; S.perch = null; S.sneak = false; WIN.pendDx = 0;
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; }
       if (window.EkoMenu) window.EkoMenu.close();
@@ -1839,8 +1843,8 @@
     }
     if (S.dragging) {
       const now = performance.now();
-      S.x = e.screenX - offX;
-      S.y = Math.min(e.screenY - offY, floorY());
+      S.x = sxOf(e) - offX;
+      S.y = Math.min(syOf(e) - offY, floorY());
       const dtm = Math.max(1, now - prevT) / 1000;
       S.vx = S.vx * 0.5 + ((S.x - prevX) / dtm) * 0.5;
       S.vy = S.vy * 0.5 + ((S.y - prevY) / dtm) * 0.5;
@@ -1875,7 +1879,7 @@
         const lvl = A.dizzy;
         DRAG.dizzyLanding = lvl;
       } else setTimeout(() => { if (!S.airborne && !(A.action && A.action.name === "dizzy") && Math.random() < 0.5) say(pickNew(TXT.drop)); }, 900);
-    } else if (performance.now() - downT < 350 && downBtn === 0) {
+    } else if (performance.now() - downT < 450 && downBtn === 0) {
       // Clic = salta y dice algo (el menú va con el botón derecho)
       tap();
     }
@@ -1930,6 +1934,7 @@
     if (!p || A.hidden || S.sleeping || S.dragging || S.fly || discreet() || window.Eko.quiet) return;
     const cx = S.x + W / 2, feet = S.y + H;
     if (Math.abs(p.x - cx) < 70 && p.y > S.y + H - 160 && p.y < feet + 10) return;     // ha sido sobre el propio Eko
+    if (window.EkoProgress) window.EkoProgress.event("dblclick");
     const before = window.Eko.lastSenses || {};
     setTimeout(() => commentOpen(before), 1500);
     if (cfgNow().walk === false || S.airborne || A.action || S.sulking) return;
@@ -1997,6 +2002,7 @@
     setHot(v) { A.hot = !!v; stage.classList.toggle("mood-hot", !!v); },
     setGlasses(v) { stage.classList.toggle("has-glasses", !!v); },
     setHat(mode) { accMode = mode; applyAcc(true); },
+    hat: () => accMode,
     fly: (k) => startFlight(k),
     quiet: false,
     setHidden(v) { A.hidden = !!v; },

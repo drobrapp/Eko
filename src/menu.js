@@ -44,6 +44,9 @@
     feather: '<path d="M20 4c-7 0-13 5-13 12v4M7 16h7M10 12h7"/>',
     sparkle: '<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/>',
     back: '<path d="M14.5 6l-6 6 6 6"/>',
+    lock: '<rect x="5.5" y="11" width="13" height="9" rx="2"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/>',
+    close: '<path d="M7 7l10 10M17 7L7 17"/>',
+    ask: '<path d="M9 9a3 3 0 1 1 4.5 2.6c-.9.5-1.5 1.2-1.5 2.2v.7"/><circle cx="12" cy="18" r=".9" fill="currentColor"/>',
     swatch: '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',
     none: '<circle cx="12" cy="12" r="7.5"/><path d="M6.7 17.3L17.3 6.7"/>',
   };
@@ -198,7 +201,7 @@
     add(1, { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote });
     c.sort((a, b) => b.score - a.score);
     const out = [], seen = new Set();
-    for (const { item } of c) { if (seen.has(item.id)) continue; seen.add(item.id); out.push(item); if (out.length === 2) break; }
+    for (const { item } of c) { if (seen.has(item.id)) continue; seen.add(item.id); out.push(item); if (out.length === (open ? 5 : 2)) break; }
     out.push({ icon: "sparkle", label: L.other, go: "root", react: "curioso" });
     return out;
   }
@@ -244,82 +247,238 @@
   }
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && open) close(); });
 
-  // ---------- Dibujo del menú ----------
-  const HEAD = { x: 210, y: 282 };          // centro de la cabeza dentro de la ventana
-  let open = false, level = null;
-
-  function layout(n) {
-    const out = [];
-    if (n > 7) {                      // muchas opciones (armario): rejilla encima de la cabeza
-      const cols = 4, rows = Math.ceil(n / cols);
-      for (let i = 0; i < n; i++) {
-        const r = Math.floor(i / cols), c = i % cols, inRow = Math.min(cols, n - r * cols);
-        out.push({ x: HEAD.x + (c - (inRow - 1) / 2) * 78, y: HEAD.y - 104 - (rows - 1 - r) * 68, small: true });
+  // ---------- Dibujo del menú: panel con categorías a la izquierda ----------
+  let open = false, level = null, cat = "foryou";
+  const PG = () => window.EkoProgress;
+  const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta" }
+                   : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook" };
+  const CATS = [["foryou", "sparkle"], ["play", "play"], ["care", "cookie"], ["wardrobe", "hanger"], ["util", "util"], ["notebook", "book"]];
+  const SUBS = { rps: "play", remind: "util", shortcuts: "util" };
+  const lockLvl = (id) => { const P = PG(); if (!P) return 0; for (const [n, d] of Object.entries(P.LEVELS)) if (d.id === id) return +n; return 0; };
+  // Lo que hay en cada categoría
+  const HATS = [["witch", "artHatWitch", "halloween"], ["pumpkin", "artHatPumpkin", "halloween"], ["vampire", "artCape", "halloween"], ["ghost", "artPuff", "halloween"],
+    ["santa", "artHatSanta", "xmas"], ["reindeer", "artAntler", "xmas"], ["elf", "artHatElf", "xmas"], ["scarf", "artScarf", 10], ["party", "artHatParty", "bday"], ["crown", "artHatCrown", 14]];
+  const ACH_NAME = { halloween: "Noche de miedo", xmas: "Navidad juntos", bday: "Cumpleaños" };
+  function items(c) {
+    const P = PG();
+    if (c === "play") {
+      const g = (id, icon, label, run, lvlId, soon) => ({ id, icon, label, run, lock: lvlId, soon });
+      return [
+        { id: "letsplay", react: "emocionado", icon: "play", label: ES ? "¡Sorpréndeme!" : "Surprise me!", run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : (ES ? "¡Sorpréndeme!" : "Surprise me!")) },
+        { id: "ball", react: "emocionado", img: "artBall", label: L.ball, run: () => (ball ? stowBall() : startGame("ball")), dyn: () => (ball ? L.stowBall : L.ball) },
+        { id: "rps", react: "picaro", icon: "scissors", label: L.rps, run: () => startGame("rps"), keep: true },
+        g("hide", "hide", L.hide, () => startGame("hide"), "game:hide"),
+        { id: "trick", react: "picaro", icon: "star", label: L.trick, run: trick },
+        g("hand", "dice", L.hand, null, "game:hand", 1),
+        g("catch", "cookie", ES ? "Atrapa galletas" : "Cookie catch", null, "game:catch", 1),
+        g("glow", "sparkle", ES ? "Tócame donde brille" : "Touch the glow", null, "game:glow", 1),
+        g("guess", "ask", ES ? "Adivina qué pienso" : "Guess my thought", null, "game:guess", 1),
+      ];
+    }
+    if (c === "care") return [
+      { id: "snack", react: "divertido", img: "artCookie", label: ES ? "Comida" : "Food", run: giveSnack },
+      { id: "water", react: "esperanzado", img: "artCan", label: L.water, run: () => startWater() },
+      { id: "hug", react: "enamorado", img: "artHeart", label: ES ? "Abrazo" : "Hug", run: hug },
+      { id: "sleep", react: "yawn", img: "artNightcap", label: L.sleep, run: () => E.goToSleep() },
+    ];
+    if (c === "wardrobe") {
+      const out = [{ id: "auto", icon: "sparkle", label: L.auto, run: () => E.setHat("auto"), keep: true, on: () => hatNow() === "auto" }];
+      for (const [id, img, gate] of HATS) {
+        const it = { id: "hat-" + id, img, icon: img ? null : "swatch", color: "#c9cedb", label: (COSTUMES.find((x) => x[0] === id) || [])[1] || id, keep: true, run: () => E.setHat(id), on: () => hatNow() === id };
+        if (P) {
+          if (typeof gate === "number") { if (!P.has("acc:" + id)) { it.lockText = (ES ? "Nivel " : "Level ") + gate; it.locked = true; } }
+          else if (!P.has("acc:" + id)) { it.locked = true; it.lockText = (ES ? "Logro: " : "Achievement: ") + ACH_NAME[gate]; }
+        }
+        out.push(it);
       }
+      out.push({ id: "nohat", icon: "back", label: L.none, keep: true, run: () => E.setHat("none"), on: () => hatNow() === "none" });
       return out;
     }
-    const radius = n <= 4 ? 122 : n <= 5 ? 138 : n <= 6 ? 150 : 164;  // arco por encima de la cabeza
-    for (let i = 0; i < n; i++) {
-      const a = (n === 1 ? 270 : 200 + 140 * (i / (n - 1))) * Math.PI / 180;
-      out.push({ x: HEAD.x + Math.cos(a) * radius, y: HEAD.y + Math.sin(a) * radius });
+    if (c === "util") return [
+      { id: "remind", react: "curioso", icon: "bell", label: L.remind, go: "remind" },
+      { id: "pomo", react: "orgulloso", icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
+      { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote },
+      { icon: "list", label: L.tasks, run: showTasks },
+      { icon: "download", label: L.lastdl, run: () => native("open_last_download") },
+      { icon: "folder", label: L.dlfolder, run: () => native("open_downloads") },
+      { icon: "camera", label: L.shot, run: () => native("screenshot") },
+      { icon: "pause", label: L.playpause, run: () => native("media_play_pause"), keep: true },
+      { icon: "next", label: L.nexttrack, run: () => native("media_next"), keep: true },
+      { icon: "mute", label: L.mute, run: muteHour },
+      { icon: "feather", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
+    ];
+    if (c === "foryou") {
+      const s = buildSmart().filter((x) => x.go !== "root");
+      if (window.EkoChat && window.EkoChat.enabled()) s.unshift({ id: "chat", react: "curioso", icon: "sparkle", label: ES ? "Habla conmigo" : "Talk to me", run: () => window.EkoChat.open() });
+      return s.slice(0, 6);
     }
-    return out;
+    if (c === "rps") return TREE.rps.map((x) => ({ ...x, keep: false }));
+    if (c === "remind") return TREE.remind.map((x) => ({ ...x, chip: true }));
+    return [];
   }
+  const hatNow = () => (E.hat ? E.hat() : "auto");
+  function hug() { E.act("hug"); window.EkoNeeds && window.EkoNeeds.give("hug"); E.fx("heart", 2); E.say(pick(ES ? ["¡Achuchón!", "Qué gustito…", "¡Te quiero!"] : ["Squeeze!", "So nice…", "Love you!"]), 2200, true); }
 
-  // Lo que dice Eko encima de las burbujas en cada nivel
+  // Lo que dice Eko arriba del panel en cada categoría
   let capText = "", greetNext = false;
   const CAP = ES ? {
-    root: ["¿Qué más te apetece?", "Todo lo que sé hacer"], treats: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
-    rest: ["¿Descansamos?"], remind: ["¿Cuándo te aviso?"], shortcuts: ["Atajos rápidos"], rps: ["¡Elige! Sin trampas"],
-  } : { root: ["What else?"], treats: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], rest: ["Rest?"], remind: ["When?"], shortcuts: ["Shortcuts"], rps: ["Pick one!"] };
-  function render(levelId) {
-    level = levelId;
-    menu.innerHTML = "";
-    capText = "";
-    const items = (levelId === "smart" ? buildSmart() : levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : TREE[levelId]).filter((it) => !it.when || it.when());
-    if (!capText) capText = (levelId === "smart" || (levelId === "root" && greetNext)) ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
-    greetNext = false;
-    const pos = layout(items.length);
-    const all = [...items];
-    if (levelId !== "root" && levelId !== "smart" && levelId !== "ask" && levelId !== "update") { all.unshift({ icon: "back", label: L.back, back: true }); pos.unshift({ x: HEAD.x - 158, y: HEAD.y + 34 }); }
-    all.forEach((it, i) => {
-      const b = document.createElement("button");
-      b.className = "blob" + (it.back ? " back" : "") + (it.text ? " txt" : "") + (it.chip ? " chip" : "") + (pos[i].small ? " small" : "");
-      b.style.setProperty("--x", pos[i].x + "px");
-      b.style.setProperty("--y", pos[i].y + "px");
-      b.style.setProperty("--d", i * 45 + "ms");
-      b.style.setProperty("--r", Math.random() * 2 + "s");
-      const label = it.dyn ? it.dyn() : it.label;
-      b.innerHTML = (it.text ? `<b>${it.text}</b>` : it.img ? `<img class="ic" src="${artSrc(it.img)}" alt="">` : svg(it.icon, it.color)) + (label ? `<span>${label}</span>` : "");
-      b.addEventListener("click", (ev) => { ev.stopPropagation(); choose(it); });
-      b.addEventListener("mouseenter", () => { E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 80, 1000 + i * 80, 0.05, 0.015); hoverReact(it); });
-      menu.appendChild(b);
-      requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add("in")));
-    });
-    if (capText) {
-      const top = Math.min(...pos.map((q) => q.y)) - 62;
-      const c = document.createElement("div");
-      c.className = "mcap"; c.textContent = capText;
-      c.style.setProperty("--y", Math.max(6, top) + "px");
-      menu.appendChild(c);
-      requestAnimationFrame(() => requestAnimationFrame(() => c.classList.add("in")));
-      E.talk && E.talk(capText);
-    }
+    play: ["¿A qué jugamos?", "¡Elige juego!"], care: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
+    notebook: ["Mi libreta"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"],
+  } : { play: ["What shall we play?"], care: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], notebook: ["My notebook"], remind: ["When?"], rps: ["Pick one!"] };
+
+  function panel() {
+    let p = menu.querySelector(".mpanel");
+    if (p) return p;
+    p = document.createElement("div");
+    p.className = "mpanel";
+    p.innerHTML = `<header class="mhead"><button type="button" class="mback">${svg("back")}</button><p class="mcap"><b></b><em></em></p>
+      <button type="button" class="mgear" title="${L.settings}">${svg("sliders")}</button><button type="button" class="mx">${svg("close")}</button></header><div class="mbody"></div>`;
+    p.querySelector(".mback").addEventListener("click", (e) => { e.stopPropagation(); E.Voice.tone && E.Voice.tone("sine", 800, 600, 0.05, 0.015); render(SUBS[level] || "home"); });
+    p.querySelector(".mgear").addEventListener("click", (e) => { e.stopPropagation(); close(); openSettings(); });
+    p.querySelector(".mx").addEventListener("click", (e) => { e.stopPropagation(); close(); });
+    menu.appendChild(p);
+    return p;
   }
+  const CAT_REACT = { play: "emocionado", care: "esperanzado", wardrobe: "orgulloso", util: "curioso", notebook: "orgulloso", foryou: "contento" };
+  function render(levelId) {
+    if (levelId === "root" || levelId === "smart") levelId = "home";
+    const p = panel();
+    level = levelId;
+    const isSub = !!SUBS[levelId];
+    const home = levelId === "home" || levelId === "ask" || levelId === "update";
+    cat = isSub ? SUBS[levelId] : home ? null : levelId;
+    p.classList.toggle("sub", !home);
+    p.dataset.c = cat || "home";
+    const body = p.querySelector(".mbody");
+    capText = "";
+    let list = null;
+    if (levelId === "home") {
+      body.innerHTML = "";
+      const grid = document.createElement("div");
+      grid.className = "mcats";
+      CATS.forEach(([id, ic], i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "mcat"; b.dataset.c = id; b.style.setProperty("--d", i * 35 + "ms");
+        b.innerHTML = `<span class="mci">${svg(ic)}</span><span class="mlb">${NAMES[id]}</span>`;
+        b.addEventListener("click", (e) => { e.stopPropagation(); E.Voice.tone && E.Voice.tone("sine", 700, 900, 0.05, 0.015); render(id); });
+        b.addEventListener("mouseenter", () => hoverReact({ react: CAT_REACT[id] }));
+        grid.appendChild(b);
+      });
+      body.appendChild(grid);
+      const m = PG() && PG().missions();
+      if (m && m.running) { const d = document.createElement("p"); d.className = "mhint"; d.innerHTML = `${ES ? "Misión" : "Mission"} ${m.i + 1}/${m.list.length}: <b>${m.list[m.i].t}</b>`; body.appendChild(d); }
+    } else if (levelId === "notebook") { body.innerHTML = notebookHTML(); wireNotebook(body); capText = notebookCap(); if (PG()) PG().event("notebook"); }
+    else {
+      list = (levelId === "ask" ? buildAsk() : levelId === "update" ? buildUpdate() : items(levelId)).filter((it) => !it.when || it.when());
+      const chips = list.length && list.every((x) => x.chip || x.text);
+      body.innerHTML = "";
+      const grid = document.createElement("div");
+      grid.className = chips ? "mchips" : "mgrid";
+      list.forEach((it, i) => grid.appendChild(tile(it, i)));
+      body.appendChild(grid);
+    }
+    if (!capText) capText = levelId === "home" || levelId === "foryou" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
+    greetNext = false;
+    const cap = p.querySelector(".mcap");
+    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : NAMES[cat]) : cat ? NAMES[cat] : "";
+    cap.querySelector("b").textContent = ttl || capText;
+    cap.querySelector("em").textContent = ttl ? capText : "";
+    E.talk && E.talk(capText);
+    body.classList.remove("swap"); void body.offsetWidth; body.classList.add("swap");
+    body.scrollTop = 0;
+  }
+  function tile(it, i) {
+    const b = document.createElement("button");
+    b.type = "button";
+    const label = it.dyn ? it.dyn() : it.label;
+    const P = PG();
+    const lvl = it.lock ? lockLvl(it.lock) : 0;
+    const locked = it.locked || (it.lock && P && !P.has(it.lock));
+    const soon = !locked && it.soon;
+    if (it.chip || it.text) {
+      b.className = "mchip";
+      b.innerHTML = `<b>${it.text}</b>`;
+    } else {
+      b.className = "mtile" + (locked ? " locked" : "") + (soon ? " soon" : "") + (it.on && it.on() ? " on" : "");
+      const ic = it.img ? `<img src="${artSrc(it.img)}" alt="">` : svg(it.icon, it.color);
+      const badge = locked ? `<i>${svg("lock")}${it.lockText ? (it.lockText.startsWith("Logro") || it.lockText.startsWith("Achiev") ? (ES ? "Logro" : "Award") : it.lockText.replace(/^(Nivel|Level) /, ES ? "Nv " : "Lv ")) : (ES ? "Nv " : "Lv ") + lvl}</i>` : soon ? `<i>${ES ? "Muy pronto" : "Soon"}</i>` : "";
+      b.innerHTML = `<span class="mic">${ic}</span><span class="mlb">${label}</span>${badge}`;
+    }
+    b.style.setProperty("--d", i * 28 + "ms");
+    b.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (locked || soon) {
+        E.act("shake");
+        E.say(soon ? (ES ? "¡Lo estoy aprendiendo! Muy pronto" : "I'm still learning it!") : it.lockText && !lvl ? (ES ? `Eso se consigue con un logro: ${it.lockText.replace(/^Logro: /, "")}` : it.lockText) : (ES ? `¡Eso lo aprendo en el nivel ${lvl}!` : `I learn that at level ${lvl}!`), 2600, true);
+        b.classList.remove("nope"); void b.offsetWidth; b.classList.add("nope");
+        return;
+      }
+      choose(it);
+      if (it.id && (it.id.startsWith("hat-") || it.id === "auto" || it.id === "nohat")) setTimeout(() => open && render(level), 60);
+    });
+    b.addEventListener("mouseenter", () => { E.Voice && E.Voice.tone && E.Voice.tone("sine", 900 + i * 60, 1000 + i * 60, 0.04, 0.012); hoverReact(it); });
+    return b;
+  }
+
+  // ---------- Libreta (dentro del menú) ----------
+  let nbTab = "me";
+  const NEED_NAMES = ES ? { hunger: "Hambre", energy: "Energía", fun: "Diversión", love: "Cariño" } : { hunger: "Food", energy: "Energy", fun: "Fun", love: "Love" };
+  function notebookCap() { const P = PG(); return P ? `${ES ? "Somos" : "We're"} «${P.title(P.level())}»` : NAMES.notebook; }
+  function notebookHTML() {
+    const P = PG(), Nd = window.EkoNeeds;
+    const tabs = `<div class="ntabs"><button type="button" data-t="me" class="${nbTab === "me" ? "on" : ""}">${ES ? "Cómo estoy" : "How I am"}</button><button type="button" data-t="ach" class="${nbTab === "ach" ? "on" : ""}">${ES ? "Logros" : "Achievements"}</button></div>`;
+    if (nbTab === "ach" && P) {
+      const list = P.ACH.filter((a) => !a.when || a.when());
+      const got = P.get().ach;
+      const n = list.filter((a) => got[a.id]).length;
+      return tabs + `<p class="nsub">${n} / ${list.length}</p><div class="nach">${list.map((a) => `<button type="button" class="nmed${got[a.id] ? " got" : ""}${a.soon ? " soon" : ""}" data-a="${a.id}"><img src="${artSrc(a.ic)}" alt=""></button>`).join("")}</div><p class="ninfo">${ES ? "Toca una medalla para ver cómo se consigue" : "Tap a medal to see how to get it"}</p>`;
+    }
+    let html = tabs;
+    if (P) {
+      const l = P.level(), x = P.get().xp, a = P.xpFor(l), b = l < P.MAX ? P.xpFor(l + 1) : a + 1;
+      const pct = l >= P.MAX ? 100 : Math.round(((x - a) / (b - a)) * 100);
+      const nx = P.nextUnlock();
+      html += `<div class="nlvl"><b>${ES ? "Nivel" : "Level"} ${l}</b><span class="nbar"><i style="width:${Math.max(4, pct)}%"></i></span><em>${nx ? `${ES ? "Nivel" : "Level"} ${nx.lvl}: ${nx.t}` : (ES ? "¡Lo has desbloqueado todo!" : "All unlocked!")}</em></div>`;
+    }
+    if (Nd && Nd.on()) {
+      const N = Nd.get();
+      html += `<div class="nneeds">${Nd.KINDS.map((k) => { const v = Math.round(N[k]); return `<button type="button" class="nneed${v < 40 ? " low" : ""}" data-k="${k}"><img src="${artSrc(Nd.WISH[k])}" alt=""><span><b>${NEED_NAMES[k]}</b><em>${Nd.word(k)}</em><span class="nbar"><i style="width:${Math.max(4, v)}%;background:hsl(${Math.round(8 + v * 1.02)},58%,60%)"></i></span></span></button>`; }).join("")}</div>`;
+    }
+    const m = P && P.missions();
+    if (m && (m.skipped || m.done)) html += `<p class="ninfo"><button type="button" class="nlink" data-m="again">${ES ? "Repetir las misiones de bienvenida" : "Replay the welcome missions"}</button></p>`;
+    else if (m && m.running) html += `<p class="ninfo">${ES ? "Misión" : "Mission"} ${m.i + 1}/${m.list.length} · <button type="button" class="nlink" data-m="skip">${ES ? "Saltar misiones" : "Skip missions"}</button></p>`;
+    return html;
+  }
+  function wireNotebook(body) {
+    const P = PG(), Nd = window.EkoNeeds;
+    body.querySelectorAll(".ntabs button").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); nbTab = b.dataset.t; render("notebook"); }));
+    const act = {
+      hunger: () => giveSnack(),
+      energy: () => (Nd.get().energy < 60 ? E.goToSleep() : (E.act("shake"), E.say(ES ? "¡Aún no tengo sueño!" : "I'm not sleepy yet!", 2000, true))),
+      fun: () => propose(true),
+      love: hug,
+    };
+    body.querySelectorAll(".nneed").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); close(); setTimeout(act[b.dataset.k], 250); }));
+    body.querySelectorAll(".nmed").forEach((b) => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const a = P.ACH.find((x) => x.id === b.dataset.a);
+      const got = P.get().ach[a.id];
+      body.querySelectorAll(".nmed").forEach((x) => x.classList.toggle("sel", x === b));
+      body.querySelector(".ninfo").innerHTML = `<b>${a.name}</b> · ${got ? (ES ? "¡Conseguido!" : "Done!") : a.soon ? (ES ? "Muy pronto" : "Soon") : a.how}`;
+      if (got) E.express("orgulloso", 1.6);
+    }));
+    body.querySelectorAll(".nlink").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); close(); setTimeout(() => (b.dataset.m === "skip" ? (P.skipMissions(), E.say(ES ? "¡Vale! Ya sabes dónde encontrarlas" : "OK!", 2200, true)) : P.startMissions()), 300); }));
+  }
+  function showNotebook() { openAt("notebook"); }
 
   function choose(it) {
     E.Voice.ensure && E.Voice.ensure();
     if (it.id) { USE[it.id] = (USE[it.id] || 0) + 1; store.set("eko-menu-use", USE); }
-    if (it.back) { render(parentOf(level)); return; }
     if (it.go) { if (it.enter) it.enter(); render(it.go); return; }
     if (it.run) {
       if (!it.keep) close();
       it.run();
     }
-  }
-  function parentOf(lv) {
-    for (const [k, items] of Object.entries(TREE)) if (items.some((i) => i.go === lv)) return k;
-    return "root";
   }
 
   function openMenu() {
@@ -331,13 +490,14 @@
     E.hold(1e6);
     E.setHitFull(true);
     E.Voice.tone && E.Voice.tone("sine", 520, 780, 0.12, 0.03);
-    // Eko habla primero: a veces una pregunta, normalmente 2 sugerencias + «Otra cosa…»
+    if (PG()) PG().event("menu");
+    // Eko habla primero: a veces una pregunta, normalmente sugerencias para ti
     const cfgS = window.EkoSettings ? window.EkoSettings.get() : {};
     const today = new Date().toDateString();
     const askNow = cfgS.menuAsk !== false && store.get("eko-menu-asked") !== today && Math.random() < 0.35;
     if (askNow) store.set("eko-menu-asked", today);
     greetNext = true;
-    E.keepInside(() => { if (open) render(askNow ? "ask" : "root"); });
+    E.keepInside(() => { if (open) { render(askNow ? "ask" : "home"); requestAnimationFrame(() => panel().classList.add("in")); } });
   }
   function openAt(levelId) {
     if (!open) {
@@ -346,7 +506,7 @@
       E.setMenuPose(true); E.hold(1e6); E.setHitFull(true);
       lastUse = performance.now();
     }
-    E.keepInside(() => { if (open) render(levelId); });
+    E.keepInside(() => { if (open) { render(levelId); requestAnimationFrame(() => panel().classList.add("in")); } });
   }
   function close() {
     if (!open) return;
@@ -354,14 +514,15 @@
     stage.classList.remove("menu-open");
     E.setMenuPose(false);
     E.hold(2);
-    for (const b of menu.children) b.classList.remove("in");
+    const p = menu.querySelector(".mpanel");
+    if (p) p.classList.remove("in");
     setTimeout(() => { if (!open) menu.innerHTML = ""; }, 260);
     if (!ball && !hideGame) E.setHitFull(false);
   }
   // Clic fuera de las burbujas: cerrar
   stage.addEventListener("click", (e) => {
     if (e.target.closest(".card") || e.target.closest("#hit")) return;
-    if (open && !e.target.closest(".blob")) close();
+    if (open && !e.target.closest(".mpanel")) close();
     const c = $("#card");
     if (c && c.classList.contains("in")) closeCard();
   });
@@ -423,6 +584,7 @@
       const tail = res === 0 ? pick(SAY.tie) : res === 1 ? pick(SAY.win) : pick(SAY.lose);
       E.say(`${names[me]}… ${tail}`, 3000, true, res === 1 ? "wink" : res === 2 ? "sad" : "shrug");
       if (res === 1) { E.hop(-380); E.fx("spark", 2); }
+      if (res === 2 && window.EkoProgress) window.EkoProgress.event("rpsWin");
     }, 1500);
   }
 
@@ -452,6 +614,7 @@
       if (!hideGame) return;
       hideGame = false;
       E.say(pick(SAY.found), 2600, true, "heart");
+      if (window.EkoProgress) window.EkoProgress.event("found");
       E.hop(-420);
       document.removeEventListener("eko-tap", onFound);
     };
@@ -499,7 +662,8 @@
   function propose(force = false, reason = "") {
     if (!force && !canPropose()) return;
     if (force && (open || ball || hideGame)) close();
-    const game = GAMES[Math.floor(Math.random() * GAMES.length)];
+    const games = GAMES.filter((g) => g !== "hide" || !window.EkoProgress || window.EkoProgress.has("game:hide"));
+    const game = games[Math.floor(Math.random() * games.length)];
     proposing = true;
     if (!force) { gs.count++; gs.last = Date.now(); store.set("eko-games", gs); }
     E.keepInside(() => {
@@ -735,40 +899,6 @@
     setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
   }
 
-  // ---------- Libreta: cómo está (necesidades) ----------
-  let nbTimer = 0;
-  function showNotebook() {
-    const Nd = window.EkoNeeds; if (!Nd) return openSettings();
-    const name = (window.EkoSettings && window.EkoSettings.get().petName) || "Eko";
-    const NAMES = ES ? { hunger: "Hambre", energy: "Energía", fun: "Diversión", love: "Cariño" } : { hunger: "Food", energy: "Energy", fun: "Fun", love: "Love" };
-    const src = (id) => { const n = document.getElementById(id); return n ? n.getAttribute("href") : ""; };
-    const row = (k) => `<button type="button" class="nbr" data-k="${k}"><span class="nbi"><img src="${src(Nd.WISH[k])}" alt=""></span><span class="nbl"><b>${NAMES[k]}</b><em></em><span class="bar"><i></i></span></span></button>`;
-    const c = card(`<div class="nb"><h4>${ES ? "La libreta de" : ""} ${name}${ES ? "" : "'s notebook"}</h4>${Nd.KINDS.map(row).join("")}<p class="nbh">${ES ? "Toca una para cuidarme" : "Tap one to look after me"}</p><button type="button" class="nbs">${L.settings}</button></div>`);
-    const paint = () => {
-      const n = Nd.get();
-      c.querySelectorAll(".nbr").forEach((b) => {
-        const v = Math.round(n[b.dataset.k]);
-        const bar = b.querySelector(".bar i");
-        bar.style.width = Math.max(4, v) + "%";
-        bar.style.background = `hsl(${Math.round(8 + v * 1.02)}, 58%, 60%)`;
-        b.querySelector("em").textContent = Nd.word(b.dataset.k);
-        b.classList.toggle("low", v < 40);
-      });
-    };
-    paint();
-    clearInterval(nbTimer); nbTimer = setInterval(() => { if (!c.classList.contains("in") || !c.querySelector(".nb")) { clearInterval(nbTimer); return; } paint(); }, 1500);
-    E.act("nod");
-    const act = {
-      hunger: () => giveSnack(),
-      energy: () => (Nd.get().energy < 60 ? E.goToSleep() : (E.act("shake"), E.say(ES ? "¡Aún no tengo sueño!" : "I'm not sleepy yet!", 2000, true))),
-      fun: () => propose(true),
-      love: () => { E.act("hug"); Nd.give("hug"); E.fx("heart", 2); E.say(pick(ES ? ["¡Achuchón!", "Qué gustito…", "¡Te quiero!"] : ["Squeeze!", "So nice…", "Love you!"]), 2200, true); },
-    };
-    c.querySelectorAll(".nbr").forEach((b) => b.addEventListener("click", () => { closeCard(); setTimeout(act[b.dataset.k], 250); }));
-    c.querySelector(".nbs").addEventListener("click", () => { closeCard(); openSettings(); });
-    setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
-  }
-
   // ---------- Descanso ----------
   function muteHour() {
     E.say(pick(SAY.muted), 2400, true, "nod");
@@ -896,18 +1026,21 @@
 
   // Cerrar el menú si el ratón se va lejos de Eko o si no se usa en un rato
   let awaySince = 0, openedAt = 0;
+  const TOUCH = !!(window.matchMedia && matchMedia("(pointer: coarse)").matches);
   setInterval(() => {
     if (!open) { awaySince = 0; return; }
     if (!openedAt) openedAt = performance.now();
     const c = E.cursor, S = E.S;
     const inside = c.x >= S.x && c.x <= S.x + E.W && c.y >= S.y && c.y <= S.y + E.H;
-    if (inside) awaySince = 0; else if (!awaySince) awaySince = performance.now();
-    if ((awaySince && performance.now() - awaySince > 1200) || performance.now() - lastUse > 20000) close();
+    if (inside || TOUCH) awaySince = 0; else if (!awaySince) awaySince = performance.now();
+    if ((awaySince && performance.now() - awaySince > 2500) || performance.now() - lastUse > 20000) close();
   }, 200);
   let lastUse = performance.now();
   menu.addEventListener("pointermove", () => { lastUse = performance.now(); });
+  menu.addEventListener("pointerdown", () => { lastUse = performance.now(); });
 
   window.EkoMenu = {
+    card: (h, a) => card(h, a), closeCard: () => closeCard(), openAt: (l) => openAt(l),
     toggle() {
       if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) { hideGame = false; return; }   // estaba escondido y lo has pillado
       if (!open && updPending() && !hideGame) { openAt("update"); return; }                                   // actualización pendiente: un clic y listo
@@ -923,7 +1056,7 @@
       if (!open && updPending()) { openAt("update"); return true; }
       return false;
     },
-    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), propose: () => { try { propose(false, "bored"); } catch (_) {} }, startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

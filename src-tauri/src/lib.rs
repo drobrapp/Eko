@@ -95,9 +95,11 @@ fn show_settings(app: &AppHandle) -> Result<(), String> {
 
 // ---------- Barra para hablar con Eko (IA): ventanita propia que se puede mover por el escritorio ----------
 #[tauri::command]
-async fn chatbar_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+async fn chatbar_show(app: AppHandle, x: f64, y: f64, focus: Option<bool>) -> Result<(), String> {
+    let focus = focus.unwrap_or(false);
     if let Some(w) = app.get_webview_window("chatbar") {
         let _ = w.show();
+        if focus { let _ = w.set_focus(); }
         return Ok(());
     }
     tauri::WebviewWindowBuilder::new(&app, "chatbar", tauri::WebviewUrl::App("chatbar.html".into()))
@@ -110,7 +112,7 @@ async fn chatbar_show(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
         .skip_taskbar(true)
         .resizable(false)
         .shadow(false)
-        .focused(false)
+        .focused(focus)
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())

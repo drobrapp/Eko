@@ -26,6 +26,7 @@ button{border:none;cursor:pointer;font:700 13px "Segoe UI",system-ui,sans-serif}
   try { const n = (JSON.parse(localStorage.getItem("eko-settings") || "{}").petName || "").trim(); if (n) t.placeholder = `Habla con ${n}…`; } catch (_) {}
   const send = () => { const v = t.value.trim(); if (!v || !T) return; T.event.emit("chat-input", v); t.value = ""; s.disabled = true; setTimeout(() => (s.disabled = false), 1500); };
   s.addEventListener("click", send);
+  window.addEventListener("focus", () => t.focus());
   t.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); if (e.key === "Escape") t.blur(); });
   document.getElementById("x").addEventListener("click", () => T && T.event.emit("chat-input", "__hide"));
   // arrastrar desde cualquier parte de la barra que no sea el texto o los botones

@@ -206,6 +206,15 @@
 
   // Tarjeta para escribirle (se queda abierta para seguir hablando; Esc o × para cerrar)
   function open() {
+    // En el escritorio: la barra propia (se puede mover y no persigue a Eko)
+    if (invoke) {
+      barTemp = cfg().aiBar === false; barOn = true;
+      let pos = null; try { pos = JSON.parse(localStorage.getItem("eko-chatbar-pos") || "null"); } catch (_) {}
+      const x = pos ? pos.x : window.screenX + 40, y = pos ? pos.y : window.screenY + 150;
+      invoke("chatbar_show", { x, y, focus: true }).catch(() => { barOn = false; barTemp = false; });
+      if (!history.length) E.sayChat(pick(["¡Cuéntame!", "Te escucho, dime", "¿De qué hablamos?"]), 2200);
+      return;
+    }
     let c = document.getElementById("chatCard");
     if (!c) {
       c = document.createElement("div");
@@ -234,7 +243,7 @@
   }
 
   // Barra en el escritorio (si la IA está activada y «Barra para hablar» también)
-  let barOn = false, ekoAway = false;
+  let barOn = false, barTemp = false, ekoAway = false;
   if (E.listen) E.listen("cmd", (e) => {
     if (e.payload === "stowball") { barOn = false; }                          // Rust la ha escondido junto con Eko: se vuelve a mostrar
     if (e.payload === "wake" || e.payload === "back") { ekoAway = false; barOn = false; syncBar(); }
@@ -242,7 +251,7 @@
   function syncBar() {
     if (!invoke) return;
     const s = cfg(), l = E.lastSenses || {};
-    const want = !!s.ai && s.aiBar !== false && !E.A.hidden && !l.fullscreen;   // siempre visible salvo en pantalla completa
+    const want = (barTemp || (!!s.ai && s.aiBar !== false)) && !E.A.hidden && !l.fullscreen;   // siempre visible salvo en pantalla completa
     if (want === barOn) return;
     barOn = want;
     if (want) {
@@ -254,6 +263,7 @@
   setInterval(syncBar, 2000);
   if (E.listen) E.listen("chat-input", (e) => {
     const v = String(e.payload || "");
+    if (v === "__hide" && barTemp) { barTemp = false; syncBar(); return; }   // abierta desde «Hablar conmigo»: solo se cierra
     if (v === "__hide") { if (window.EkoSettings) window.EkoSettings.set("aiBar", false); E.say("Vale, escondo la barra. La recuperas en mis ajustes", 3000, true); syncBar(); return; }
     if (v.trim()) ask(v.trim());
   });

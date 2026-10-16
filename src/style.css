@@ -371,7 +371,7 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
   pointer-events: auto; opacity: 0; transform: translateY(14px) scale(.92); transform-origin: 50% 110%;
   transition: opacity .2s ease, transform .38s cubic-bezier(.3, 1.45, .5, 1);
 }
-.mpanel.in { opacity: 1; transform: none; }
+.mpanel.in { opacity: 1; transform: scale(var(--fit, 1)); }
 .mpanel::after { content: ""; position: absolute; left: 147px; bottom: -8px; width: 18px; height: 18px; background: #fffaf6; transform: rotate(45deg); border-radius: 0 0 5px 0; box-shadow: 4px 4px 8px rgba(50, 30, 20, .08); }
 :where(.mpanel button) { font: inherit; color: inherit; border: none; background: none; cursor: pointer; padding: 0; }
 .mpanel svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -540,7 +540,11 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 }
 #badge.in { opacity: .92; transform: translateX(-50%) scale(1); }
 #badge.break { background: #5fa87a; }
-.menu-open #bubble, .menu-open #badge { opacity: 0; }
+.menu-open #bubble, .menu-open #badge, .menu-open #thought, .menu-open #wish { opacity: 0 !important; }
+/* Nunca dos bocadillos a la vez: si habla, se esconde el de pensar (y el de deseo) */
+#bubble.show ~ #thought, #bubble.show ~ #wish { opacity: 0 !important; }
+.thinking #wish { opacity: 0 !important; }
+.card { overflow-y: auto; scrollbar-width: thin; }
 
 #pod { transform-origin: 50% 100%; transition: transform .3s ease; }
 

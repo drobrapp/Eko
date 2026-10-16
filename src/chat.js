@@ -188,6 +188,7 @@
     }
     c.querySelector("input").placeholder = `Dile algo a ${cfg().petName || "Eko"}…`;
     c.classList.add("in");
+    if (window.EkoFit) window.EkoFit.card(c);
     E.setHitFull(true);
     E.hold(1e6);
     setTimeout(() => E.focusInput(c.querySelector("input")), 80);

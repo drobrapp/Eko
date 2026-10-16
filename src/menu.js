@@ -401,7 +401,43 @@
     E.talk && E.talk(capText);
     body.classList.remove("swap"); void body.offsetWidth; body.classList.add("swap");
     body.scrollTop = 0;
+    fitPanel();
   }
+  // Dónde acaba Eko por arriba (cabeza, gorro, brote…) dentro de su ventana
+  function headTop() {
+    try {
+      // la cabeza en sí (sin gorro): el gorro puede quedar detrás del panel, la cara nunca
+      const shape = (E.el.head && E.el.head.querySelector(":scope > path")) || E.el.pet;
+      const sr = stage.getBoundingClientRect(), pr = shape.getBoundingClientRect();
+      if (!pr.height) return 250;
+      return pr.top - sr.top;
+    } catch (_) { return 250; }
+  }
+  // El panel nunca tapa a Eko: se apoya encima de su cabeza y, si no cabe, se encoge
+  function fitPanel() {
+    const p = menu.querySelector(".mpanel"); if (!p) return;
+    const sr = stage.getBoundingClientRect(), top = headTop();
+    const gap = 16, margin = 6;
+    const avail = Math.max(80, top - gap - margin);
+    p.style.bottom = Math.round(sr.height - (top - gap)) + "px";
+    const hd = p.querySelector(".mhead"), bd = p.querySelector(".mbody");
+    const natural = Math.min(216, (hd ? hd.offsetHeight + 6 : 36) + (bd ? bd.scrollHeight : 160) + 18);
+    const fit = avail >= natural ? 1 : Math.max(0.8, avail / natural);
+    p.style.maxHeight = Math.round(Math.min(216, avail / fit)) + "px";
+    p.style.setProperty("--fit", fit.toFixed(3));
+  }
+  // Las tarjetas (preguntas, notas, juegos…) tampoco: si son altas, suben
+  function fitCard(c) {
+    if (!c) return;
+    requestAnimationFrame(() => {
+      const top = headTop(), h = c.offsetHeight;
+      c.style.top = Math.round(Math.max(6, Math.min(70, top - 14 - h))) + "px";
+      c.style.maxHeight = Math.round(Math.max(90, top - 20)) + "px";
+    });
+  }
+  setInterval(() => { if (open) fitPanel(); const c = document.querySelector(".card.in"); if (c) fitCard(c); }, 400);
+  window.EkoFit = { card: fitCard, headTop };
+
   function tile(it, i) {
     const b = document.createElement("button");
     b.type = "button";
@@ -550,6 +586,7 @@
     if (!c) { c = document.createElement("div"); c.id = "card"; c.className = "card"; stage.appendChild(c); }
     c.innerHTML = html;
     c.classList.add("in");
+    fitCard(c);
     E.setHitFull(true);
     clearTimeout(cardTimer);
     if (autoClose) cardTimer = setTimeout(closeCard, autoClose);

@@ -2,10 +2,19 @@
 
 use tauri::{AppHandle, Manager};
 
+/// Abre una carpeta, archivo, acceso directo o web con su programa por defecto, por la vía normal de Windows
+/// (ShellExecute), sin lanzar otros procesos intermedios.
 fn open_path(target: &str) {
     #[cfg(windows)]
     {
-        let _ = std::process::Command::new("explorer").arg(target).spawn();
+        use windows::core::{HSTRING, PCWSTR};
+        use windows::Win32::UI::Shell::ShellExecuteW;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+        let file = HSTRING::from(target);
+        let verb = HSTRING::from("open");
+        unsafe {
+            ShellExecuteW(None, &verb, &file, PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL);
+        }
     }
     #[cfg(not(windows))]
     {
@@ -85,25 +94,44 @@ pub fn media_prev() {
     });
 }
 
-/// Sube, baja o silencia el volumen (como las teclas multimedia del teclado)
+/// Sube, baja o silencia el volumen con el control de audio de Windows (sin simular teclas)
 #[tauri::command]
 pub fn volume(dir: String) {
     #[cfg(windows)]
-    {
-        use windows::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP};
-        let (vk, times): (u8, u32) = match dir.as_str() {
-            "up" => (0xAF, 5),
-            "down" => (0xAE, 5),
-            "mute" => (0xAD, 1),
-            _ => return,
-        };
-        for _ in 0..times {
-            unsafe {
-                keybd_event(vk, 0, KEYBD_EVENT_FLAGS(0), 0);
-                keybd_event(vk, 0, KEYEVENTF_KEYUP, 0);
+    std::thread::spawn(move || {
+        use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+        use windows::Win32::Media::Audio::{eConsole, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
+        use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let en: IMMDeviceEnumerator = match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
+                Ok(x) => x,
+                Err(_) => return,
+            };
+            let Ok(dev) = en.GetDefaultAudioEndpoint(eRender, eConsole) else { return };
+            let vol: IAudioEndpointVolume = match dev.Activate(CLSCTX_ALL, None) {
+                Ok(x) => x,
+                Err(_) => return,
+            };
+            match dir.as_str() {
+                "up" => {
+                    for _ in 0..4 {
+                        let _ = vol.VolumeStepUp(std::ptr::null());
+                    }
+                }
+                "down" => {
+                    for _ in 0..4 {
+                        let _ = vol.VolumeStepDown(std::ptr::null());
+                    }
+                }
+                _ => {
+                    if let Ok(m) = vol.GetMute() {
+                        let _ = vol.SetMute(!m.as_bool(), std::ptr::null());
+                    }
+                }
             }
         }
-    }
+    });
     #[cfg(not(windows))]
     let _ = dir;
 }
@@ -124,14 +152,9 @@ pub fn open_folder(app: AppHandle, which: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Abre una dirección web con el navegador por defecto (sin pasar por ninguna consola)
+/// Abre una dirección web con el navegador por defecto
 fn open_url(url: &str) {
-    #[cfg(windows)]
-    {
-        let _ = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", url]).spawn();
-    }
-    #[cfg(not(windows))]
-    let _ = url;
+    open_path(url);
 }
 
 fn encode(s: &str) -> String {
@@ -225,7 +248,7 @@ pub fn open_app(name: String) -> Result<String, String> {
 #[tauri::command]
 pub fn lock_pc() {
     #[cfg(windows)]
-    {
-        let _ = std::process::Command::new("rundll32.exe").arg("user32.dll,LockWorkStation").spawn();
+    unsafe {
+        let _ = windows::Win32::System::Shutdown::LockWorkStation();
     }
 }

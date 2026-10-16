@@ -6,9 +6,10 @@
 #room.appear{animation:roomIn .7s cubic-bezier(.3,1.5,.5,1) forwards}
 #room.vanish{animation:roomOut .5s ease-in forwards}
 @keyframes roomIn{0%{opacity:0;transform:scale(.6) translateY(30px)}60%{opacity:1;transform:scale(1.04)}100%{opacity:1;transform:none}}
+#room.build{opacity:1;transform:none}
+#room.build #inner{animation:rise 1.6s cubic-bezier(.3,1.2,.5,1) forwards}
+@keyframes rise{0%{clip-path:inset(100% 0 0 0);transform:translateY(12px)}30%{clip-path:inset(74% 0 0 0);transform:none}55%{clip-path:inset(30% 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
 @keyframes roomOut{0%{opacity:1;transform:none}100%{opacity:0;transform:scale(.7) translateY(20px)}}
-#room.night #inner{filter:brightness(.62) saturate(.85) hue-rotate(-8deg)}
-#room.dusk #inner{filter:brightness(.88) sepia(.15) saturate(1.1)}
 #inner{position:absolute;inset:0;transition:filter 2s}
 .bg{position:absolute;left:0;bottom:0;width:100%;pointer-events:none;user-select:none}
 #sky{position:absolute;border-radius:4px;overflow:hidden;transition:background 2s ease}
@@ -18,8 +19,6 @@
 .d img{width:100%;height:100%;display:block;transform-origin:50% 100%}
 .d.wall img{transform-origin:50% 0%;filter:drop-shadow(0 3px 3px rgba(60,35,20,.28))}
 .d.floor::after{content:"";position:absolute;left:8%;right:8%;bottom:-3px;height:9px;border-radius:50%;background:radial-gradient(closest-side,rgba(70,40,20,.38),transparent);z-index:-1}
-#glow{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 2s;background:radial-gradient(circle at 26% 70%,rgba(255,190,110,.35),transparent 42%)}
-#room.night #glow{opacity:1}
 .cloud{position:absolute;border-radius:50%;background:#FFF8EF;box-shadow:inset -6px -8px 0 rgba(200,180,165,.35);pointer-events:none;animation:cl 1s ease-out forwards}
 @keyframes cl{0%{transform:scale(.2);opacity:0}25%{opacity:1}100%{transform:scale(1.25) translateY(-12px);opacity:0}}
 .sp{position:absolute;width:14px;height:14px;pointer-events:none;animation:sp .8s ease-out forwards}
@@ -38,7 +37,7 @@
 #parcel.open .box{animation:wig .5s ease}
 @keyframes fall{0%{transform:translateY(-220px) rotate(-6deg)}50%{transform:translateY(-90px) rotate(5deg)}80%{transform:translateY(-12px) rotate(-2deg)}100%{transform:none}}
 </style></head><body>
-<div id="room"><div id="inner"><img class="bg" id="bg" alt="" draggable="false"><div id="sky"></div><div id="layer"></div><div id="parcel"><img class="bal" src="art/balloon.webp" alt=""><img class="box" src="art/parcel.webp" alt=""></div></div><div id="glow"></div></div>
+<div id="room"><div id="inner"><img class="bg" id="bg" alt="" draggable="false"><div id="sky"></div><div id="layer"></div><div id="parcel"><img class="bal" src="art/balloon.webp" alt=""><img class="box" src="art/parcel.webp" alt=""></div></div></div>
 <script>
 // Casa de Eko: aparece entre nubes, ventana según la hora, muebles con perspectiva y los efectos de colocar/guardar.
 (() => {
@@ -54,7 +53,7 @@
     const bg = $("#bg"); if (bg.getAttribute("src") !== p.room) bg.src = p.room;
     bg.style.top = top + "px"; bg.style.height = "auto";
     const g = p.glass; Object.assign(sky.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px", background: SKY[p.sky] || SKY.day });
-    sky.className = p.sky; room.classList.toggle("night", p.sky === "night"); room.classList.toggle("dusk", p.sky === "dusk");
+    sky.className = p.sky;   // solo cambia el cielo; la habitación tiene siempre la misma luz
     if (p.shelf) {
       if (!shelfEl) { shelfEl = document.createElement("img"); shelfEl.className = "d"; shelfEl.draggable = false; layer.appendChild(shelfEl); }
       shelfEl.src = p.shelf.src; Object.assign(shelfEl.style, { left: p.shelf.x + "px", top: p.shelf.y + "px", width: p.shelf.w + "px", height: p.shelf.h + "px", zIndex: 1, filter: "drop-shadow(0 3px 3px rgba(60,35,20,.25))" });
@@ -100,6 +99,13 @@
     const { id, kind } = e.payload || {};
     if (id === "room") {
       if (kind === "appear") { room.className = room.className.replace(/\b(on|appear|vanish)\b/g, "") + " appear"; clouds(10, top + 20, innerWidth - 20, innerHeight - top - 30, 18); setTimeout(() => { room.classList.remove("appear"); room.classList.add("on"); }, 750); }
+      if (kind === "build") {
+        room.className = room.className.replace(/\b(on|appear|vanish|build)\b/g, "") + " build";
+        clouds(10, innerHeight - 60, innerWidth - 20, 50, 14);
+        setTimeout(() => clouds(10, top + 60, innerWidth - 20, innerHeight - top - 80, 16), 600);
+        setTimeout(() => { clouds(10, top, innerWidth - 20, innerHeight - top, 22); const b = document.body.getBoundingClientRect(); for (let i = 0; i < 14; i++) setTimeout(() => { const sp = document.createElement("img"); sp.src = "art/fx-spark.webp"; sp.className = "sp"; sp.style.left = Math.random() * (b.width - 14) + "px"; sp.style.top = top + Math.random() * (b.height - top - 20) + "px"; document.body.appendChild(sp); setTimeout(() => sp.remove(), 900); }, i * 70); }, 1400);
+        setTimeout(() => { room.classList.remove("build"); room.classList.add("on"); }, 1700);
+      }
       if (kind === "vanish") { clouds(10, top + 20, innerWidth - 20, innerHeight - top - 30, 16); room.classList.remove("on"); room.classList.add("vanish"); }
       return;
     }

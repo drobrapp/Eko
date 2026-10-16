@@ -23,7 +23,7 @@ window.EkoProgress = (() => {
     3:  { t: "Truco: voltereta", id: "trick:flip" },
     4:  { t: "Accesorio: gafas", id: "acc:readglasses" },
     5:  { t: "Juego: escondite", id: "game:hide" },
-    6:  { t: "Decoración: camita", id: "deco:bed" },
+    6:  { t: "¡Tu propia casa! (y una camita)", id: "deco:bed" },
     7:  { t: "Truco: pirueta", id: "trick:spin" },
     8:  { t: "Accesorio: pajarita", id: "acc:bowtie" },
     9:  { t: "Juego: atrapa galletas", id: "game:catch" },
@@ -61,6 +61,13 @@ window.EkoProgress = (() => {
     { id: "loyal", ic: "artHeart", name: "Fiel", how: "Pasad juntos 30 días distintos", n: 30, ev: "day", xp: 50 },
     { id: "bday", ic: "artSpark", name: "Cumpleaños", how: "Estad juntos en tu cumpleaños o en el suyo", xp: 40, give: ["acc:party"] },
     { id: "xmas", ic: "artSpark", name: "Navidad juntos", how: "Ábrelo en diciembre", xp: 30, give: ["acc:santa", "acc:elf", "acc:reindeer"] },
+    { id: "home", ic: "artRoom", name: "Hogar, dulce hogar", how: "Ayúdale a construir su casa", n: 1, ev: "house", xp: 40 },
+    { id: "mail", ic: "artParcel", name: "¡Correo!", how: "Abre su primer paquete", n: 1, ev: "parcel", xp: 20 },
+    { id: "gallery", ic: "artDecoFrame", name: "Galería de arte", how: "Reúne 5 cuadros en su casa", n: 5, ev: "pics", xp: 40 },
+    { id: "greenhand", ic: "artDecoPot", name: "Mano verde", how: "Que riegue su maceta 7 veces", n: 7, ev: "potWater", xp: 25 },
+    { id: "napper", ic: "artNightcap", name: "Dormilón", how: "Que duerma 5 siestas en su camita", n: 5, ev: "bedNap", xp: 25 },
+    { id: "tidy", ic: "artDecoFrame", name: "Todo en su sitio", how: "Que enderece el cuadro 5 veces", n: 5, ev: "frameFix", xp: 20 },
+    { id: "shiny", ic: "artDecoTrophy", name: "Reluciente", how: "Que saque brillo a su trofeo 3 veces", n: 3, ev: "polish", xp: 20 },
     { id: "halloween", ic: "artSpark", name: "Noche de miedo", how: "Ábrelo en la semana de Halloween", xp: 30, give: ["acc:witch", "acc:pumpkin", "acc:vampire", "acc:ghost"] },
   ];
 

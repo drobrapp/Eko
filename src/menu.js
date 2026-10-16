@@ -250,10 +250,10 @@
   // ---------- Dibujo del menú: panel con categorías a la izquierda ----------
   let open = false, level = null, cat = "foryou";
   const PG = () => window.EkoProgress;
-  const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta" }
-                   : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook" };
+  const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta", house: "Mi casa" }
+                   : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook", house: "My home" };
   const CATS = [["foryou", "sparkle"], ["play", "play"], ["care", "cookie"], ["wardrobe", "hanger"], ["util", "util"], ["notebook", "book"]];
-  const SUBS = { rps: "play", tricks: "play", corner: "wardrobe", remind: "util", shortcuts: "util" };
+  const SUBS = { rps: "play", tricks: "play", remind: "util", shortcuts: "util" };
   const lockLvl = (id) => { const P = PG(); if (!P) return 0; for (const [n, d] of Object.entries(P.LEVELS)) if (d.id === id) return +n; return 0; };
   // Lo que hay en cada categoría
   const HATS = [["witch", "artHatWitch", "halloween"], ["pumpkin", "artHatPumpkin", "halloween"], ["vampire", "artCape", "halloween"], ["ghost", "artPuff", "halloween"],
@@ -282,7 +282,7 @@
       { id: "sleep", react: "yawn", img: "artNightcap", label: L.sleep, run: () => E.goToSleep() },
     ];
     if (c === "wardrobe") {
-      const out = [{ id: "corner", react: "emocionado", img: "artDecoBed", label: ES ? "Mi casa" : "My home", go: "corner" }, { id: "auto", icon: "sparkle", label: L.auto, run: () => E.setHat("auto"), keep: true, on: () => hatNow() === "auto" }];
+      const out = [{ id: "auto", icon: "sparkle", label: L.auto, run: () => E.setHat("auto"), keep: true, on: () => hatNow() === "auto" }];
       for (const [id, img, gate] of HATS) {
         const it = { id: "hat-" + id, img, icon: img ? null : "swatch", color: "#c9cedb", label: (COSTUMES.find((x) => x[0] === id) || [])[1] || id, keep: true, run: () => E.setHat(id), on: () => hatNow() === id };
         if (P) {
@@ -313,7 +313,7 @@
       return s.slice(0, 6);
     }
     if (c === "rps") return TREE.rps.map((x) => ({ ...x, keep: false }));
-    if (c === "corner") return window.EkoCorner ? window.EkoCorner.menuItems() : [];
+    if (c === "corner" || c === "house") return window.EkoCorner ? window.EkoCorner.menuItems() : [];
     if (c === "tricks") {
       const T = window.EkoTricks;
       const IMG = { flip: "artSpark", pirouette: "artNote", balance: "artIcDiscreet", juggle: "artJuggle", magic: "artWand", bellyFull: "artCookie" };
@@ -338,7 +338,7 @@
   let capText = "", greetNext = false;
   const CAP = ES ? {
     play: ["¿A qué jugamos?", "¡Elige juego!"], care: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
-    notebook: ["Mi libreta"], corner: ["Mi casita", "¿Vamos a mi casa?", "Hogar, dulce hogar"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"], tricks: ["¿Qué te enseño?", "¡Mira lo que sé hacer!"],
+    notebook: ["Mi libreta"], house: ["Mi casita", "¿Vamos a mi casa?", "Hogar, dulce hogar"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"], tricks: ["¿Qué te enseño?", "¡Mira lo que sé hacer!"],
   } : { play: ["What shall we play?"], care: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], notebook: ["My notebook"], remind: ["When?"], rps: ["Pick one!"] };
 
   function panel() {
@@ -381,6 +381,20 @@
         grid.appendChild(b);
       });
       body.appendChild(grid);
+      // Mi casa: botón ancho debajo de las categorías
+      {
+        const C = window.EkoCorner, st = C && C.state ? C.state() : "locked";
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "mcat mhouse" + (st === "locked" ? " locked" : ""); b.style.setProperty("--d", CATS.length * 35 + "ms");
+        b.innerHTML = `<span class="mci"><img src="${artSrc("artRoom")}" alt=""></span><span class="mlb">${NAMES.house}<small>${st === "locked" ? (ES ? "Nivel 6" : "Level 6") : st === "build" ? (ES ? "¡Tengo una sorpresa!" : "A surprise!") : (ES ? "Mi rincón en tu escritorio" : "My little place")}</small></span>`;
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (st === "locked") { E.say(ES ? "Cuando lleguemos al nivel 6 te enseño algo muy especial…" : "At level 6 I'll show you something special…", 2800, true, "picaro"); return; }
+          E.Voice.tone && E.Voice.tone("sine", 700, 900, 0.05, 0.015); render("house");
+        });
+        b.addEventListener("mouseenter", () => hoverReact({ react: "emocionado" }));
+        body.appendChild(b);
+      }
       const m = PG() && PG().missions();
       if (m && m.running) { const d = document.createElement("p"); d.className = "mhint"; d.innerHTML = `${ES ? "Misión" : "Mission"} ${m.i + 1}/${m.list.length}: <b>${m.list[m.i].t}</b>`; body.appendChild(d); }
     } else if (levelId === "notebook") { body.innerHTML = notebookHTML(); wireNotebook(body); capText = notebookCap(); if (PG()) PG().event("notebook"); }
@@ -396,7 +410,7 @@
     if (!capText) capText = levelId === "home" || levelId === "foryou" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     greetNext = false;
     const cap = p.querySelector(".mcap");
-    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : levelId === "corner" ? (ES ? "Mi casa" : "My home") : NAMES[cat]) : cat ? NAMES[cat] : "";
+    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : levelId === "house" ? (ES ? "Mi casa" : "My home") : NAMES[cat]) : cat ? NAMES[cat] : "";
     cap.querySelector("b").textContent = ttl || capText;
     cap.querySelector("em").textContent = ttl ? capText : "";
     E.talk && E.talk(capText);
@@ -430,7 +444,7 @@
     const bottomY = top - gap, room = Math.max(80, bottomY - margin);
     p.style.bottom = Math.round(sr.height - bottomY) + "px";
     p.style.transformOrigin = "50% 100%";
-    p.style.maxHeight = "216px";
+    p.style.maxHeight = "280px";
     const H = p.offsetHeight;                    // altura real (el transform no la cambia)
     let fit = Math.min(1, room / H);
     if (fit < 0.8) { fit = 0.8; p.style.maxHeight = Math.floor(room / fit) + "px"; }

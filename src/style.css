@@ -365,7 +365,7 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 #menu { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
 /* Panel del menú: categorías a la izquierda, contenido a la derecha, colgando sobre Eko */
 .mpanel {
-  position: absolute; left: 54px; bottom: 156px; width: 312px; max-height: 216px;
+  position: absolute; left: 54px; bottom: 156px; width: 312px; max-height: 280px;
   display: flex; flex-direction: column; padding: 8px 10px 10px; border-radius: 22px; background: #fffaf6;
   box-shadow: 0 10px 30px rgba(50, 30, 20, .28), 0 1px 0 rgba(255, 255, 255, .8) inset;
   font: 13px "Segoe UI", system-ui, sans-serif; color: #3b2f2a;
@@ -645,5 +645,16 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .ghud .gx { width: 22px; height: 22px; border: none; border-radius: 50%; background: #efe3da; color: #6b5348; font: 700 13px "Segoe UI", system-ui, sans-serif; line-height: 22px; padding: 0; cursor: pointer; }
 
 /* Eko pequeñito (subido a un icono): los bocadillos bajan con su cabeza */
-#bubble, #thought { translate: 0 calc((1 - var(--sc, 1)) * 140px); }
-#wish { translate: 0 calc((1 - var(--sc, 1)) * 60px); }
+#bubble, #thought, #wish { scale: calc(1 / var(--sc, 1)); }        /* los textos siempre a tamaño normal */
+/* En su casa: los bocadillos van encima de la casa */
+.inhome #bubble { bottom: var(--homeB, 152px); }
+.inhome #thought, .inhome #wish { opacity: 0 !important; }
+
+/* Botón ancho «Mi casa» en el inicio del menú */
+.mhouse { flex-direction: row; justify-content: flex-start; gap: 10px; width: 100%; margin-top: 7px; padding: 6px 12px; }
+.mhouse .mci img { width: 54px; height: 30px; object-fit: contain; }
+.mhouse .mlb { display: flex; flex-direction: column; align-items: flex-start; text-align: left; font-size: 12.5px; font-weight: 600; }
+.mhouse .mlb small { font-weight: 400; font-size: 10.5px; color: #8a7468; }
+.mhouse.locked { opacity: .6; filter: grayscale(.4); }
+.mhouse .mci { width: 62px; height: 40px; background: none; }
+.mhouse .mci img { width: 62px; height: 40px; }

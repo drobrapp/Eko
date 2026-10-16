@@ -5,6 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.22.0": { important: true, lines: ["Mi casa tiene ahora su propio botón en el menú", "¡Y hay logros nuevos de la casa! Mira mi libreta"] },
+    "0.21.0": { important: true, lines: ["Ahora puedes cogerme aunque esté en mi casa, y mis bocadillos se leen bien aunque sea pequeñito", "Y mi casa… ¡la construiré con magia cuando lleguemos al nivel 6!"] },
     "0.20.0": { important: true, lines: ["¡Mi casa ahora aparece entre nubes cuando voy! Búscala en Armario → Mi casa", "Y cuando gane algo nuevo, me llegará en un paquete. ¡Lo abriremos juntos!"] },
     "0.19.0": { important: true, lines: ["¡Ahora tengo mi propia habitación! Con ventana, cuadros que se van desbloqueando y todo", "Me hago pequeñito para entrar. ¡Ven a verme!"] },
     "0.18.0": { important: true, lines: ["¡He aprendido a hacerme pequeñito con mi varita! Así quepo en los iconos del escritorio"] },

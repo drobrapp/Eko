@@ -18,6 +18,7 @@ window.EkoCorner = (() => {
   const C = Object.assign({ off: {}, side: "left", tilt: 4, tiltAt: Date.now(), water: 0, polish: 0, pic: null, picAt: 0, got: null }, store.get("eko-corner", {}));
   const save = () => store.set("eko-corner", C);
   const PG = () => window.EkoProgress;
+  const ev = (k, v) => { try { PG() && PG().event(k, v); } catch (_) {} };
   const lvl = () => (PG() ? PG().level() : 20);
   const testAll = () => { try { return !!(window.EkoSettings && window.EkoSettings.get().testAll); } catch (_) { return false; } };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,9 +39,9 @@ window.EkoCorner = (() => {
   const SHELF = { src: "art/shelf.webp", x: 286, y: TOP + 102, w: 76, h: 18 };
   const PARCEL = { x: 178, w: 44, h: 40, z: 0.42 };
   const PICS = [
-    { id: "portrait", name: "Retrato", src: "art/pic-portrait.webp", lv: 1, ar: 212 / 240 },
-    { id: "sprout", name: "El brote", src: "art/pic-sprout.webp", lv: 3, ar: 195 / 240 },
-    { id: "cookies", name: "Bodegón de galletas", src: "art/pic-cookies.webp", lv: 8, ar: 192 / 240 },
+    { id: "portrait", name: "Retrato", src: "art/pic-portrait.webp", lv: 6, ar: 212 / 240 },
+    { id: "sprout", name: "El brote", src: "art/pic-sprout.webp", lv: 7, ar: 195 / 240 },
+    { id: "cookies", name: "Bodegón de galletas", src: "art/pic-cookies.webp", lv: 9, ar: 192 / 240 },
     { id: "sleep", name: "Eko dormilón", src: "art/pic-sleep.webp", lv: 16, ar: 192 / 240 },
     { id: "astro", name: "Eko astronauta", src: "art/pic-astro.webp", lv: 19, ar: 211 / 240 },
   ];
@@ -51,16 +52,17 @@ window.EkoCorner = (() => {
   const got = (k) => C.got.includes(k);
   const pending = () => [...DECO.filter((d) => d.lock && unlockedDeco(d) && !got(d.id)).map((d) => d.id), ...unlockedPics().filter((p) => !got("pic:" + p.id)).map((p) => "pic:" + p.id)];
   const picsHave = () => PICS.filter((p) => got("pic:" + p.id));
+  setTimeout(() => { try { const c = (PG() && PG().get && (PG().get().cnt || {}).pics) || 0; for (let i = c; i < picsHave().length; i++) ev("pics"); } catch (_) {} }, 6000);   // cuadros que ya tenía
   const picNow = () => { const u = picsHave(); return u.find((p) => p.id === C.pic) || u[u.length - 1] || null; };
   const present = (d) => (d.id === "frame" ? !!picNow() && !C.off.frame : got(d.id) && !C.off[d.id]);
   const hidden = new Set();                                 // ocultos un momento (mientras Eko los coloca)
 
-  let lay = null, parcel = null;                            // parcel: { id, state: "drop"|"floor"|"open" }
+  let lay = null, parcel = null, building = false;                            // parcel: { id, state: "drop"|"floor"|"open" }
   function layout() {
     const w = E.world; if (!w.width) return null;
     const x0 = C.side === "right" ? w.left + w.width - 24 - RW : w.left + 24;
     const y0 = w.top + w.height - WH;
-    const items = DECO.filter((d) => present(d) && !hidden.has(d.id)).map((d) => {
+    const items = DECO.filter((d) => !building && present(d) && !hidden.has(d.id)).map((d) => {
       let { x, w: iw, h } = d, src = d.src;
       if (d.id === "frame") { const p = picNow(); src = p.src; iw = Math.round(h * p.ar); x = d.x + (d.w - iw) / 2; }
       const y = TOP + (d.top != null ? d.top : d.bottom - h);
@@ -171,12 +173,15 @@ window.EkoCorner = (() => {
     if (!S.sleeping) { S.mode = "idle"; S.modeUntil = A.t + 5; }
     const m = baseMini() * lerp(1, FAR, R.z);
     if (Math.abs((A.mini || 1) - m) > 0.002) E.setMini(m, true);
+    E.stage.classList.add("inhome");                                   // sus bocadillos, encima de la casa y a buen tamaño
+    E.stage.style.setProperty("--homeB", ((WH + 12) / (m * ((window.EkoSettings && window.EkoSettings.get().size) || 1))).toFixed(1) + "px");
   });
   E.HOOKS.pose.push((P) => {
     if (!R || !lay) return;
     const floorTop = E.world.top + E.world.height;
     let up = floorTop - sy(footY(R.z)) + (R.extra || 0);
     if (R.hop) { const k = clamp((A.t - R.hop.t0) / 0.6, 0, 1); up = lerp(R.hop.from, R.hop.to, ease(k)) + 26 * Math.sin(Math.PI * k); if (k >= 1) R.hop = null; }
+    A.roomLiftPx = up;
     P.lift += up / scale();
     if (R.tw) {                                                      // andando por casa (también hacia el fondo)
       R.walkPh = (R.walkPh || 0) + 0.16;
@@ -261,7 +266,9 @@ window.EkoCorner = (() => {
     await hop(floorTop - sy(footY(0)), 0);
     exitRoom();
   }
+  function homeOff() { A.roomLiftPx = 0; E.stage.classList.remove("inhome"); }
   function exitRoom() {
+    homeOff();
     R = null; setBack(false); E.el.pet.removeAttribute("mask");
     A.inRoom = false;                                                  // el vigilante de tamaño le devuelve su tamaño con la varita
     E.hold(2);
@@ -270,6 +277,7 @@ window.EkoCorner = (() => {
   }
   function abort() {
     if (!R && !trip) return;
+    homeOff();
     R = null; trip = null; setBack(false); E.el.pet.removeAttribute("mask"); A.inRoom = false;
     hidden.clear(); cur = null;
     closeHome(1500);
@@ -285,7 +293,7 @@ window.EkoCorner = (() => {
     const base = floorTop - sy(footY(R.z));
     await hop(base, bedTop); if (!R) return "stay";
     R.extra = bedTop - base;
-    E.goToSleep(false);
+    E.goToSleep(false); ev("bedNap");
     return "sleep";
   }
   async function doWater() {
@@ -305,7 +313,7 @@ window.EkoCorner = (() => {
     } };
     setTimeout(() => { fx("pot", "water"); tone("sine", 900, 700, 0.3, 0.012); }, 1500);
     await wait(3600);
-    fx("pot", "happy"); say("waterEnd", 2200, "contento"); C.water = Date.now(); save();
+    fx("pot", "happy"); say("waterEnd", 2200, "contento"); C.water = Date.now(); save(); ev("potWater");
     if (window.EkoNeeds) window.EkoNeeds.give("pet");
     await wait(1200);
   }
@@ -317,11 +325,11 @@ window.EkoCorner = (() => {
     R.held = null;
     E.act(id === "frame" ? "decoFix" : "decoPolish", { dir: 1 });
     if (id === "frame") {
-      await wait(1630); fx("frame", "fix"); C.tilt = 0; C.tiltAt = Date.now(); save(); tone("sine", 500, 800, 0.12, 0.03);
+      await wait(1630); fx("frame", "fix"); C.tilt = 0; C.tiltAt = Date.now(); save(); ev("frameFix"); tone("sine", 500, 800, 0.12, 0.03);
       await wait(1100); await faceYou(); say("frameEnd", 2000, "orgulloso"); C.tilt = Math.random() < 0.5 ? 0.5 : -0.5; save();
     } else {
       await wait(1200); fx("trophy", "shine"); await wait(2200); fx("trophy", "shine");
-      await faceYou(); say("trophyEnd", 2200, "orgulloso"); C.polish = Date.now(); save();
+      await faceYou(); say("trophyEnd", 2200, "orgulloso"); C.polish = Date.now(); save(); ev("polish");
     }
     await wait(1200);
   }
@@ -375,6 +383,7 @@ window.EkoCorner = (() => {
     R.held.out = A.t;
     if (key.startsWith("pic:")) { C.pic = key.slice(4); C.picAt = Date.now(); C.tilt = 0; }
     C.got.push(key); hidden.delete(d.id); save();
+    ev("parcel"); if (key.startsWith("pic:")) ev("pics");
     lay = layout(); send();
     fx(d.id, "appear");
     tone("sawtooth", 900, 300, 0.2, 0.02, 1200); setTimeout(() => tone("sine", 700, 1200, 0.15, 0.025), 120);
@@ -420,7 +429,7 @@ window.EkoCorner = (() => {
 
   // Un viaje a casa: aparece la casa, entra, hace las tareas y sale (o se queda dormido)
   async function go(tasks, why) {
-    if (trip || R) return false;
+    if (trip || R || !C.built) return false;
     if (S.sleeping) E.wakeUp(false);
     trip = { tasks };
     if (why) say(why, 2000);
@@ -432,6 +441,7 @@ window.EkoCorner = (() => {
       else if (t === "pot") await doWater();
       else if (t === "frame" || t === "trophy") await doWall(t);
       else if (t === "swap") await swapPic();
+      else if (t === "look") await lookAround();
       else if (t.startsWith("deliver:")) await deliver(t.slice(8));
       else if (t.startsWith("stow:")) await stow(t.slice(5));
       else if (t.startsWith("unstow:")) await unstow(t.slice(7));
@@ -453,7 +463,7 @@ window.EkoCorner = (() => {
   const free = () => !trip && !R && !E.busy() && !S.sleeping && !S.perch && !E.A.hidden && !A.gameMode && !(window.EkoMenu && window.EkoMenu.isOpen && window.EkoMenu.isOpen());
   const withParcels = (tasks) => [...pending().map((k) => "deliver:" + k), ...tasks];
   setInterval(() => {
-    if (!free() || !E.native) return;
+    if (!free() || !E.native || !C.built) return;
     const l = E.lastSenses || {};
     if (l.fullscreen || l.in_call) return;
     const h = new Date().getHours(), night = h >= 23 || h < 7;
@@ -470,6 +480,7 @@ window.EkoCorner = (() => {
   // Paquete nuevo: lo anuncia y pregunta si vais a abrirlo
   let asked = "";
   setInterval(() => {
+    if (!C.built) { if (houseOpen() && free() && E.native && !asked) { asked = "build"; offerBuild(); } return; }
     const p = pending(); if (!p.length || !free() || !E.native) return;
     const key = p.join();
     if (asked === key) return;
@@ -485,8 +496,67 @@ window.EkoCorner = (() => {
     }, 2600);
   }, 20000);
 
+  // ---------- Desbloquear la casa: una pequeña ceremonia ----------
+  const houseOpen = () => testAll() || !PG() || PG().has("deco:bed");
+  function offerBuild() {
+    E.say("¡Tengo una sorpresa enorme! ¿Me acompañas?", 2800, true, "emocionado");
+    setTimeout(() => {
+      const M = window.EkoMenu; if (!M || !free()) { asked = ""; return; }
+      const c = M.card(`<p>He ahorrado magia para algo muy especial…</p><div class="chips"><button type="button" class="chip main y">¡A ver!</button><button type="button" class="chip n">Luego</button></div>`);
+      if (!c) return;
+      const t = setTimeout(() => { M.closeCard(); asked = ""; }, 25000);
+      c.querySelector(".y").addEventListener("click", () => { clearTimeout(t); M.closeCard(); build(); });
+      c.querySelector(".n").addEventListener("click", () => { clearTimeout(t); M.closeCard(); E.say("Vale… ¡pero no tardes, que me muero de ganas!", 2400, true); setTimeout(() => { asked = ""; }, 30 * 60000); });
+    }, 2900);
+  }
+  async function build() {
+    if (trip || R || C.built || !invoke || !E.native) return;
+    trip = { tasks: [] };
+    if (S.sleeping) E.wakeUp(false);
+    lay = layout(); if (!lay) { trip = null; return; }
+    E.say("Llevo mucho tiempo practicando este hechizo…", 2400, true, "picaro");
+    const doorX = sx(DOOR.x);
+    await new Promise((res) => { E.walkTo(doorX, 90, () => res()); setTimeout(res, 25000); });
+    S.mode = "idle"; S.modeUntil = A.t + 8;
+    await wait(400);
+    E.act("miniMagic"); await wait(500);
+    E.say("¡Casa… CASITA… aparece!", 2200, true);
+    await wait(500);
+    building = true; lay = layout();
+    open = true;
+    await invoke("corner_show", { x: lay.x0, y: lay.y0, w: RW, h: WH }).catch(() => { open = false; });
+    if (!open) { building = false; trip = null; return; }
+    for (let i = 0; i < 3; i++) { await wait(100); send(); }
+    fx("room", "build");
+    tone("sine", 300, 900, 1.2, 0.025); setTimeout(() => tone("sine", 600, 1200, 0.4, 0.03), 1300);
+    await wait(1700);
+    building = false; lay = layout(); send();
+    lay.items.forEach((it, i) => setTimeout(() => fx(it.id, "appear"), i * 220));
+    E.fx && E.fx("heart", 3); E.express && E.express("emocionado", 3); E.hop && E.hop(-420);
+    await wait(600);
+    E.say("¡Mi propia casa! ¡Gracias por cuidarme tanto!", 3200, true);
+    C.built = true; save();
+    ev("house");
+    await wait(3300);
+    trip = null;
+    go(["look", ...pending().map((k) => "deliver:" + k)]);
+  }
+  async function lookAround() {
+    if (!R) return;
+    await walkIn(205, 0.55); if (!R) return;
+    E.say(pick(["Ooooh…", "Qué bonita…", "¡Y tiene ventana!"]), 1800, true);
+    await wait(1400);
+    await walkIn(150, 0.3); await faceYou(); if (!R) return;
+    E.express && E.express("enamorado", 2.5);
+    E.say(pick(["¡Es perfecta!", "Aquí voy a ser muy feliz", "¡Hogar, dulce hogar!"]), 2200, true);
+    await wait(2000);
+  }
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
   // ---------- Menú «Mi casa» ----------
   function menuItems() {
+    if (!houseOpen()) return [{ id: "home-locked", img: "artDecoBed", label: "Mi casa", locked: true, lockText: "Nivel 6", run: () => {} }];
+    if (!C.built) return [{ id: "home-build", react: "emocionado", img: "artDecoBed", label: "¡Construir mi casa!", run: () => build() }];
     const out = [{ id: "home-go", react: "emocionado", img: "artDecoBed", label: "Ir a casa", run: () => {
       const t = withParcels([]);
       if (!t.length) { const opts = []; if (got("pot") && !C.off.pot) opts.push("pot"); if (picNow()) opts.push("frame"); if (got("trophy") && !C.off.trophy) opts.push("trophy"); t.push(opts.length ? opts[Math.floor(Math.random() * opts.length)] : "frame"); }
@@ -509,5 +579,5 @@ window.EkoCorner = (() => {
     return out;
   }
 
-  return { go, menuItems, pending, inside: () => !!R };
+  return { go, menuItems, pending, inside: () => !!R, state: () => (!houseOpen() ? "locked" : !C.built ? "build" : "built") };
 })();

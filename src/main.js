@@ -1547,6 +1547,14 @@
     const leanLift = S.dragging ? 0 : 84 * Math.abs(Math.sin(lean * Math.PI / 180));
     A.appliedLift = Math.max(A.autoLift || 0, leanLift);
     el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift - A.appliedLift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+    // en su casa el cuerpo va subido: la zona para cogerlo sube con él
+    {
+      const u = (el.pet.ownerSVGElement.clientWidth || 110) / 240, up = A.inRoom ? (P.lift + A.appliedLift) * u : 0;
+      if (Math.abs(up - (A.hitUp || 0)) > 0.5) {
+        A.hitUp = up; hit.style.translate = up ? `0 ${(-up).toFixed(1)}px` : "";
+        if (NATIVE && !(A.hitSendAt > A.t)) { A.hitSendAt = A.t + 0.15; setTimeout(sendHitbox, 0); }
+      }
+    }
 
     const lift = clamp((groundY() - S.y) / 300, 0, 1);
     const sh = (1 - lift * 0.7) * A.appear;
@@ -1861,6 +1869,7 @@
     if (!S.pressed) return;
     if (!S.dragging && Math.hypot(sxOf(e) - downX, syOf(e) - downY) > (e.pointerType === "touch" ? 12 : 5)) {
       S.dragging = true; S.airborne = false; S.mode = "drag"; A.action = null; S.perch = null; S.sneak = false; WIN.pendDx = 0;
+      if (A.inRoom && A.roomLiftPx) { S.y -= A.roomLiftPx; offY += A.roomLiftPx; }   // lo coges dentro de su casa: sin saltos
       if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; }
       if (window.EkoMenu) window.EkoMenu.close();
       if (S.fly) { S.fly = null; setTimeout(() => setFlyGear(null), 800); }

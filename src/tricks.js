@@ -85,7 +85,14 @@ window.EkoTricks = (() => {
     }
     once(o, "jump", () => { E.hop(-800, 0, 0.01); tone("sine", 380, 900, 0.32, 0.04); });
     const air = sm(0.21, 0.56, k), tuck = Math.sin(Math.PI * air);
-    P.spin += d * 360 * ease(sm(0.23, 0.53, k));
+    const ang = d * 360 * ease(sm(0.23, 0.53, k));
+    P.spin += ang;
+    // al girar, la cabeza pasaría por debajo de los pies y se saldría de la ventana: sube el cuerpo lo justo
+    // (cuenta con lo alto que es ahora mismo: un gorro de bruja pasa mucho más abajo que la cabeza sola)
+    if (o.R == null) { try { const bb = E.el.upper.getBBox(); o.R = Math.max(184, 80 - bb.y); o.W = Math.max(100, -bb.x, bb.x + bb.width); } catch (_) { o.R = 184; o.W = 100; } }
+    { const c = Math.cos(ang * Math.PI / 180), sn = Math.abs(Math.sin(ang * Math.PI / 180));
+      const low = Math.max(80 + 96 * c, 80 - o.R * c) + o.W * 0.62 * sn;
+      P.lift += Math.max(0, low - 176) + 16 * sn; }
     if (air > 0 && air < 1) {
       P.sy *= 1 - 0.13 * tuck; P.sx *= 1 + 0.03 * tuck;
       P.aL = lerp(70, -75, tuck); P.aR = -P.aL;                    // brazos pegados en lo alto del giro
@@ -346,7 +353,7 @@ window.EkoTricks = (() => {
       } else {
         once(o, "thud", () => {
           S.mode = "sit"; S.modeUntil = A.t + (1 - k) * A.action.dur + 0.4;
-          E.bump && E.bump(-7); dust(0, 172, 6); tone("triangle", 160, 70, 0.2, 0.06); E.fx("bang", 1);
+          E.bump && E.bump(-7); dust(0, 164, 6); tone("triangle", 160, 70, 0.2, 0.06); E.fx("bang", 1);
         });
         const imp = 1 - ease(sm(0.3, 0.38, k));
         P.sy *= 1 - 0.16 * imp; P.sx *= 1 + 0.1 * imp; P.sway += -d * 6 * imp;
@@ -373,15 +380,16 @@ window.EkoTricks = (() => {
       } else if (k < 0.22) {                                         // ¡plaf!
         const m = sm(0.1, 0.22, k);
         P.sway += f * lerp(14, 80, m * m); P.aL = 140; P.aR = -140; P.eyes = "closed";
+        P.shift -= f * 100 * m * m;                                   // cae hacia dentro de su ventana, no fuera
       } else if (k < 0.52) {                                         // en el suelo, pataleta
-        once(o, "plaf", () => { E.bump && E.bump(-5); dust(f * 170, 150, 6, 34); tone("triangle", 180, 60, 0.22, 0.06); });
+        once(o, "plaf", () => { E.bump && E.bump(-5); dust(f * 110, 146, 6, 34); tone("triangle", 180, 60, 0.22, 0.06); });
         const b = Math.sin(Math.PI * sm(0.22, 0.28, k)) * 4;
-        P.sway += f * (80 - b); P.eyes = "x";
+        P.sway += f * (80 - b); P.eyes = "x"; P.shift -= f * 100;
         P.legL = Math.sin(A.t * 18) * 10; P.legR = Math.sin(A.t * 18 + Math.PI) * 10;
         P.aL = 150 + Math.sin(A.t * 10) * 10; P.aR = -150 - Math.sin(A.t * 10) * 10;
       } else if (k < 0.72) {                                         // se levanta con rebote
         const m = back(sm(0.52, 0.72, k));
-        P.sway += f * 80 * (1 - m); P.aL = lerp(150, 30, m); P.aR = lerp(-150, -30, m); P.eyes = "squint";
+        P.sway += f * 80 * (1 - m); P.aL = lerp(150, 30, m); P.aR = lerp(-150, -30, m); P.eyes = "squint"; P.shift -= f * 100 * (1 - m);
       } else {                                                        // se sacude el polvo y disimula
         once(o, "brush", () => { dust(0, 150, 3, 22); });
         o.starsOn = k < 0.84;

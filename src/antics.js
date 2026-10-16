@@ -141,8 +141,8 @@
       start(c) { c.x0 = S.x; E.express("picaro", 1); },
       pose(P, t) { const k = seg(t, 0, 0.35); P.sy *= 1 - 0.12 * Math.sin(k * Math.PI); P.sx *= 1 + 0.08 * Math.sin(k * Math.PI); },
       tick(dt, t, c) {
-        if (t > 0.35 && !c.a) { c.a = 1; const p = pod(0, 20); puff(p.x, p.y, 11); V.chirp(); setTimeout(() => E.setHidden(true), 230); }
-        if (t > 1.05 && !c.b) { c.b = 1; S.x = farX(); S.facing = S.x > c.x0 ? -1 : 1; const p = pod(0, 20); setTimeout(() => puff(p.x, p.y, 11), 30); setTimeout(() => { E.setHidden(false); E.bump(-6); }, 260); }
+        if (t > 0.35 && !c.a) { c.a = 1; const p = pod(0, -14); puff(p.x, p.y, 11); V.chirp(); setTimeout(() => E.setHidden(true), 230); }
+        if (t > 1.05 && !c.b) { c.b = 1; S.x = farX(); S.facing = S.x > c.x0 ? -1 : 1; const p = pod(0, -14); setTimeout(() => puff(p.x, p.y, 11), 30); setTimeout(() => { E.setHidden(false); E.bump(-6); }, 260); }
         if (t > 1.6 && !c.c) { c.c = 1; E.express(pick(["divertido", "picaro"]), 2); if (Math.random() < 0.4) say("¡Tachán!", "Ta-da!"); }
       },
       end() { E.setHidden(false); },

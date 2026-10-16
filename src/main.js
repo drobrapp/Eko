@@ -1515,7 +1515,26 @@
     const t = clamp(A.turn + P.turn, -1, 1), at = Math.abs(t);
     const th = clamp(t + P.hturn, -1, 1), ath = Math.abs(th);
     const lean = (walking ? t * (S.speed > 100 ? 9 : 5) : 0) + P.sway;
-    el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
+    // Nada de Eko puede salirse por debajo de su ventana (al inclinarse, caerse o girar, Windows lo recortaría):
+    // si en el fotograma anterior asomaba por abajo, sube el cuerpo lo justo (y vuelve a bajar poco a poco)
+    {
+      const svgEl = el.pet.ownerSVGElement;
+      const clipped = svgEl && svgEl.style.clipPath;              // travesuras que se esconden a propósito
+      if (!clipped && !A.hidden && !S.dragging) {
+        // solo el cuerpo (cabeza, gorro, brazos, patas), no los objetos sueltos de trucos y travesuras
+        let bottom = -1e9, any = false;
+        for (const part of [el.upper, el.legs, el.armL, el.armR]) { if (!part) continue; const q = part.getBoundingClientRect(); if (q.height) { any = true; bottom = Math.max(bottom, q.bottom); } }
+        const r = { bottom, height: any ? 1 : 0 }, sr = stage.getBoundingClientRect();
+        const k = (svgEl.getBoundingClientRect().width / 240) || 0.458;   // px por unidad del dibujo
+        const over = (r.bottom - sr.bottom + 1) / k;
+        const was = A.appliedLift || 0;
+        if (r.height) A.autoLift = over > 0 ? was + over + 2 : Math.max(0, Math.min(A.autoLift || 0, was) + over * 0.12);
+      } else A.autoLift = 0;
+    }
+    // y una estimación inmediata por la inclinación (para no perder ni un fotograma en los cambios bruscos)
+    const leanLift = S.dragging ? 0 : 84 * Math.abs(Math.sin(lean * Math.PI / 180));
+    A.appliedLift = Math.max(A.autoLift || 0, leanLift);
+    el.pet.setAttribute("transform", `translate(${(shiver + P.shift).toFixed(2)} ${(bob - P.lift - A.appliedLift).toFixed(2)}) rotate(${P.spin.toFixed(1)} 0 80) rotate(${lean.toFixed(2)} 0 176) translate(0 176) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(0 -176)`);
 
     const lift = clamp((groundY() - S.y) / 300, 0, 1);
     const sh = (1 - lift * 0.7) * A.appear;
@@ -1821,6 +1840,7 @@
     S.pressed = true;
     Voice.ensure();
     downX = sxOf(e); downY = syOf(e); downT = performance.now();
+    { const hr = hit.getBoundingClientRect(); S.tapZone = (e.clientY - hr.top) / Math.max(1, hr.height) < 0.5 ? "head" : "belly"; }
     offX = sxOf(e) - S.x; offY = syOf(e) - S.y;
     prevX = S.x; prevY = S.y; prevT = downT;
   });
@@ -1906,12 +1926,16 @@
 
   const pokes = [];
   function poke() {
+    A.idleBeforePoke = Date.now() - lastInteraction;
     touched();
     if (window.EkoNeeds) window.EkoNeeds.give("pet");
     if (S.sleeping) { wakeUp(); return; }
     const now = performance.now();
     pokes.push(now);
     while (pokes.length && now - pokes[0] > 20000) pokes.shift();
+    // reacciones variadas (cosquillas, caricias, sustos, trucos, enfados…): las elige taps.js
+    if (window.EkoTaps && window.EkoTaps.react(S.tapZone || "belly", pokes.filter((t) => now - t < 6000).length, now - (A.lastPokeAt || 0))) { A.lastPokeAt = now; return; }
+    A.lastPokeAt = now;
     if (pokes.length >= 4) {            // muchos toquecitos seguidos: se enfada un poco
       act("angry"); bump(3); Voice.sigh();
       say(pick(TXT.pokeAnnoyed), 2400, true);

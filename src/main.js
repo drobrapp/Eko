@@ -2086,10 +2086,17 @@
   // Única fuente de verdad de la zona clicable: o toda la ventana (menú, tarjetas, juegos) o solo Eko
   let hitFull = false;
   // Tamaño «mágico» (para subirse a los iconos): escala con los pies como punto fijo
-  function setMini(m) {
+  function setMini(m, instant) {
     A.mini = clamp(m, 0.2, 1);
-    pod.style.transition = "transform .5s cubic-bezier(.3, 1.7, .5, 1)";
     stage.style.setProperty("--sc", A.mini.toFixed(3));
+    if (instant) {                                   // cambios continuos (perspectiva en su casa): sin transición
+      pod.style.transition = "";
+      const sc = (cfgNow().size || 1) * A.mini;
+      pod.style.transform = sc !== 1 ? `scale(${sc.toFixed(4)})` : "";
+      if (NATIVE && !(setMini.hb > A.t)) { setMini.hb = A.t + 0.4; sendHitbox(); }
+      return;
+    }
+    pod.style.transition = "transform .5s cubic-bezier(.3, 1.7, .5, 1)";
     applySettings(cfgNow());
     setTimeout(() => { pod.style.transition = ""; if (NATIVE) sendHitbox(); }, 560);
   }

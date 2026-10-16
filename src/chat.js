@@ -9,20 +9,84 @@
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
   const stage = document.getElementById("stage");
   const MOODS = ["feliz", "curioso", "sorprendido", "triste", "emocionado", "picaro", "enamorado", "timido", "confundido", "orgulloso", "divertido", "cansado", "sereno", "esperanzado"];
-  const ACTS = { baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"), abrazo: () => E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep() };
+  const TR = () => window.EkoTricks;
+  const trick = (id) => { const T = TR(); if (!T) return; const t = T.LIST.find((x) => x.id === id); if (t && T.has(t)) T.run(id); else E.say("¡Ese truco aún lo estoy aprendiendo!", 2200, true); };
+  const HATS = { bruja: "witch", calabaza: "pumpkin", vampiro: "vampire", fantasma: "ghost", "papá noel": "santa", papanoel: "santa", reno: "reindeer", elfo: "elf", bufanda: "scarf", fiesta: "party", corona: "crown" };
+  // Lo que puede hacer de verdad cuando la IA lo pide con {acción} o {acción:dato}
+  const ACTS = {
+    baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"),
+    abrazo: () => E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep(),
+    come: () => window.EkoMenu && window.EkoMenu.snack && window.EkoMenu.snack(),
+    juega: () => window.EkoMenu && window.EkoMenu.propose && window.EkoMenu.propose(true),
+    truco: () => { const T = TR(), u = T ? T.unlocked().filter((x) => x.id !== "bellyFull") : []; if (u.length) T.run(u[Math.floor(Math.random() * u.length)].id); else { E.act("tada"); } },
+    voltereta: () => trick("flip"), pirueta: () => trick("pirouette"), equilibrio: () => trick("balance"), malabares: () => trick("juggle"), magia: () => trick("magic"),
+    gorro: (arg) => {
+      const id = HATS[(arg || "").trim()] || (arg || "").trim();
+      if (!id || id === "nada" || id === "ninguno") { E.setHat("none"); return; }
+      const P = window.EkoProgress;
+      if (P && !P.has("acc:" + id)) { E.say("Ese todavía no lo tengo en el armario…", 2200, true); return; }
+      E.setHat(id);
+    },
+    quitagorro: () => E.setHat("none"),
+    recordatorio: (arg) => {
+      const m = String(arg || "").match(/^(\d{1,3})\s*:?\s*(.*)$/);
+      if (!m || !window.EkoMenu || !window.EkoMenu.remindIn) return;
+      window.EkoMenu.remindIn(Math.max(1, Math.min(600, +m[1])), (m[2] || "¡Lo que me pediste!").slice(0, 80));
+      E.fx("spark", 1);
+    },
+  };
+  // ---------- Memoria: lo que le cuentas y quiere recordar (solo en tu PC) ----------
+  const MEM_KEY = "eko-ai-memory";
+  const memGet = () => { try { return JSON.parse(localStorage.getItem(MEM_KEY) || "[]"); } catch (_) { return []; } };
+  const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9ñ ]/g, "").trim();
+  function remember(fact) {
+    fact = String(fact || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    if (fact.length < 4) return false;
+    const list = memGet(), n = norm(fact);
+    if (list.some((x) => norm(x.t) === n || norm(x.t).includes(n) || n.includes(norm(x.t)))) return false;
+    list.push({ t: fact, at: Date.now() });
+    try { localStorage.setItem(MEM_KEY, JSON.stringify(list.slice(-40))); } catch (_) {}
+    return true;
+  }
+  let lastChat = 0;
   let history = [], thinking = 0;
-  // Ejemplos de cómo habla (le enseñan el tono mejor que mil reglas)
+  // Ejemplos de formato (van en las instrucciones, no como conversación real, para que no los confunda con lo que le has dicho)
   const EXAMPLES = [
-    { role: "user", content: "hola" },
-    { role: "assistant", content: "[feliz] ¡Holi! Ya te echaba de menos, ¿qué me cuentas?" },
-    { role: "user", content: "estoy cansado" },
-    { role: "assistant", content: "[triste] Jo… ¿y si paras cinco minutos? Yo te guardo el sitio. {abrazo}" },
-    { role: "user", content: "¿qué haces?" },
-    { role: "assistant", content: "[picaro] Vigilar tu escritorio. Hay una carpeta sospechosa por ahí…" },
-    { role: "user", content: "cuéntame un chiste" },
-    { role: "assistant", content: "[divertido] ¿Qué hace un champiñón en una fiesta? ¡Ser un fungi! Vale, me lo he currado poco. {salta}" },
+    ["hola", "[feliz] ¡Holi! Ya te echaba de menos, ¿qué me cuentas?"],
+    ["estoy cansado", "[triste] Jo… ¿y si paras cinco minutos? Yo te guardo el sitio. {abrazo}"],
+    ["cuéntame un chiste", "[divertido] ¿Qué hace un champiñón en una fiesta? ¡Ser un fungi! {salta}"],
+    ["¿me haces un truco?", "[picaro] ¡Claro! Mira esto… {truco}"],
+    ["recuérdame en 10 minutos sacar la ropa", "[orgulloso] ¡Hecho! En diez minutos te aviso de la ropa. {recordatorio:10:Sacar la ropa}"],
+    ["ponte la corona", "[orgulloso] Su majestad está lista. {gorro:corona}"],
+    ["mañana tengo una entrevista de trabajo", "[esperanzado] ¡Qué nervios! Seguro que lo bordas. <recuerda>Tiene una entrevista de trabajo mañana</recuerda>"],
   ];
 
+
+  function actionsText() {
+    const T = TR(), u = T ? T.unlocked().map((t) => ({ flip: "{voltereta}", pirouette: "{pirueta}", balance: "{equilibrio}", juggle: "{malabares}", magic: "{magia}" })[t.id]).filter(Boolean) : [];
+    return ["{baila}", "{salta}", "{saluda}", "{abrazo}", "{piensa}", "{duerme}", "{come} (comerte una galleta)", "{juega} (proponer un juego)", "{truco} (uno al azar)", ...u,
+      "{gorro:nombre} (ponerte bruja, calabaza, vampiro, fantasma, papá noel, reno, elfo, bufanda, fiesta o corona)", "{quitagorro}", "{recordatorio:minutos:texto} (avisar dentro de X minutos)"].join(", ");
+  }
+  function memText() {
+    const m = memGet().slice(-20);
+    return m.length ? "Lo que recuerdas de tu humano (úsalo con naturalidad cuando venga a cuento, sin recitarlo):\n" + m.map((x) => "- " + x.t).join("\n") : "Aún no sabes mucho de tu humano: pregúntale cosas de vez en cuando.";
+  }
+  function moreContext() {
+    const P = window.EkoProgress, out = [];
+    if (P) {
+      const g = P.get(), l = P.level();
+      out.push(` Sois «${P.title(l)}» (nivel de amistad ${l} de 20) y lleváis ${g.days || 1} días juntos.`);
+      const got = P.ACH.filter((a) => g.ach[a.id]).sort((a, b) => g.ach[b.id] - g.ach[a.id]).slice(0, 2).map((a) => a.name);
+      if (got.length) out.push(` Últimos logros: ${got.join(", ")}.`);
+      const nx = P.nextUnlock(); if (nx) out.push(` En el nivel ${nx.lvl} aprenderás: ${nx.t.toLowerCase()}.`);
+    }
+    const hat = E.hat ? E.hat() : "auto";
+    if (hat && hat !== "auto" && hat !== "none") out.push(` Llevas puesto: ${hat}.`);
+    if (lastChat && Date.now() - lastChat > 6 * 3600000) out.push(" Hacía bastante que no hablabais.");
+    const h = new Date().getHours();
+    out.push(h < 6 ? " Es muy tarde." : h < 12 ? " Es por la mañana." : h < 15 ? " Es mediodía." : h < 21 ? " Es por la tarde." : " Es de noche.");
+    return out.join("");
+  }
   function system() {
     const s = cfg(), now = new Date(), l = E.lastSenses || {};
     const name = s.petName || "Eko", user = (s.userName || "").trim();
@@ -34,10 +98,13 @@
       "No hagas listas, ni des consejos largos, ni preguntes «¿en qué puedo ayudarte?». Eres una mascota, no un asistente. Si te piden algo serio o largo, contestas con cariño y brevemente.",
       "Reglas: responde SIEMPRE en 1 o 2 frases cortas (máximo 30 palabras). Sin emojis. Nunca digas que eres una IA, un modelo o un programa: eres " + name + ". Si no sabes algo, sales del paso con humor.",
       `Empieza tu respuesta SIEMPRE con tu emoción entre corchetes, eligiendo una de: ${MOODS.join(", ")}. Ejemplo: [feliz] ¡Qué bien verte!`,
-      `Si te apetece hacer algo, termina con una acción entre llaves: {baila}, {salta}, {saluda}, {abrazo}, {piensa} o {duerme}. Úsalo poco.`,
+      "Puedes HACER cosas de verdad poniendo al final una acción entre llaves (como mucho una): " + actionsText() + ". Úsalas cuando te lo pidan o cuando venga muy a cuento; si te piden algo que no está en la lista, di con gracia que aún no sabes.",
+      "Si tu humano te cuenta algo personal que merezca recordar (su nombre, su trabajo, gustos, planes, gente importante, cómo se siente con algo), añade al final <recuerda>el dato en pocas palabras</recuerda>. Nunca recuerdes contraseñas, datos de salud, dinero ni nada íntimo.",
+      memText(),
+      "Ejemplos de formato (NO son conversaciones reales con tu humano):\n" + EXAMPLES.map(([u, r]) => `Humano: ${u}\n${name}: ${r}`).join("\n"),
       `Contexto ahora: es ${dias[now.getDay()]}, son las ${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}.` +
         (l.app ? ` Tu humano está usando ${String(l.app).replace(/\.exe$/i, "")}.` : "") +
-        (thirsty ? " Tu brote tiene sed." : "") + (E.S.sleeping ? " Estabas dormido." : "") + (window.EkoNeeds ? window.EkoNeeds.describe() : ""),
+        (thirsty ? " Tu brote tiene sed." : "") + (E.S.sleeping ? " Estabas dormido." : "") + (window.EkoNeeds ? window.EkoNeeds.describe() : "") + moreContext(),
     ].join("\n");
   }
 
@@ -60,8 +127,8 @@
       else {
         const body = {
           model: cfg().aiModel || "gemma3:4b", stream: false, keep_alive: "3m",
-          messages: [{ role: "system", content: system() }, ...EXAMPLES, ...history],
-          options: Object.assign({ temperature: 0.7, top_p: 0.9, repeat_penalty: 1.1, num_predict: 110 }, cfg().aiCpu ? { num_gpu: 0 } : {}),
+          messages: [{ role: "system", content: system() }, ...history],
+          options: Object.assign({ temperature: 0.7, top_p: 0.9, repeat_penalty: 1.1, num_predict: 150 }, cfg().aiCpu ? { num_gpu: 0 } : {}),
         };
         const raw = await invoke("ai_chat", { body: JSON.stringify(body) });
         reply = (JSON.parse(raw).message || {}).content || "";
@@ -85,16 +152,24 @@
     let t = String(raw).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     let mood = null, action = null;
     t = t.replace(/^\s*\[([^\]]+)\]\s*/, (_, m) => { mood = m.toLowerCase().trim(); return ""; });
-    t = t.replace(/\s*\{([^}]+)\}\s*$/, (_, a) => { action = a.toLowerCase().trim(); return ""; });
+    const facts = [];
+    t = t.replace(/<recuerda>([\s\S]*?)<\/recuerda>/gi, (_, f) => { facts.push(f); return ""; }).replace(/<\/?recuerda>/gi, "");
+    t = t.replace(/\{([^}]+)\}/g, (_, a) => { if (!action) action = a.trim(); return ""; });
     t = t.replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
     if (!t) t = pick(["Mmm…", "¡Jeje!", "Me he quedado en blanco"]);
     if (t.length > 220) t = t.slice(0, 217).replace(/\s+\S*$/, "") + "…";
-    history.push({ role: "assistant", content: `[${mood || "feliz"}] ${t}` });
+    history.push({ role: "assistant", content: `[${mood || "feliz"}] ${t}` + (action ? ` {${action}}` : "") });
     if (mood && MOODS.includes(mood)) E.express(mood, 3.5);
     const ms = Math.min(12000, 2600 + t.length * 55);
     E.sayChat(t, ms);
     E.hold(ms / 1000 + 4);
-    if (action && ACTS[action]) setTimeout(ACTS[action], 600);
+    if (action) {
+      const i = action.indexOf(":"), key = (i < 0 ? action : action.slice(0, i)).toLowerCase().trim(), arg = i < 0 ? "" : action.slice(i + 1).trim();
+      if (ACTS[key]) setTimeout(() => ACTS[key](key === "recordatorio" ? arg : arg.toLowerCase()), 600);
+    }
+    let learned = 0; for (const f of facts) if (remember(f)) learned++;
+    if (learned) setTimeout(() => { E.fx("spark", 1); }, 900);         // «apuntado»: chispita discreta
+    lastChat = Date.now();
   }
 
   // Tarjeta para escribirle (se queda abierta para seguir hablando; Esc o × para cerrar)
@@ -150,5 +225,5 @@
     if (v.trim()) ask(v.trim());
   });
 
-  window.EkoChat = { open, close, ask, enabled: () => !!cfg().ai, reset: () => { history = []; } };
+  window.EkoChat = { open, close, ask, show, memory: memGet, remember, system: () => system(), enabled: () => !!cfg().ai, reset: () => { history = []; } };
 })();

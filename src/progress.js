@@ -20,23 +20,23 @@ window.EkoProgress = (() => {
   const LEVELS = {
     1:  { t: "Galleta, pelota, piedra-papel-tijera, gorro de dormir y paraguas" },
     2:  { t: "Juego: ¿Qué mano?", id: "game:hand", soon: 1 },
-    3:  { t: "Truco: voltereta", id: "trick:flip", soon: 1 },
+    3:  { t: "Truco: voltereta", id: "trick:flip" },
     4:  { t: "Accesorio: gafas", id: "acc:readglasses" },
     5:  { t: "Juego: escondite", id: "game:hide" },
     6:  { t: "Decoración: camita", id: "deco:bed", soon: 1 },
-    7:  { t: "Truco: pirueta", id: "trick:spin", soon: 1 },
+    7:  { t: "Truco: pirueta", id: "trick:spin" },
     8:  { t: "Accesorio: pajarita", id: "acc:bowtie" },
     9:  { t: "Juego: atrapa galletas", id: "game:catch", soon: 1 },
     10: { t: "Accesorio: bufanda (¡y fiesta!)", id: "acc:scarf" },
-    11: { t: "Truco: equilibrio a la pata coja", id: "trick:balance", soon: 1 },
+    11: { t: "Truco: equilibrio a la pata coja", id: "trick:balance" },
     12: { t: "Decoración: maceta", id: "deco:pot", soon: 1 },
     13: { t: "Juego: tócame donde brille", id: "game:glow", soon: 1 },
     14: { t: "Accesorio: corona", id: "acc:crown" },
-    15: { t: "Truco: malabares", id: "trick:juggle", soon: 1 },
+    15: { t: "Truco: malabares", id: "trick:juggle" },
     16: { t: "Decoración: cuadro", id: "deco:frame", soon: 1 },
     17: { t: "Accesorio: auriculares", id: "acc:headphones" },
     18: { t: "Juego: adivina qué pienso", id: "game:guess", soon: 1 },
-    19: { t: "Truco: magia", id: "trick:magic", soon: 1 },
+    19: { t: "Truco: magia", id: "trick:magic" },
     20: { t: "Título «Mejor amigo» y trofeo", id: "deco:trophy", soon: 1 },
   };
   const TITLES = [[20, "Mejor amigo"], [15, "Inseparables"], [10, "Muy amigos"], [5, "Amigos"], [2, "Colegas"], [1, "Recién conocidos"]];
@@ -46,7 +46,7 @@ window.EkoProgress = (() => {
   // n = cuántas veces; give = qué desbloquea; xp = premio
   const ACH = [
     { id: "first", ic: "artHeart", name: "Primer amigo", how: "Completa las misiones de bienvenida", xp: 30 },
-    { id: "glutton", ic: "artCookie", name: "Goloso", how: "Dale 20 galletas", n: 20, ev: "feed", xp: 25 },
+    { id: "glutton", ic: "artCookie", name: "Goloso", how: "Dale 20 galletas (desbloquea el truco «Barriga llena»)", n: 20, ev: "feed", xp: 25, give: ["trick:belly"] },
     { id: "gardener", ic: "artCan", name: "Jardinero", how: "Riégale 7 días distintos", n: 7, ev: "waterDay", xp: 30 },
     { id: "rps", ic: "artSpark", name: "Invencible", how: "Gánale 10 veces a piedra, papel o tijera", n: 10, ev: "rpsWin", xp: 25 },
     { id: "detective", ic: "artAsk", name: "Detective", how: "Encuéntralo 10 veces en el escondite", n: 10, ev: "found", xp: 25 },
@@ -142,6 +142,9 @@ window.EkoProgress = (() => {
     later(1100, () => E.act("tada"));
     if (big) { later(1300, () => E.fx("notes", 3)); later(1600, () => { E.setDance(true); later(4200, () => E.setDance(false)); }); }
     showToast("artSpark", `¡Nivel ${l}!`, d.soon ? `${d.t} (muy pronto)` : d.t, 6);
+    // si lo nuevo es un truco, lo estrena en cuanto acaba la fiesta
+    const TR = { "trick:flip": "flip", "trick:spin": "pirouette", "trick:balance": "balance", "trick:juggle": "juggle", "trick:magic": "magic" };
+    if (TR[d.id]) later(big ? 7600 : 5200, () => { if (window.EkoTricks && !E.S.sleeping) { E.say("¡Mira lo que he aprendido!", 1600, true); later(900, () => window.EkoTricks.run(TR[d.id])); } });
     later(900, () => E.say(d.soon ? `¡Nivel ${l}! Estoy aprendiendo algo nuevo…` : `¡Nivel ${l}! ${d.t.split(": ").pop().replace(/^./, (c) => c.toUpperCase())} para ti`, 3600, true));
   }
   function unlockAch(id) {
@@ -157,7 +160,7 @@ window.EkoProgress = (() => {
     addXp(a.xp || 20);
   }
   function celebrateAch(a) {
-    showToast(a.ic, `¡Logro: ${a.name}!`, a.give ? "Nuevo en el armario" : a.how, 5);
+    showToast(a.ic, `¡Logro: ${a.name}!`, a.give ? (a.give[0].startsWith("trick:") ? "Truco nuevo desbloqueado" : "Nuevo en el armario") : a.how, 5);
     E.express("orgulloso", 3); E.fx("heart", 2); E.hop(-380);
   }
   function count(ev, n = 1) {

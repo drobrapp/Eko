@@ -18,6 +18,7 @@
     { p: ["despierta", "arriba", "buenos días"], run: () => (E.S.sleeping ? E.wakeUp() : (E.act("wave"), E.say(pick(["¡Ya estoy despierto!", "¡Buenos días!"]), 2000, true))) },
     { p: ["ven", "ven aquí", "acércate"], run: () => { E.say(pick(["¡Voy!", "¡Ahí voy!"]), 1400, true); E.walkTo(E.cursor.x, 170); } },
     { p: ["salta", "da un salto"], run: () => E.hop(-560) },
+    { p: ["haz un truco", "un truco", "enséñame un truco"], run: () => { const T = window.EkoTricks, u = T ? T.unlocked() : []; if (u.length) T.run(u[Math.floor(Math.random() * u.length)].id); else { E.act("tada"); E.say("¡Aún estoy aprendiendo trucos!", 2000, true); } } },
     { p: ["vuela", "a volar"], run: () => E.fly() },
     { p: ["saluda", "di hola"], run: () => { E.act("wave"); E.say("¡Holi!", 1600, true); } },
     { p: ["qué hora es", "dime la hora"], run: () => { const d = new Date(); E.act("point", { dir: 1 }); E.say(`Son las ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`, 2800, true); } },

@@ -253,7 +253,7 @@
   const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta" }
                    : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook" };
   const CATS = [["foryou", "sparkle"], ["play", "play"], ["care", "cookie"], ["wardrobe", "hanger"], ["util", "util"], ["notebook", "book"]];
-  const SUBS = { rps: "play", remind: "util", shortcuts: "util" };
+  const SUBS = { rps: "play", tricks: "play", remind: "util", shortcuts: "util" };
   const lockLvl = (id) => { const P = PG(); if (!P) return 0; for (const [n, d] of Object.entries(P.LEVELS)) if (d.id === id) return +n; return 0; };
   // Lo que hay en cada categoría
   const HATS = [["witch", "artHatWitch", "halloween"], ["pumpkin", "artHatPumpkin", "halloween"], ["vampire", "artCape", "halloween"], ["ghost", "artPuff", "halloween"],
@@ -268,7 +268,7 @@
         { id: "ball", react: "emocionado", img: "artBall", dimg: () => (ball ? "artIcBasket" : "artBall"), label: L.ball, run: () => (ball ? stowBall() : startGame("ball")), dyn: () => (ball ? L.stowBall : L.ball) },
         { id: "rps", react: "picaro", img: "artIcRps", icon: "scissors", label: L.rps, run: () => startGame("rps"), keep: true },
         g("hide", "artIcHide", L.hide, () => startGame("hide"), "game:hide"),
-        { id: "trick", react: "picaro", img: "artIcTrick", label: L.trick, run: trick },
+        { id: "trick", react: "picaro", img: "artIcTrick", label: ES ? "Trucos" : "Tricks", go: "tricks" },
         g("hand", "artIcHand", L.hand, null, "game:hand", 1),
         g("catch", "artCookie", ES ? "Atrapa galletas" : "Cookie catch", null, "game:catch", 1),
         g("glow", "artIcGlow", ES ? "Tócame donde brille" : "Touch the glow", null, "game:glow", 1),
@@ -313,6 +313,20 @@
       return s.slice(0, 6);
     }
     if (c === "rps") return TREE.rps.map((x) => ({ ...x, keep: false }));
+    if (c === "tricks") {
+      const T = window.EkoTricks;
+      const IMG = { flip: "artSpark", pirouette: "artNote", balance: "artIcDiscreet", juggle: "artJuggle", magic: "artWand", bellyFull: "artCookie" };
+      const out = [
+        { id: "dance", react: "emocionado", img: "artNotes", label: ES ? "Bailar" : "Dance", run: () => { E.setDance(true); setTimeout(() => E.setDance(false), 8500); } },
+        { id: "tada", react: "orgulloso", img: "artIcTrick", label: "¡Ta-chán!", run: () => { E.act("tada"); E.express && E.express("emocionado", 2.2); setTimeout(() => E.say("¡Ta-chán!", 1600, true), 700); } },
+      ];
+      if (T) for (const t of T.LIST) {
+        const it = { id: "tr-" + t.id, react: "picaro", img: IMG[t.id], label: t.name, run: () => T.run(t.id), lock: t.lock };
+        if (t.lock === "trick:belly") { it.lock = null; if (!T.has(t)) { it.locked = true; it.lockText = (ES ? "Logro: " : "Achievement: ") + "Goloso"; } }
+        out.push(it);
+      }
+      return out;
+    }
     if (c === "remind") return TREE.remind.map((x) => ({ ...x, chip: true }));
     return [];
   }
@@ -323,7 +337,7 @@
   let capText = "", greetNext = false;
   const CAP = ES ? {
     play: ["¿A qué jugamos?", "¡Elige juego!"], care: ["Mmm, ¿qué me das?", "¡Mímame!"], util: ["¿En qué te ayudo?"], wardrobe: ["¿Qué me pongo?", "¡Desfile!"],
-    notebook: ["Mi libreta"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"],
+    notebook: ["Mi libreta"], remind: ["¿Cuándo te aviso?"], rps: ["¡Elige! Sin trampas"], tricks: ["¿Qué te enseño?", "¡Mira lo que sé hacer!"],
   } : { play: ["What shall we play?"], care: ["What do I get?"], util: ["How can I help?"], wardrobe: ["What should I wear?"], notebook: ["My notebook"], remind: ["When?"], rps: ["Pick one!"] };
 
   function panel() {
@@ -381,7 +395,7 @@
     if (!capText) capText = levelId === "home" || levelId === "foryou" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     greetNext = false;
     const cap = p.querySelector(".mcap");
-    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : NAMES[cat]) : cat ? NAMES[cat] : "";
+    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : NAMES[cat]) : cat ? NAMES[cat] : "";
     cap.querySelector("b").textContent = ttl || capText;
     cap.querySelector("em").textContent = ttl ? capText : "";
     E.talk && E.talk(capText);
@@ -571,6 +585,8 @@
     setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);
   }
   function trick() {
+    const T = window.EkoTricks, u = T ? T.unlocked() : [];
+    if (u.length && Math.random() < 0.7) { T.run(pick(u).id); return; }
     const t = pick(["dance", "fly", "tada", "tada", "dance"]);
     if (t === "dance") { E.setDance(true); setTimeout(() => E.setDance(false), 8500); }
     else if (t === "fly") E.fly();
@@ -1060,7 +1076,7 @@
       if (!open && updPending()) { openAt("update"); return true; }
       return false;
     },
-    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), snack: () => giveSnack(), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
     isOpen: () => open,
   };
 })();

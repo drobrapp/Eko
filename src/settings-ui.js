@@ -244,4 +244,23 @@
   document.addEventListener("change", () => setTimeout(deps, 0));
   document.addEventListener("click", () => setTimeout(deps, 0));
   deps();
+  // ---------- Lo que recuerda de ti (memoria de la IA) ----------
+  const MEM = "eko-ai-memory";
+  const memRead = () => { try { return JSON.parse(localStorage.getItem(MEM) || "[]"); } catch (_) { return []; } };
+  const memWrite = (l) => { try { localStorage.setItem(MEM, JSON.stringify(l)); } catch (_) {} };
+  function memPaint() {
+    const ul = $("#memList"); if (!ul) return;
+    const l = memRead();
+    ul.innerHTML = l.map((m, i) => `<li><span></span><button type="button" data-i="${i}" title="Olvidar">×</button></li>`).join("");
+    ul.querySelectorAll("li span").forEach((sp, i) => { sp.textContent = l[i].t; });
+    $("#memRow").hidden = !l.length; $("#memEmpty").hidden = !!l.length;
+  }
+  const ml = $("#memList");
+  if (ml) {
+    ml.addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (!b) return; const l = memRead(); l.splice(+b.dataset.i, 1); memWrite(l); memPaint(); saved(); says("Vale, eso ya no lo recuerdo"); });
+    $("#memClear").addEventListener("click", () => { memWrite([]); memPaint(); saved(); says("Borrón y cuenta nueva. ¿Quién eres? (es broma)"); });
+    window.addEventListener("storage", (e) => { if (e.key === MEM) memPaint(); });
+    window.addEventListener("focus", memPaint);
+    memPaint();
+  }
 })();

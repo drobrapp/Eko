@@ -68,7 +68,7 @@
     if (!on) return;
     const w = why();
     if (v.kind === "error") status("error", v.text);
-    else if (w) { status("ignored-" + w, v.text, v.conf); return; }
+    else if (w) { status("ignored-" + w, w === "call" ? `${v.text || ""}|${((E.lastSenses || {}).mic_apps || []).join(", ")}` : v.text, v.conf); return; }
     else status(v.kind, v.text, v.conf);
     if (v.kind === "speech") {
       // Te oye hablar: te mira, sin interrumpir lo que hace (como mucho cada 10 s)

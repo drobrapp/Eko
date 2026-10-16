@@ -149,7 +149,7 @@
     unknown: (e) => `🤔 Ha oído «${e.text}» pero no es una orden`,
     nomatch: () => "❓ Te ha oído pero no ha entendido ninguna orden",
     "ignored-music": () => "⏸ Te oye, pero no hace caso: está sonando música",
-    "ignored-call": () => "⏸ Te oye, pero no hace caso: estás en una llamada",
+    "ignored-call": (e) => { const apps = String(e.text || "").split("|")[1] || ""; return `⏸ Te oye, pero no hace caso: cree que estás en una llamada${apps ? ` (usa el micro: ${apps})` : ""}`; },
     "ignored-quiet": () => "⏸ Te oye, pero está en modo discreto",
     "ignored-hidden": () => "⏸ Te oye, pero está escondido",
     error: (e) => `⚠ Error: ${e.text || "no puede usar el micrófono"} — revisa Windows → Hora e idioma → Voz`,

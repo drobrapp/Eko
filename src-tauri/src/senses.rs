@@ -37,6 +37,7 @@ pub struct Senses {
     idle: u64,
     fullscreen: bool,
     in_call: bool,
+    mic_apps: Vec<String>,
     recording: bool,
     cpu: f32,
     ram: f32,
@@ -159,7 +160,8 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
             }
 
             let (battery, charging) = power();
-            let in_call = mic_in_use();
+            let mic_apps = mic_users();
+            let in_call = !mic_apps.is_empty();
             #[cfg(windows)]
             let music = media.current();
             #[cfg(not(windows))]
@@ -178,6 +180,7 @@ fn start_main_loop(app: AppHandle, online: Arc<AtomicBool>) {
                 idle: idle_secs(),
                 fullscreen,
                 in_call,
+                mic_apps,
                 recording,
                 cpu,
                 ram,
@@ -366,40 +369,55 @@ fn power() -> (Option<u8>, bool) {
     (None, true)
 }
 
-/// Micrófono en uso por cualquier app (Zoom, Meet, Teams, Discord…) = estás en una llamada.
+/// Apps que están usando el micrófono ahora mismo (Zoom, Meet, Teams, Discord…) = estás en una llamada.
+/// No cuentan el propio Eko ni lo que usa para escucharte (reconocimiento de voz de Windows, su WebView).
 #[cfg(windows)]
-fn mic_in_use() -> bool {
+fn mic_users() -> Vec<String> {
     use winreg::RegKey;
     let base = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone";
-    let Ok(root) = winreg::HKCU.open_subkey(base) else { return false };
+    let Ok(root) = winreg::HKCU.open_subkey(base) else { return Vec::new() };
     fn active(k: &RegKey) -> bool {
         matches!(k.get_value::<u64, _>("LastUsedTimeStop"), Ok(0))
             && matches!(k.get_value::<u64, _>("LastUsedTimeStart"), Ok(v) if v > 0)
     }
-    // El propio Eko (cuando te escucha) no cuenta como «llamada»
+    fn mine(name: &str, me: &str) -> bool {
+        let n = name.to_lowercase();
+        (!me.is_empty() && n == me)
+            || n.contains("msedgewebview2")
+            || n.contains("speech")
+            || n.contains("cortana")
+            || n.contains("eko.exe")
+    }
+    // Nombre corto para mostrarlo: último trozo de la ruta o del paquete
+    fn short(name: &str) -> String {
+        let last = name.rsplit('#').next().unwrap_or(name);
+        let last = last.split('_').next().unwrap_or(last);
+        last.trim_end_matches(".exe").trim_end_matches(".EXE").to_string()
+    }
     let me = std::env::current_exe().map(|p| p.to_string_lossy().replace('\\', "#").to_lowercase()).unwrap_or_default();
+    let mut out = Vec::new();
     for name in root.enum_keys().flatten() {
         let Ok(k) = root.open_subkey(&name) else { continue };
         if name == "NonPackaged" {
             for sub in k.enum_keys().flatten() {
-                if !me.is_empty() && sub.to_lowercase() == me {
+                if mine(&sub, &me) {
                     continue;
                 }
                 if let Ok(k2) = k.open_subkey(&sub) {
                     if active(&k2) {
-                        return true;
+                        out.push(short(&sub));
                     }
                 }
             }
-        } else if active(&k) {
-            return true;
+        } else if !mine(&name, &me) && active(&k) {
+            out.push(short(&name));
         }
     }
-    false
+    out
 }
 #[cfg(not(windows))]
-fn mic_in_use() -> bool {
-    false
+fn mic_users() -> Vec<String> {
+    Vec::new()
 }
 
 #[cfg(windows)]

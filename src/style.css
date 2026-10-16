@@ -1,3 +1,4 @@
+html,body{overflow:hidden}*{scrollbar-width:none}*::-webkit-scrollbar{display:none;width:0;height:0}
 html, body {
   margin: 0;
   width: 100%;
@@ -402,7 +403,7 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .mcat[data-c="util"] { --cb: #def0ea; --cc: #3f8f77; }
 .mcat[data-c="notebook"] { --cb: #e3ecf7; --cc: #4f78a8; }
 .mcat .mlb { font-size: 12px; }
-.mbody { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin-right: -6px; padding-right: 6px; scrollbar-width: thin; scrollbar-color: #e6d6cb transparent; }
+.mbody { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin-right: -6px; padding-right: 6px; }
 .mbody.swap > * { animation: mswap .28s ease both; }
 @keyframes mswap { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 .mgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -544,7 +545,7 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 /* Nunca dos bocadillos a la vez: si habla, se esconde el de pensar (y el de deseo) */
 #bubble.show ~ #thought, #bubble.show ~ #wish { opacity: 0 !important; }
 .thinking #wish { opacity: 0 !important; }
-.card { overflow-y: auto; scrollbar-width: thin; }
+.card { overflow-y: auto; overflow-x: hidden; }
 
 #pod { transform-origin: 50% 100%; transition: transform .3s ease; }
 

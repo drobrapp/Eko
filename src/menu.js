@@ -122,8 +122,8 @@
       { icon: "scissors", label: L.scissors, run: () => playRps(2) },
     ],
     util: [
-      { id: "remind", react: "curioso", icon: "bell", label: L.remind, go: "remind" },
-      { id: "pomo", react: "orgulloso", icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
+      { id: "remind", react: "curioso", img: "artIcBell", label: L.remind, go: "remind" },
+      { id: "pomo", react: "orgulloso", img: "artIcFocus", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
       { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote },
       { icon: "list", label: L.tasks, run: showTasks },
       { icon: "bolt", label: L.shortcuts, go: "shortcuts" },
@@ -132,15 +132,15 @@
     shortcuts: [
       { icon: "download", label: L.lastdl, run: () => native("open_last_download") },
       { icon: "folder", label: L.dlfolder, run: () => native("open_downloads") },
-      { icon: "camera", label: L.shot, run: () => native("screenshot") },
-      { icon: "pause", label: L.playpause, run: () => native("media_play_pause") },
+      { img: "artCamera", label: L.shot, run: () => native("screenshot") },
+      { img: "artIcPlaypause", label: L.playpause, run: () => native("media_play_pause") },
       { icon: "next", label: L.nexttrack, run: () => native("media_next") },
     ],
     wardrobe: COSTUMES.map(([id, lab, ic, col]) => ({ icon: ic, color: col, label: lab, run: () => { E.setHat(id); }, keep: true })),
     rest: [
       { id: "sleep", react: "yawn", icon: "moon", label: L.sleep, run: () => E.goToSleep() },
-      { icon: "mute", label: L.mute, run: muteHour },
-      { icon: "feather", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
+      { img: "artIcMute", label: L.mute, run: muteHour },
+      { img: "artIcDiscreet", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
     ],
   };
 
@@ -262,17 +262,17 @@
   function items(c) {
     const P = PG();
     if (c === "play") {
-      const g = (id, icon, label, run, lvlId, soon) => ({ id, icon, label, run, lock: lvlId, soon });
+      const g = (id, img, label, run, lvlId, soon) => ({ id, img, label, run, lock: lvlId, soon });
       return [
-        { id: "letsplay", react: "emocionado", icon: "play", label: ES ? "¡Sorpréndeme!" : "Surprise me!", run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : (ES ? "¡Sorpréndeme!" : "Surprise me!")) },
-        { id: "ball", react: "emocionado", img: "artBall", label: L.ball, run: () => (ball ? stowBall() : startGame("ball")), dyn: () => (ball ? L.stowBall : L.ball) },
-        { id: "rps", react: "picaro", icon: "scissors", label: L.rps, run: () => startGame("rps"), keep: true },
-        g("hide", "hide", L.hide, () => startGame("hide"), "game:hide"),
-        { id: "trick", react: "picaro", icon: "star", label: L.trick, run: trick },
-        g("hand", "dice", L.hand, null, "game:hand", 1),
-        g("catch", "cookie", ES ? "Atrapa galletas" : "Cookie catch", null, "game:catch", 1),
-        g("glow", "sparkle", ES ? "Tócame donde brille" : "Touch the glow", null, "game:glow", 1),
-        g("guess", "ask", ES ? "Adivina qué pienso" : "Guess my thought", null, "game:guess", 1),
+        { id: "letsplay", react: "emocionado", img: "artIcSurprise", dimg: () => (ball ? "artIcBasket" : "artIcSurprise"), label: ES ? "¡Sorpréndeme!" : "Surprise me!", run: () => (ball ? stowBall() : propose(true)), dyn: () => (ball ? L.stowBall : (ES ? "¡Sorpréndeme!" : "Surprise me!")) },
+        { id: "ball", react: "emocionado", img: "artBall", dimg: () => (ball ? "artIcBasket" : "artBall"), label: L.ball, run: () => (ball ? stowBall() : startGame("ball")), dyn: () => (ball ? L.stowBall : L.ball) },
+        { id: "rps", react: "picaro", img: "artIcRps", icon: "scissors", label: L.rps, run: () => startGame("rps"), keep: true },
+        g("hide", "artIcHide", L.hide, () => startGame("hide"), "game:hide"),
+        { id: "trick", react: "picaro", img: "artIcTrick", label: L.trick, run: trick },
+        g("hand", "artIcHand", L.hand, null, "game:hand", 1),
+        g("catch", "artCookie", ES ? "Atrapa galletas" : "Cookie catch", null, "game:catch", 1),
+        g("glow", "artIcGlow", ES ? "Tócame donde brille" : "Touch the glow", null, "game:glow", 1),
+        g("guess", "artIcGuess", ES ? "Adivina qué pienso" : "Guess my thought", null, "game:guess", 1),
       ];
     }
     if (c === "care") return [
@@ -295,17 +295,17 @@
       return out;
     }
     if (c === "util") return [
-      { id: "remind", react: "curioso", icon: "bell", label: L.remind, go: "remind" },
-      { id: "pomo", react: "orgulloso", icon: "timer", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
-      { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote },
-      { icon: "list", label: L.tasks, run: showTasks },
-      { icon: "download", label: L.lastdl, run: () => native("open_last_download") },
+      { id: "remind", react: "curioso", img: "artIcBell", label: L.remind, go: "remind" },
+      { id: "pomo", react: "orgulloso", img: "artIcFocus", label: L.pomo, run: () => (pomo ? stopPomo() : startPomo()), dyn: () => (pomo ? L.stopPomo : L.pomo) },
+      { id: "note", react: "curioso", img: "artIcNote", label: L.note, run: askNote },
+      { img: "artIcTasks", label: L.tasks, run: showTasks },
+      { img: "artIcDownload", label: L.lastdl, run: () => native("open_last_download") },
       { icon: "folder", label: L.dlfolder, run: () => native("open_downloads") },
-      { icon: "camera", label: L.shot, run: () => native("screenshot") },
-      { icon: "pause", label: L.playpause, run: () => native("media_play_pause"), keep: true },
+      { img: "artCamera", label: L.shot, run: () => native("screenshot") },
+      { img: "artIcPlaypause", label: L.playpause, run: () => native("media_play_pause"), keep: true },
       { icon: "next", label: L.nexttrack, run: () => native("media_next"), keep: true },
-      { icon: "mute", label: L.mute, run: muteHour },
-      { icon: "feather", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
+      { img: "artIcMute", label: L.mute, run: muteHour },
+      { img: "artIcDiscreet", label: L.discreet, run: toggleDiscreet, dyn: () => (E.quiet ? L.discreet + " ✓" : L.discreet) },
     ];
     if (c === "foryou") {
       const s = buildSmart().filter((x) => x.go !== "root");
@@ -332,13 +332,14 @@
     p = document.createElement("div");
     p.className = "mpanel";
     p.innerHTML = `<header class="mhead"><button type="button" class="mback">${svg("back")}</button><p class="mcap"><b></b><em></em></p>
-      <button type="button" class="mgear" title="${L.settings}">${svg("sliders")}</button><button type="button" class="mx">${svg("close")}</button></header><div class="mbody"></div>`;
+      <button type="button" class="mgear" title="${L.settings}"><img src="${artSrc("artIcSettings")}" alt=""></button><button type="button" class="mx">${svg("close")}</button></header><div class="mbody"></div>`;
     p.querySelector(".mback").addEventListener("click", (e) => { e.stopPropagation(); E.Voice.tone && E.Voice.tone("sine", 800, 600, 0.05, 0.015); render(SUBS[level] || "home"); });
     p.querySelector(".mgear").addEventListener("click", (e) => { e.stopPropagation(); close(); openSettings(); });
     p.querySelector(".mx").addEventListener("click", (e) => { e.stopPropagation(); close(); });
     menu.appendChild(p);
     return p;
   }
+  const CAT_IMG = { foryou: "artCatForyou", play: "artCatPlay", care: "artCatCare", wardrobe: "artCatWardrobe", util: "artCatUtil", notebook: "artCatNotebook" };
   const CAT_REACT = { play: "emocionado", care: "esperanzado", wardrobe: "orgulloso", util: "curioso", notebook: "orgulloso", foryou: "contento" };
   function render(levelId) {
     if (levelId === "root" || levelId === "smart") levelId = "home";
@@ -359,7 +360,7 @@
       CATS.forEach(([id, ic], i) => {
         const b = document.createElement("button");
         b.type = "button"; b.className = "mcat"; b.dataset.c = id; b.style.setProperty("--d", i * 35 + "ms");
-        b.innerHTML = `<span class="mci">${svg(ic)}</span><span class="mlb">${NAMES[id]}</span>`;
+        b.innerHTML = `<span class="mci"><img src="${artSrc(CAT_IMG[id])}" alt=""></span><span class="mlb">${NAMES[id]}</span>`;
         b.addEventListener("click", (e) => { e.stopPropagation(); E.Voice.tone && E.Voice.tone("sine", 700, 900, 0.05, 0.015); render(id); });
         b.addEventListener("mouseenter", () => hoverReact({ react: CAT_REACT[id] }));
         grid.appendChild(b);
@@ -400,7 +401,8 @@
       b.innerHTML = `<b>${it.text}</b>`;
     } else {
       b.className = "mtile" + (locked ? " locked" : "") + (soon ? " soon" : "") + (it.on && it.on() ? " on" : "");
-      const ic = it.img ? `<img src="${artSrc(it.img)}" alt="">` : svg(it.icon, it.color);
+      const im = it.dimg ? it.dimg() : it.img;
+      const ic = im ? `<img src="${artSrc(im)}" alt="">` : svg(it.icon, it.color);
       const badge = locked ? `<i>${svg("lock")}${it.lockText ? (it.lockText.startsWith("Logro") || it.lockText.startsWith("Achiev") ? (ES ? "Logro" : "Award") : it.lockText.replace(/^(Nivel|Level) /, ES ? "Nv " : "Lv ")) : (ES ? "Nv " : "Lv ") + lvl}</i>` : soon ? `<i>${ES ? "Muy pronto" : "Soon"}</i>` : "";
       b.innerHTML = `<span class="mic">${ic}</span><span class="mlb">${label}</span>${badge}`;
     }
@@ -431,7 +433,7 @@
       const list = P.ACH.filter((a) => !a.when || a.when());
       const got = P.get().ach;
       const n = list.filter((a) => got[a.id]).length;
-      return tabs + `<p class="nsub">${n} / ${list.length}</p><div class="nach">${list.map((a) => `<button type="button" class="nmed${got[a.id] ? " got" : ""}${a.soon ? " soon" : ""}" data-a="${a.id}"><img src="${artSrc(a.ic)}" alt=""></button>`).join("")}</div><p class="ninfo">${ES ? "Toca una medalla para ver cómo se consigue" : "Tap a medal to see how to get it"}</p>`;
+      return tabs + `<p class="nsub">${n} / ${list.length}</p><div class="nach" style="--medal:url('${artSrc("artMedal")}')">${list.map((a) => `<button type="button" class="nmed${got[a.id] ? " got" : ""}${a.soon ? " soon" : ""}" data-a="${a.id}"><img src="${artSrc(a.ic)}" alt=""></button>`).join("")}</div><p class="ninfo">${ES ? "Toca una medalla para ver cómo se consigue" : "Tap a medal to see how to get it"}</p>`;
     }
     let html = tabs;
     if (P) {
@@ -561,7 +563,9 @@
   // ---------- Jugar: snack, truco ----------
   function giveSnack() {
     const Nd = window.EkoNeeds;
-    if (Nd && Nd.full()) { E.act("shake"); E.express("contento", 2); E.say(pick(Nd.L.full), 2200, true); return; }
+    const PGm = window.EkoProgress && window.EkoProgress.missions();
+    const forMission = !!(PGm && PGm.running && PGm.list[PGm.i] && PGm.list[PGm.i].ev === "feed");   // en la misión se deja comer aunque esté lleno
+    if (Nd && Nd.full() && !forMission) { E.act("shake"); E.express("contento", 2); E.say(pick(Nd.L.full), 2200, true); return; }
     E.act("eat");
     if (Nd) Nd.give("feed");
     setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);

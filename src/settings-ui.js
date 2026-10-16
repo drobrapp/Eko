@@ -50,6 +50,7 @@
     fly: (v) => yes(v) ? "¡Capa lista!" : "Guardo la capa… snif",
     follow: (v) => yes(v) ? "¡Te sigo con la mirada!" : "Vale, no te miro… (mucho)",
     ai: (v) => yes(v) ? "¡Voy a poder charlar contigo de verdad!" : "Vale, vuelvo a ser de pocas palabras",
+    testAll: (v) => yes(v) ? "¡Todo abierto! Prueba lo que quieras" : "Vuelvo a lo que me he ganado",
     pcActions: (v) => yes(v) ? "¡Pídeme cosas! Pongo música, abro programas, busco…" : "Vale, no toco nada de tu PC",
     aiBar: (v) => yes(v) ? "¡Barrita fuera! Arrástrala adonde te venga bien" : "Vale, escondo la barra",
     aiCpu: (v) => yes(v) ? "Pensaré más despacio, pero sin forzar tu gráfica" : "¡A toda máquina!",

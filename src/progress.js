@@ -71,6 +71,7 @@ window.EkoProgress = (() => {
   const level = () => { let l = 1; while (l < MAX && P.xp >= xpFor(l + 1)) l++; return l; };
   const has = (id) => {
     if (!id) return true;
+    try { if (window.EkoSettings && window.EkoSettings.get().testAll) return true; } catch (_) {}   // modo pruebas: todo desbloqueado
     for (const [n, d] of Object.entries(LEVELS)) if (d.id === id) return level() >= +n;
     return P.unl.includes(id);
   };

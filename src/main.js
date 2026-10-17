@@ -711,8 +711,10 @@
   }
   function flyToIcon(ic, then) {
     if (S.fly || S.airborne || S.dragging || S.sleeping || S.sulking) return false;
-    const cx = ic.x + ic.w / 2, top = ic.y + 6;
-    const perch = { id: "icon:" + ic.name, icon: true, x: cx - 45, y: top, w: 90, h: ic.h };
+    // ic.w es el hueco de la cuadrícula (más ancho que el icono): el dibujo del icono está a la izquierda del hueco
+    const iconPx = clamp((ic.w || 100) * 0.48, 24, 120);
+    const cx = ic.x + iconPx / 2 + 5, top = ic.y + 6;
+    const perch = { id: "icon:" + ic.name, icon: true, x: cx - iconPx / 2 - 4, y: top, w: iconPx + 8, h: ic.h };
     const x1 = cx - W / 2, y1 = top - H + PERCH_SINK;
     S.perch = null; WIN.pendDx = 0; S.then = null; A.action = null;
     S.fly = { kind: "cape", t0: A.t, prep: 0.9, dur: clamp(Math.hypot(x1 - S.x, y1 - S.y) / 300, 2, 4.5), x0: S.x, x1, y0: S.y, y1, h: rnd(50, 110), dir: Math.sign(x1 - S.x) || 1, perch, then };

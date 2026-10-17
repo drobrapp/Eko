@@ -11,7 +11,7 @@ window.EkoMini = (() => {
 
   // Tamaño para que quede proporcionado al icono (la imagen del icono es ~60 % del ancho de su celda)
   function sizeFor(ic) {
-    const iconPx = clamp((ic.w || 76) * 0.62, 26, 120);
+    const iconPx = clamp((ic.w || 100) * 0.48, 24, 120);
     return clamp((iconPx * 1.3) / (125 * size()), 0.28, 0.9);
   }
 

@@ -32,8 +32,8 @@ window.EkoCorner = (() => {
   const DOOR = { x: 200, z: 0 };
   const DECO = [
     { id: "bed", lock: "deco:bed", name: "Camita", src: "art/deco-bed.webp", x: 44, w: 122, h: 82, bottom: 170, z: 0.5, spot: { x: 105, z: 0.5 } },
-    { id: "pot", lock: "deco:pot", name: "Maceta", src: "art/deco-pot.webp", x: 238, w: 46, h: 49, bottom: 187, z: 0.02, spot: { x: 214, z: 0.14 } },
-    { id: "cabinet", lock: null, name: "Vitrina", src: "art/cabinet.webp", x: 302, w: 72, h: 89, bottom: 189, z: 0.04, spot: { x: 280, z: 0.16 } },
+    { id: "pot", lock: "deco:pot", name: "Maceta", src: "art/deco-pot.webp", x: 226, w: 46, h: 49, bottom: 187, z: 0.02, spot: { x: 202, z: 0.14 } },
+    { id: "cabinet", lock: null, name: "Vitrina", src: "art/cabinet.webp", x: 284, w: 72, h: 89, bottom: 189, z: 0.04, spot: { x: 262, z: 0.16 } },
     { id: "frame", lock: null, name: "Cuadro", src: null, x: 176, w: 54, h: 68, top: 24, z: 1, wall: true, spot: { x: 203, z: 0.95 } },
     { id: "trophy", lock: "deco:trophy", name: "Trofeo", src: "art/deco-trophy.webp", x: 303, w: 40, h: 38, bottom: 104, z: 1, wall: true, spot: { x: 300, z: 0.95 } },
   ];
@@ -88,6 +88,7 @@ window.EkoCorner = (() => {
   const unlockedPics = () => PICS.filter((p) => testAll() || lvl() >= p.lv);
   if (!C.got) { C.got = [...DECO.filter((d) => d.lock && unlockedDeco(d)).map((d) => d.id), ...unlockedPics().map((p) => "pic:" + p.id)]; save(); }   // quien ya tenía cosas no recibe paquetes de lo viejo
   const got = (k) => C.got.includes(k);
+  if (C.off && C.off.frame) { delete C.off.frame; save(); }   // los cuadros ya no se «quitan» así (antes se podía y se quedaban ocultos)
   const cabOn = () => got("cabinet") && !C.off.cabinet;
   if (C.built && !C.got.some((k) => k.startsWith("pic:"))) { C.got.push("pic:portrait"); save(); }   // el retrato viene con la casa
   const pending = () => [...DECO.filter((d) => d.lock && unlockedDeco(d) && !got(d.id)).map((d) => d.id), ...unlockedPics().filter((p) => !got("pic:" + p.id)).map((p) => "pic:" + p.id),
@@ -116,7 +117,7 @@ window.EkoCorner = (() => {
       let { x, w: iw, h } = d, src = d.src;
       if (d.id === "frame") { const p = picNow(); src = p.src; iw = Math.round(h * p.ar); x = d.x + (d.w - iw) / 2; }
       let y = TOP + (d.top != null ? d.top : d.bottom - h);
-      if (d.id === "trophy" && cabOn()) { iw = 34; h = 32; x = 321; y = TOP + 189 - 89 - h + 3; }        // encima de la vitrina
+      if (d.id === "trophy" && cabOn()) { iw = 34; h = 32; x = 303; y = TOP + 189 - 89 - h + 3; }        // encima de la vitrina
       return { id: d.id, src, x, y, w: iw, h, z: d.z };
     });
     if (!building && !C.off.frame) for (let i = 1; i < 3; i++) {
@@ -386,7 +387,7 @@ window.EkoCorner = (() => {
   async function doWall(id) {                                          // enderezar el cuadro o sacar brillo al trofeo
     const it = DECO.find((d) => d.id === id);
     say(id === "frame" ? "frame" : "trophy", 2000);
-    const sp = id === "trophy" && cabOn() ? { x: 294, z: 0.22 } : it.spot;
+    const sp = id === "trophy" && cabOn() ? { x: 276, z: 0.22 } : it.spot;
     await walkIn(sp.x, sp.z); if (!R) return;
     // de espaldas, estirándose hacia la pared
     R.held = null;
@@ -444,7 +445,7 @@ window.EkoCorner = (() => {
     // lo lleva a su sitio
     let slot = 0;
     if (key.startsWith("pic:")) { fixHung(); slot = C.hung.length < 3 ? C.hung.length : 1 + Math.floor(Math.random() * 2); }
-    const d = key.startsWith("pic:") ? PSLOT[slot] : key.startsWith("sv:") ? { id: key, spot: { x: 280, z: 0.16 } } : key.startsWith("season:") ? { id: "season", spot: { x: 104, z: 0.08 } } : DECO.find((x) => x.id === key);
+    const d = key.startsWith("pic:") ? PSLOT[slot] : key.startsWith("sv:") ? { id: key, spot: { x: 262, z: 0.16 } } : key.startsWith("season:") ? { id: "season", spot: { x: 104, z: 0.08 } } : DECO.find((x) => x.id === key);
     say("placing", 1600);
     await walkIn(d.spot.x, d.spot.z); if (!R) return;
     R.held.up = true;

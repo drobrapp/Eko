@@ -645,7 +645,8 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .ghud .gx { width: 22px; height: 22px; border: none; border-radius: 50%; background: #efe3da; color: #6b5348; font: 700 13px "Segoe UI", system-ui, sans-serif; line-height: 22px; padding: 0; cursor: pointer; }
 
 /* Eko pequeñito (subido a un icono): los bocadillos bajan con su cabeza */
-#bubble, #thought, #wish { scale: calc(1 / var(--sc, 1)); }        /* los textos siempre a tamaño normal */
+#bubble, #thought, #wish { scale: calc(1 / var(--sc, 1)); }
+#bubble { transform-origin: 0 100%; }      /* su centro visual está en el borde izquierdo de la caja (translate -50%): escala desde ahí para no desplazarse */        /* los textos siempre a tamaño normal */
 /* En su casa: los bocadillos van encima de la casa */
 .inhome #bubble { bottom: var(--homeB, 152px); }
 .inhome #thought, .inhome #wish { opacity: 0 !important; }

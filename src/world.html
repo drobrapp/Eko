@@ -38,6 +38,19 @@ body.night #sun{animation:none}
 .flake{position:fixed;top:-10px;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.9;pointer-events:none;animation:fall linear infinite}
 .flake.leaf{width:9px;height:6px;border-radius:3px}
 @keyframes fall{to{transform:translate(60px,110vh) rotate(300deg)}}
+.plant{position:absolute;z-index:5;pointer-events:auto;cursor:pointer;transform-origin:50% 100%}
+.plant img{width:100%;height:100%;display:block;pointer-events:none}
+.plant.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}@keyframes pop{from{transform:scale(.2)}}
+.plant .thirst{position:absolute;left:50%;top:-14px;width:10px;height:13px;margin-left:-5px;background:#7FB3E0;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;clip-path:polygon(50% 0,100% 60%,85% 95%,15% 95%,0 60%);opacity:0;transition:opacity .4s}
+.plant.dry .thirst{opacity:.9;animation:bob 1.6s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-5px)}}
+.prop.held{transition:none}
+.drop{position:absolute;width:5px;height:9px;border-radius:50%;background:#8EC5F0;opacity:0;animation:drip .7s ease-in forwards}@keyframes drip{from{opacity:.95}to{transform:translateY(90px);opacity:0}}
+.dirt{position:absolute;width:7px;height:7px;border-radius:50%;background:#7A4E2E;opacity:0;animation:dirt .6s ease-out forwards}@keyframes dirt{0%{opacity:1}100%{transform:translate(var(--dx),-40px);opacity:0}}
+.pull{position:absolute;z-index:35;pointer-events:none;animation:pull 1.8s ease-out forwards}@keyframes pull{0%{transform:translateY(20px) scale(.6) rotate(-20deg)}30%{transform:translateY(-70px) scale(1) rotate(10deg)}70%{transform:translateY(-80px) scale(1) rotate(0)}100%{transform:translateY(-110px) scale(.9);opacity:0}}
+.gtext{position:absolute;z-index:35;transform:translateX(-50%);font:700 26px "Segoe Print","Comic Sans MS",cursive;color:#fff;text-shadow:0 2px 6px rgba(120,30,20,.5);pointer-events:none;animation:up 1.9s ease-out forwards}@keyframes up{to{transform:translate(-50%,-60px);opacity:0}}
+.prop::before{content:"";position:absolute;left:8%;right:8%;bottom:-4px;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.38),rgba(45,60,25,0));z-index:-1;pointer-events:none}
+.prop.held::before{display:none}
+#ekoShadow{position:absolute;z-index:19;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.35),rgba(45,60,25,0));pointer-events:none}
 </style></head><body>
 <div id="sky"></div><div id="sun"></div><div id="stars"></div><div id="clouds"></div>
 <div class="layer" id="far"></div><div class="layer" id="mid"></div>

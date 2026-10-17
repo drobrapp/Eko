@@ -1,4 +1,4 @@
-// El Valle de Eko (fase 1): su casa por fuera, el camino, el cielo real y la niebla de lo que aún no está abierto.
+// El Valle de Eko: su casa por fuera, el camino, el huerto, el cielo real y la niebla de lo que aún no está abierto.
 // Vista lateral a pantalla completa. Haces clic y Eko va; él comenta el paisaje. Esc o «Volver a casa» para salir.
 (() => {
   "use strict";
@@ -16,9 +16,9 @@
   let W = innerWidth, H = innerHeight, k = H / 1080;
   const G = () => 300 * k;                                  // alto del suelo
   const groundTop = () => H - G();
-  const PATH = () => groundTop() + G() * 0.25;              // donde pisa Eko (el camino de tierra)
-  const BACK = () => groundTop() + G() * 0.12;              // base de lo que está detrás del camino
-  const FRONT = () => groundTop() + G() * 0.52;             // base de lo que está delante
+  const PATH = () => groundTop() + G() * 0.27;              // donde pisa Eko (el camino de tierra)
+  const BACK = () => groundTop() + G() * 0.14;              // base de lo que está detrás del camino
+  const FRONT = () => groundTop() + G() * 0.42;             // base de lo que está delante
   const OPEN = { x0: 140, x1: 2050 };                       // zona abierta en la fase 1 (en «unidades de 1080p»)
   const WORLD = 2600;
   const U = (u) => u * k;                                   // unidades → px
@@ -59,7 +59,7 @@
     (layer === "front" ? front : back).appendChild(el);
     const p = { el, src, ux, uh, ar: o.ar || 1, base, o };
     props.push(p);
-    if (o.click) el.addEventListener("click", (e) => { e.stopPropagation(); o.click(p); });
+    if (o.click) el.addEventListener("click", (e) => { e.stopPropagation(); o.click(p, e); });
     return p;
   }
   // casa (1102×971); la puerta está un 18 % a la izquierda del centro
@@ -69,13 +69,97 @@
   for (const [gx, gy, gs] of GLOWS) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [gx, gy, gs]; house.el.appendChild(g); }
   prop("tree.webp", 280, 360, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(330, () => say(pick(["Este árbol es mi favorito", "Aquí da una sombrita estupenda", "Algún día le pondré un columpio"]))) });
   prop("bush.webp", 560, 120, "back", "back", { ar: 786 / 710, click: () => goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))) });
-  prop("fence.webp", 1300, 90, "back", "back", { ar: 900 / 338 });
-  prop("bush.webp", 1560, 100, "back", "back", { ar: 786 / 710 });
-  prop("tree.webp", 1820, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
-  const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1460, 260, "front", "front", { ar: 162 / 800 })];
+  prop("fence.webp", 1260, 90, "back", "back", { ar: 900 / 338 });
+  prop("tree.webp", 1910, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1860, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
+  const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1430, 260, "front", "front", { ar: 162 / 800 })];
   for (const l of lamps) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [0.54, 0.17, 120]; l.el.appendChild(g); l.el.addEventListener("click", (e) => { e.stopPropagation(); goTo(l.ux + 40, () => say(phase() === "night" ? "De noche se encienden solas" : "Por la noche esto brilla muchísimo")); }); }
   const sign = prop("sign.webp", 1180, 240, "front", "front", { ar: 379 / 700, click: () => goTo(1140, () => say(`«El Valle de ${name}». ¡Bienvenido a mi valle!`)) });
   const st = document.createElement("div"); st.id = "signText"; st.textContent = `El Valle\nde ${name}`; st.style.whiteSpace = "pre"; sign.el.appendChild(st);
+
+  // ---------- Huerto (fase 2): plantar, regar y cosechar en tiempo real ----------
+  const testMode = (() => { try { return !!JSON.parse(localStorage.getItem("eko-settings") || "{}").testAll; } catch (_) { return false; } })();
+  const GROW = testMode ? 20e3 : 3 * 3600e3;                 // tiempo mínimo entre fases (regada)
+  let GD = { slots: [null, null, null], hv: { carrot: 0, tomato: 0 } };
+  try { GD = Object.assign(GD, JSON.parse(localStorage.getItem("eko-garden") || "{}")); } catch (_) {}
+  const gSave = () => { try { localStorage.setItem("eko-garden", JSON.stringify(GD)); } catch (_) {} };
+  const BED = { ux: 1640, uh: 66, ar: 1000 / 202 };
+  const bed = prop("g-bed.webp", BED.ux, BED.uh, "back", "back", { ar: BED.ar, click: (p, e) => slotAt(e) });
+  const can = prop("g-can.webp", 1690, 58, "front", "front", { ar: 500 / 265, click: () => waterNext() });
+  prop("g-seeds.webp", 1770, 82, "front", "front", { ar: 436 / 500, click: () => plantNext() });
+  const SX = [0.2, 0.5, 0.8];                                 // huecos del bancal (fracción del ancho)
+  const ART = { 0: ["g-sprout.webp", 347 / 400, 70], 1: ["g-young.webp", 500 / 475, 100], carrot: ["g-carrotplant.webp", 461 / 500, 125], tomato: ["g-tomato.webp", 447 / 600, 170] };
+  const plants = SX.map((fx, i) => { const d = document.createElement("div"); d.className = "plant"; d.innerHTML = `<img alt="" draggable="false"><b class="thirst"></b>`; d.addEventListener("click", (e) => { e.stopPropagation(); act(i); }); back.appendChild(d); return d; });
+  const slotX = (i) => BED.ux + (SX[i] - 0.5) * BED.uh * BED.ar;
+  const stage = (s) => (s.st >= 2 ? s.c : s.st);
+  const thirsty = (s) => s.st < 2 && !(s.wet > s.since);
+  function grow() {
+    const now = Date.now(); let ch = false;
+    for (const s of GD.slots) if (s && s.st < 2 && s.wet > s.since && now - s.since >= GROW) { s.st++; s.since = now; ch = true; }
+    if (ch) gSave();
+    drawPlants();
+  }
+  function drawPlants() {
+    plants.forEach((d, i) => {
+      const s = GD.slots[i]; d.style.display = s ? "" : "none"; if (!s) return;
+      const [src, ar, uh] = ART[stage(s)], img = d.firstChild;
+      if (!img.src.endsWith(src)) img.src = "art/valley/" + src;
+      d.dataset.ar = ar; d.dataset.uh = uh; d.classList.toggle("dry", thirsty(s));
+    });
+    gLayout();
+  }
+  function gLayout() {
+    const bh = U(BED.uh), top = BACK() - bh, base = top + bh * 0.42;
+    plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });
+    bed.el.style.zIndex = 6;
+  }
+  function slotAt(e) { const r = bed.el.getBoundingClientRect(); const f = (e.clientX - r.left) / r.width; act(f < 0.35 ? 0 : f < 0.65 ? 1 : 2); }
+  // efectos
+  function fx(cls, x, y, n, life) {
+    for (let j = 0; j < n; j++) { const d = document.createElement("i"); d.className = cls; Object.assign(d.style, { left: x + (Math.random() - 0.5) * U(50) + "px", top: y + "px", animationDelay: j * (life / n) + "ms", "--dx": (Math.random() - 0.5) * U(80) + "px" }); front.appendChild(d); setTimeout(() => d.remove(), life + 1200); }
+  }
+  function floatText(t, x, y) { const d = document.createElement("div"); d.className = "gtext"; d.textContent = t; Object.assign(d.style, { left: x + "px", top: y + "px", fontSize: U(26) + "px" }); front.appendChild(d); setTimeout(() => d.remove(), 1900); }
+  let gBusy = false;
+  function work(pose, ms, done) { gBusy = true; E.pose = pose; E.poseT = E.t; setTimeout(() => { E.pose = null; gBusy = false; done && done(); }, ms); }
+  const GL = {
+    plant: ["¡A plantar!", "Una semillita aquí…", "Crece fuerte, ¿eh?", "Tapadita con tierra"],
+    planted: ["¡Listo! Ahora hay que regarla", "Ya está plantada. Le falta agua", "Hecho. ¿Me pasas la regadera?"],
+    water: ["¡Agüita!", "Glu, glu, glu…", "Que no le falte de nada", "Riego, riego…"],
+    wait: ["Aún está creciendo, hay que tener paciencia", "Todavía le falta un poco", "Ya está regada. Ahora, a esperar", "Crece despacito, como todo lo bueno"],
+    carrot: ["¡Una zanahoria enorme!", "¡Mira qué zanahoria!", "¡Zanahoria recién sacada!"],
+    tomato: ["¡Tomates rojitos!", "¡Qué tomates más buenos!", "¡Cosecha de tomates!"],
+    full: ["El bancal ya está lleno", "No queda sitio para más semillas"],
+    nodry: ["Ahora mismo nada necesita agua", "Todo está regado"],
+  };
+  function act(i) {
+    if (gBusy || E.exiting) return;
+    goTo(slotX(i) - 90, () => {
+      E.face = 1;
+      const s = GD.slots[i], bx = U(slotX(i)), by = BACK() - U(BED.uh) * 0.5;
+      if (!s) {
+        say(pick(GL.plant), 1500);
+        work("dig", 1500, () => { const c = (GD.hv.carrot || 0) <= (GD.hv.tomato || 0) ? (Math.random() < 0.65 ? "carrot" : "tomato") : (Math.random() < 0.65 ? "tomato" : "carrot"); GD.slots[i] = { c, st: 0, since: Date.now(), wet: 0 }; gSave(); drawPlants(); plants[i].classList.add("pop"); setTimeout(() => plants[i].classList.remove("pop"), 600); fx("dirt", bx, by, 8, 300); say(pick(GL.planted), 2200); });
+        fx("dirt", bx, by, 10, 1200);
+      } else if (thirsty(s)) {
+        say(pick(GL.water), 1800);
+        can.el.classList.add("held"); work("water", 1900, () => { can.el.classList.remove("held"); can.el.style.transform = ""; layout(); s.wet = Date.now(); gSave(); drawPlants(); say(pick(GL.wait), 2200); });
+        setTimeout(() => fx("drop", bx, by - U(110), 14, 1200), 400);
+      } else if (s.st < 2) {
+        const left = Math.max(0, GROW - (Date.now() - s.since)), hrs = Math.ceil(left / 3600e3);
+        say(left > 0 && !testMode ? `${pick(GL.wait)} (unas ${hrs} h)` : pick(GL.wait), 2600);
+      } else {
+        work("dig", 1100, () => {
+          GD.hv[s.c] = (GD.hv[s.c] || 0) + (s.c === "tomato" ? 3 : 1);
+          if (s.c === "carrot") { GD.slots[i] = null; const im = document.createElement("img"); im.src = "art/valley/g-carrot.webp"; im.className = "pull"; Object.assign(im.style, { left: bx - U(60) + "px", top: by - U(60) + "px", width: U(120) + "px" }); front.appendChild(im); setTimeout(() => im.remove(), 1800); }
+          else { s.st = 1; s.since = Date.now(); s.wet = 0; floatText("+3 tomates", bx, by - U(150)); }
+          gSave(); drawPlants(); fx("dirt", bx, by, 8, 300);
+          say(pick(GL[s.c]) + (GD.hv[s.c] > 1 ? ` Ya llevamos ${GD.hv[s.c]}.` : ""), 2600);
+        });
+      }
+    });
+  }
+  function plantNext() { const i = GD.slots.findIndex((s) => !s); if (i < 0) { goTo(1740, () => say(pick(GL.full))); return; } act(i); }
+  function waterNext() { const i = GD.slots.findIndex((s) => s && thirsty(s)); if (i < 0) { goTo(1650, () => say(pick(GL.nodry))); return; } act(i); }
+  function gardenTalk() { const n = GD.slots.filter((s) => s && thirsty(s)).length, r = GD.slots.filter((s) => s && s.st >= 2).length; return r ? "¡Hay cosas listas para cosechar en el huerto!" : n ? "Las plantas del huerto tienen sed" : GD.slots.every((s) => !s) ? "¿Plantamos algo en el huerto?" : ""; }
   // niebla: lo que todavía no se puede visitar
   const fogR = document.createElement("div"); fogR.id = "fogR"; back.parentNode.appendChild(fogR);
   const fogL = document.createElement("div"); fogL.id = "fogL"; back.parentNode.appendChild(fogL);
@@ -99,6 +183,7 @@
     Object.assign(fogL.style, { left: U(-400) + "px", width: U(OPEN.x0 + 380) + "px", zIndex: 40 });
     fogR.querySelectorAll(".mist").forEach((m, i) => Object.assign(m.style, { left: U(160 + (i % 3) * 110) + "px", top: H * (0.35 + 0.1 * i) + "px", width: U(360) + "px", height: U(200) + "px" }));
     void sb;
+    gLayout();
     placeEko();
   }
 
@@ -107,8 +192,9 @@
   const eko = document.createElement("div"); eko.id = "eko"; eko.dataset.eyes = "open"; eko.dataset.brows = "none"; eko.dataset.mood = "normal";
   const svg = tpl.querySelector("svg"); eko.appendChild(svg); tpl.remove(); box.appendChild(eko);
   const bub = document.createElement("div"); bub.id = "bub"; box.appendChild(bub);
+  const shd = document.createElement("div"); shd.id = "ekoShadow"; box.appendChild(shd);
   const el = { pet: svg.querySelector("#pet"), legL: svg.querySelector("#legL"), legR: svg.querySelector("#legR"), armL: svg.querySelector("#armL"), armR: svg.querySelector("#armR"), head: svg.querySelector("#head"), upper: svg.querySelector("#upper") };
-  const E = { x: 900 - 470 * 489 / 354 * 0.14, tx: null, then: null, v: 0, ph: 0, t: 0, face: 1, blinkAt: 2, entering: 0, exiting: 0, talkUntil: 0, wave: 0 };
+  const E = { x: 900 - 560 * 1102 / 971 * 0.18, tx: null, then: null, v: 0, ph: 0, t: 0, face: 1, blinkAt: 2, entering: 0, exiting: 0, talkUntil: 0, wave: 0 };
   const EH = () => U(160);                                   // alto de Eko en el valle
   function placeEko() {
     const h = EH(), w = h * 240 / 310;
@@ -135,7 +221,7 @@
     setTimeout(() => $("#cover").classList.remove("off"), 900);
     setTimeout(() => emit("world-exit"), 2100);
   }
-  $("#back").addEventListener("click", (e) => { e.stopPropagation(); goTo(house.ux - 470 * 489 / 354 * 0.14, () => enterHouse()); });
+  $("#back").addEventListener("click", (e) => { e.stopPropagation(); goTo(house.ux - 560 * 1102 / 971 * 0.18, () => enterHouse()); });
   addEventListener("keydown", (e) => { if (e.key === "Escape") { E.tx = null; enterHouse(); } });
   addEventListener("resize", layout);
 
@@ -158,15 +244,19 @@
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
     Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op, zIndex: 20 });
+    Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
     Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });
     // cuerpo: patas, brazos, cabeza, parpadeo
     const s = Math.sin(E.ph), wav = E.t - E.wave < 1.4 ? Math.sin((E.t - E.wave) * 14) : 0;
     el.legL.setAttribute("transform", `rotate(${(walking ? s * 22 : 0).toFixed(1)} -21 122)`);
     el.legR.setAttribute("transform", `rotate(${(walking ? -s * 22 : 0).toFixed(1)} 21 122)`);
     el.armL.setAttribute("transform", `rotate(${(walking ? -s * 18 : 4 + Math.sin(E.t * 2) * 2).toFixed(1)} -50 58)`);
-    el.armR.setAttribute("transform", `rotate(${(wav ? -120 + wav * 18 : walking ? -s * 18 : -4 - Math.sin(E.t * 2) * 2).toFixed(1)} 50 58)`);
+    const pz = E.pose && !walking ? E.pose : null, pq = E.t - (E.poseT || 0);
+    if (pz === "dig") { el.armL.setAttribute("transform", `rotate(${(-30 + Math.sin(pq * 14) * 25).toFixed(1)} -50 58)`); }
+    el.armR.setAttribute("transform", `rotate(${(pz === "dig" ? 30 - Math.sin(pq * 14) * 25 : pz === "water" ? -80 : wav ? -120 + wav * 18 : walking ? -s * 18 : -4 - Math.sin(E.t * 2) * 2).toFixed(1)} 50 58)`);
+    if (can.el.classList.contains("held")) { const cw = U(58) * 500 / 265; Object.assign(can.el.style, { left: U(E.x) + w * 0.35 + "px", top: y - h * 0.62 + "px", width: cw + "px", height: U(58) + "px", transform: `rotate(${(pq < 0.4 ? pq * 75 : 30).toFixed(0)}deg)`, zIndex: 31 }); }
     el.head.setAttribute("transform", `translate(${(E.face * (walking ? 4 : 0)).toFixed(1)} 0) rotate(${(walking ? E.face * 3 : Math.sin(E.t * 0.7) * 2).toFixed(1)} 0 40)`);
-    el.pet.setAttribute("transform", `rotate(${(walking ? E.face * 4 : 0).toFixed(1)} 0 176)`);
+    el.pet.setAttribute("transform", pz === "dig" ? `translate(0 ${(8 + Math.sin(pq * 14) * 3).toFixed(1)}) rotate(${(E.face * 10).toFixed(1)} 0 176)` : `rotate(${(walking ? E.face * 4 : 0).toFixed(1)} 0 176)`);
     if (E.t > E.blinkAt) { eko.dataset.eyes = "closed"; if (E.t > E.blinkAt + 0.13) { eko.dataset.eyes = E.t < E.talkUntil ? "happy" : "open"; E.blinkAt = E.t + 2 + Math.random() * 4; } }
     // cámara: sigue a Eko con suavidad
     const want = clamp(U(E.x) - W / 2, U(OPEN.x0 - 300), U(WORLD) - W);
@@ -181,14 +271,15 @@
 
   // Comentarios sueltos mientras paseáis
   setInterval(() => {
-    if (E.t < E.talkUntil + 6 || E.exiting || Math.random() < 0.5) return;
+    if (E.t < E.talkUntil + 6 || E.exiting || gBusy || Math.random() < 0.5) return;
+    const gt = gardenTalk(); if (gt && Math.random() < 0.4) { say(gt, 2800); return; }
     const p = phase();
     say(pick(p === "night" ? ["Mira cuántas estrellas", "Qué tranquilo está el valle de noche", "Los farolillos de casa son mi parte favorita"] : p === "dusk" ? ["Qué atardecer más bonito", "El cielo se está poniendo naranja"] : sky.w === "snow" ? ["¡Está nevando!", "Brrr… qué frío"] : sky.w === "leaves" ? ["Me encanta el ruido de las hojas", "Ya es otoño en el valle"] : ["Qué buen día hace", "Me encanta pasear contigo", "¿Oyes los pájaros?", "Huele a hierba recién cortada"]), 2800);
   }, 9000);
 
   // ---------- Arranque ----------
   $("#title").textContent = `El Valle de ${name}`;
-  layout(); sky(); setInterval(sky, 60000);
+  layout(); sky(); setInterval(sky, 60000); grow(); setInterval(grow, testMode ? 2000 : 30000);
   cam = clamp(U(E.x) - W / 2, U(OPEN.x0 - 300), U(WORLD) - W);
   E.entering = 0.001;
   requestAnimationFrame((t) => { last = t; frame(t); });

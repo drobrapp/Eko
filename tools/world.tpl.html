@@ -1,0 +1,64 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>El Valle de Eko</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9CC9EE;user-select:none;font:13px "Segoe UI",system-ui,sans-serif}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+#sky{position:fixed;inset:0;transition:background 3s}
+#sun{position:fixed;width:110px;height:110px;background:center/contain no-repeat;transition:left 3s,top 3s,filter 3s;animation:spin 120s linear infinite}
+@keyframes spin{to{rotate:360deg}}
+body.night #sun{animation:none}
+#stars i{position:fixed;width:2px;height:2px;border-radius:50%;background:#FFF4E8;opacity:0;transition:opacity 3s}
+.night #stars i{opacity:.85}
+.cloud{position:fixed;opacity:.92;pointer-events:none;filter:drop-shadow(0 6px 8px rgba(150,175,205,.3))}
+.layer{position:fixed;left:0;right:0;bottom:0;background-repeat:repeat-x;background-size:auto 100%;pointer-events:none}
+#world{position:fixed;left:0;bottom:0;height:100%;will-change:transform}
+.prop{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 100%}
+.prop img{width:100%;height:100%;display:block;pointer-events:none}
+.prop.sway{animation:sway 6s ease-in-out infinite}
+@keyframes sway{50%{transform:rotate(1.2deg)}}
+.glow{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,214,140,.85),rgba(255,200,120,.25) 50%,transparent);opacity:0;transition:opacity 2s}
+.lit .glow{opacity:1}
+#eko{position:absolute;pointer-events:auto;cursor:pointer}
+#eko #mochi{position:absolute;left:0;bottom:0;overflow:visible}
+#bub{position:absolute;transform:translate(-50%,-100%);background:#fffaf6;color:#3b2f2a;padding:8px 13px;border-radius:15px;box-shadow:0 4px 14px rgba(50,30,20,.25);font-size:15px;max-width:300px;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;white-space:normal}
+#bub.on{opacity:1}
+#bub::after{content:"";position:absolute;left:50%;bottom:-7px;width:14px;height:14px;margin-left:-7px;background:#fffaf6;transform:rotate(45deg);border-radius:0 0 4px 0}
+#fogR,#fogL{position:absolute;bottom:0;height:100%;pointer-events:none}
+#fogR{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(250,248,244,.92) 35%,#f7f4ef 60%)}
+#fogL{background:linear-gradient(270deg,rgba(255,255,255,0),rgba(250,248,244,.92) 35%,#f7f4ef 60%)}
+.mist{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.9),transparent);animation:mist 9s ease-in-out infinite;pointer-events:none}
+@keyframes mist{50%{transform:translateX(-40px) scale(1.1)}}
+#signText{position:absolute;text-align:center;font:700 22px "Segoe Print","Comic Sans MS",cursive;color:#6b4a33;pointer-events:none;line-height:1.1}
+#back{position:fixed;left:18px;top:16px;z-index:50;border:none;border-radius:18px;padding:9px 16px;background:#fffaf6;color:#5a463d;font:700 14px "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 14px rgba(50,30,20,.25);cursor:pointer}
+#title{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;font:700 20px "Segoe Print","Comic Sans MS",cursive;color:#fff;text-shadow:0 2px 6px rgba(40,30,60,.35);opacity:0;transition:opacity 1.2s;pointer-events:none}
+#title.on{opacity:1}
+#cover{position:fixed;inset:0;z-index:80;pointer-events:none;background:#fff;opacity:1;transition:opacity 1.2s}
+#cover.off{opacity:0}
+.flake{position:fixed;top:-10px;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.9;pointer-events:none;animation:fall linear infinite}
+.flake.leaf{width:9px;height:6px;border-radius:3px}
+@keyframes fall{to{transform:translate(60px,110vh) rotate(300deg)}}
+.plant{position:absolute;z-index:5;pointer-events:auto;cursor:pointer;transform-origin:50% 100%}
+.plant img{width:100%;height:100%;display:block;pointer-events:none}
+.plant.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}@keyframes pop{from{transform:scale(.2)}}
+.plant .thirst{position:absolute;left:50%;top:-14px;width:10px;height:13px;margin-left:-5px;background:#7FB3E0;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;clip-path:polygon(50% 0,100% 60%,85% 95%,15% 95%,0 60%);opacity:0;transition:opacity .4s}
+.plant.dry .thirst{opacity:.9;animation:bob 1.6s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-5px)}}
+.prop.held{transition:none}
+.drop{position:absolute;width:5px;height:9px;border-radius:50%;background:#8EC5F0;opacity:0;animation:drip .7s ease-in forwards}@keyframes drip{from{opacity:.95}to{transform:translateY(90px);opacity:0}}
+.dirt{position:absolute;width:7px;height:7px;border-radius:50%;background:#7A4E2E;opacity:0;animation:dirt .6s ease-out forwards}@keyframes dirt{0%{opacity:1}100%{transform:translate(var(--dx),-40px);opacity:0}}
+.pull{position:absolute;z-index:35;pointer-events:none;animation:pull 1.8s ease-out forwards}@keyframes pull{0%{transform:translateY(20px) scale(.6) rotate(-20deg)}30%{transform:translateY(-70px) scale(1) rotate(10deg)}70%{transform:translateY(-80px) scale(1) rotate(0)}100%{transform:translateY(-110px) scale(.9);opacity:0}}
+.gtext{position:absolute;z-index:35;transform:translateX(-50%);font:700 26px "Segoe Print","Comic Sans MS",cursive;color:#fff;text-shadow:0 2px 6px rgba(120,30,20,.5);pointer-events:none;animation:up 1.9s ease-out forwards}@keyframes up{to{transform:translate(-50%,-60px);opacity:0}}
+.prop::before{content:"";position:absolute;left:8%;right:8%;bottom:-4px;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.38),rgba(45,60,25,0));z-index:-1;pointer-events:none}
+.prop.held::before{display:none}
+#ekoShadow{position:absolute;z-index:19;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.35),rgba(45,60,25,0));pointer-events:none}
+</style></head><body>
+<div id="sky"></div><div id="sun"></div><div id="stars"></div><div id="clouds"></div>
+<div class="layer" id="far"></div><div class="layer" id="mid"></div>
+<div class="layer" id="ground"></div>
+<div id="world"><div id="backL"></div><div id="ekoBox"></div><div id="frontL"></div></div>
+<button id="back">← Volver a casa</button><div id="title"></div><div id="cover"></div>
+<div id="ekoTpl" style="display:none">
+<!--SVG-->
+</div>
+<script src="world.js"></script>
+</body></html>

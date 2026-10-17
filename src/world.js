@@ -62,19 +62,19 @@
     if (o.click) el.addEventListener("click", (e) => { e.stopPropagation(); o.click(p); });
     return p;
   }
-  // casa (relación de aspecto 489×354); la puerta está al 36 % del ancho
-  const house = prop("house.webp", 900, 470, "back", "back", { ar: 489 / 354, click: () => goTo(900 - 470 * 489 / 354 * 0.14, () => enterHouse()) });
+  // casa (1102×971); la puerta está un 18 % a la izquierda del centro
+  const house = prop("house.webp", 900, 560, "back", "back", { ar: 1102 / 971, click: () => goTo(900 - 560 * 1102 / 971 * 0.18, () => enterHouse()) });
   // farolillos y ventana de la casa (se encienden de noche)
-  const GLOWS = [[0.26, 0.24, 46], [0.31, 0.37, 36], [0.12, 0.55, 40], [0.79, 0.24, 46], [0.90, 0.57, 40], [0.66, 0.69, 70]];
+  const GLOWS = [[0.31, 0.19, 50], [0.67, 0.24, 42], [0.08, 0.54, 50], [0.96, 0.63, 50], [0.62, 0.62, 70]];
   for (const [gx, gy, gs] of GLOWS) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [gx, gy, gs]; house.el.appendChild(g); }
-  prop("tree.webp", 280, 360, "back", "back", { ar: 317 / 400, sway: true, click: () => goTo(330, () => say(pick(["Este árbol es mi favorito", "Aquí da una sombrita estupenda", "Algún día le pondré un columpio"]))) });
-  prop("bush.webp", 560, 120, "back", "back", { ar: 360 / 314, click: () => goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))) });
-  prop("fence.webp", 1300, 90, "back", "back", { ar: 663 / 168 });
-  prop("bush.webp", 1560, 100, "back", "back", { ar: 360 / 314 });
-  prop("tree.webp", 1820, 400, "back", "back", { ar: 317 / 400, sway: true, click: () => goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
-  const lamps = [prop("lamp.webp", 420, 240, "front", "front", { ar: 83 / 320 }), prop("lamp.webp", 1460, 240, "front", "front", { ar: 83 / 320 })];
-  for (const l of lamps) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [0.5, 0.14, 120]; l.el.appendChild(g); l.el.addEventListener("click", (e) => { e.stopPropagation(); goTo(l.ux + 40, () => say(phase() === "night" ? "De noche se encienden solas" : "Por la noche esto brilla muchísimo")); }); }
-  const sign = prop("sign.webp", 1180, 190, "front", "front", { ar: 261 / 320, click: () => goTo(1140, () => say(`«El Valle de ${name}». ¡Bienvenido a mi valle!`)) });
+  prop("tree.webp", 280, 360, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(330, () => say(pick(["Este árbol es mi favorito", "Aquí da una sombrita estupenda", "Algún día le pondré un columpio"]))) });
+  prop("bush.webp", 560, 120, "back", "back", { ar: 786 / 710, click: () => goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))) });
+  prop("fence.webp", 1300, 90, "back", "back", { ar: 900 / 338 });
+  prop("bush.webp", 1560, 100, "back", "back", { ar: 786 / 710 });
+  prop("tree.webp", 1820, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
+  const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1460, 260, "front", "front", { ar: 162 / 800 })];
+  for (const l of lamps) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [0.54, 0.17, 120]; l.el.appendChild(g); l.el.addEventListener("click", (e) => { e.stopPropagation(); goTo(l.ux + 40, () => say(phase() === "night" ? "De noche se encienden solas" : "Por la noche esto brilla muchísimo")); }); }
+  const sign = prop("sign.webp", 1180, 240, "front", "front", { ar: 379 / 700, click: () => goTo(1140, () => say(`«El Valle de ${name}». ¡Bienvenido a mi valle!`)) });
   const st = document.createElement("div"); st.id = "signText"; st.textContent = `El Valle\nde ${name}`; st.style.whiteSpace = "pre"; sign.el.appendChild(st);
   // niebla: lo que todavía no se puede visitar
   const fogR = document.createElement("div"); fogR.id = "fogR"; back.parentNode.appendChild(fogR);
@@ -94,7 +94,7 @@
       Object.assign(p.el.style, { left: U(p.ux) - w / 2 + "px", top: by - h + "px", width: w + "px", height: h + "px", zIndex: p.base === "front" ? 30 : 5 });
       p.el.querySelectorAll(".glow").forEach((g) => { const [gx, gy, gs] = g.dataset.g.split(",").map(Number); const s = U(gs); Object.assign(g.style, { left: gx * w - s / 2 + "px", top: gy * h - s / 2 + "px", width: s + "px", height: s + "px" }); });
     }
-    const sb = sign.el; Object.assign(st.style, { left: "8%", width: "84%", top: "16%", fontSize: U(24) + "px" });
+    const sb = sign.el; Object.assign(st.style, { left: "4%", width: "92%", top: "13%", fontSize: U(21) + "px" });
     Object.assign(fogR.style, { left: U(OPEN.x1 - 120) + "px", width: U(WORLD - OPEN.x1 + 400) + "px", zIndex: 40 });
     Object.assign(fogL.style, { left: U(-400) + "px", width: U(OPEN.x0 + 380) + "px", zIndex: 40 });
     fogR.querySelectorAll(".mist").forEach((m, i) => Object.assign(m.style, { left: U(160 + (i % 3) * 110) + "px", top: H * (0.35 + 0.1 * i) + "px", width: U(360) + "px", height: U(200) + "px" }));

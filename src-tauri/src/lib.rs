@@ -125,6 +125,50 @@ fn chatbar_hide(app: AppHandle) {
     }
 }
 
+// ---------- El Valle de Eko: su mundo a pantalla completa ----------
+#[tauri::command]
+async fn world_show(app: AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("world") {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    // en el monitor donde está Eko
+    let (mut x, mut y, mut w, mut h) = (0.0, 0.0, 1280.0, 720.0);
+    if let Some(m) = app.get_webview_window("main").and_then(|m| m.current_monitor().ok().flatten()) {
+        let sf = m.scale_factor();
+        x = m.position().x as f64 / sf; y = m.position().y as f64 / sf;
+        w = m.size().width as f64 / sf; h = m.size().height as f64 / sf;
+    }
+    tauri::WebviewWindowBuilder::new(&app, "world", tauri::WebviewUrl::App("world.html".into()))
+        .title("El Valle de Eko")
+        .position(x, y)
+        .inner_size(w, h)
+        .decorations(false)
+        .resizable(false)
+        .always_on_top(true)
+        .skip_taskbar(false)
+        .focused(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn world_hide(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("world") {
+        let _ = w.close();
+    }
+}
+
+/// Esconde o muestra a Eko (mientras está de paseo por su valle)
+#[tauri::command]
+fn set_main_visible(app: AppHandle, on: bool) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = if on { w.show() } else { w.hide() };
+    }
+}
+
 // ---------- Rincón de Eko: muebles en una esquina de la barra de tareas ----------
 #[tauri::command]
 async fn corner_show(app: AppHandle, x: f64, y: f64, w: f64, h: f64) -> Result<(), String> {
@@ -474,7 +518,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc, actions::backup_save, actions::app_restart])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, world_show, world_hide, set_main_visible, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc, actions::backup_save, actions::app_restart])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

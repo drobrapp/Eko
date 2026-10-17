@@ -565,6 +565,7 @@ window.EkoCorner = (() => {
       else if (t === "swap") await swapPic();
       else if (t.startsWith("hang:")) await swapPic(t.slice(5));
       else if (t === "decorate") await decorate();
+      else if (t === "valley") { await toValley(); return true; }
       else if (t === "look") await lookAround();
       else if (t === "tea") await teaBreak();
       else if (t.startsWith("deliver:")) await deliver(t.slice(8));
@@ -692,6 +693,33 @@ window.EkoCorner = (() => {
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 
+
+  // ---------- El Valle: sale por la puerta y se abre su mundo a pantalla completa ----------
+  let away = false;
+  async function toValley() {
+    if (!R) return;
+    say(Math.random() < 0.5 ? "¡Vamos fuera!" : "¡Al valle!", 1600, "emocionado");
+    await walkIn(40, 0.55); if (!R) return;
+    setBack(true); await wait(500);
+    fx("room", "vanish");
+    homeOff(); R = null; setBack(false); E.el.pet.removeAttribute("mask"); A.inRoom = false; trip = null;
+    away = true; E.hold(1e6);
+    E.setMini(1, true);
+    open = false;
+    if (invoke) {
+      await invoke("corner_hide").catch(() => {});
+      await invoke("set_main_visible", { on: false }).catch(() => {});
+      await invoke("world_show").catch(() => { comeBack(); });
+    }
+  }
+  function comeBack() {
+    if (!away) return;
+    away = false;
+    if (invoke) { invoke("world_hide").catch(() => {}); invoke("set_main_visible", { on: true }).catch(() => {}); }
+    E.hold(3);
+    setTimeout(() => { K.smoke(0, 120, 7, K.ground, 50); tone("sine", 500, 900, 0.2, 0.03); E.say(Math.random() < 0.5 ? "¡Qué paseo más bonito!" : "Ya estoy de vuelta", 2400, true, "feliz"); }, 400);
+  }
+  if (TEV) TEV.listen("world-exit", () => comeBack());
   // ---------- Decorar: mover cosas y cambiarles el color ----------
   // Colores: tiñen tus imágenes (no se dibuja nada nuevo). Los últimos se desbloquean con el nivel.
   const COLORS = {
@@ -773,6 +801,7 @@ window.EkoCorner = (() => {
       if (!t.length) { const opts = []; if (got("pot") && !C.off.pot) opts.push("pot"); if (picNow()) opts.push("frame"); if (got("trophy") && !C.off.trophy) opts.push("trophy"); t.push(opts.length ? opts[Math.floor(Math.random() * opts.length)] : "frame"); }
       go(t, "summon");
     } }];
+    out.push({ id: "home-valley", react: "emocionado", img: "artValley", label: `Ir al Valle de ${(window.EkoSettings && window.EkoSettings.get().petName) || "Eko"}`, run: () => go(["valley"], "summon") });
     out.push({ id: "home-deco", react: "emocionado", img: "artRug", label: "Decorar", run: () => go(withParcels(["decorate"]), "summon") });
     out.push({ id: "home-things", react: "curioso", img: "artParcel", label: "Mis cosas", go: "housethings" });
     out.push({ id: "home-bed", react: "cansado", img: "artNightcap", label: "A la cama", run: () => { if (!got("bed")) { E.say("Aún no tengo camita… llega en el nivel 6", 2400, true); return; } if (C.off.bed) C.off.bed = false; go(withParcels(["bed"]), "bed"); } });

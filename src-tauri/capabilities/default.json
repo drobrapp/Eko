@@ -8,7 +8,8 @@
     "ball",
     "chatbar",
     "catch",
-    "corner"
+    "corner",
+    "world"
   ],
   "permissions": [
     "core:default",

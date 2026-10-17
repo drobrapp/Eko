@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.29.0": { important: true, lines: ["¡Ya puedes visitar mi valle! Entra en Mi casa y pulsa «Ir al Valle»", "Por ahora solo se puede ver mi casa por fuera y el camino… ¡pero más allá de la niebla hay más cosas esperando!"] },
     "0.28.0": { important: true, lines: ["¡Ahora puedes decorar mi casa! Mover los muebles, cambiarles el color y pintar las paredes", "Está en Mi casa → Decorar. Y en «Mis cosas» eliges qué cuadros cuelgo"] },
     "0.27.0": { important: true, lines: ["¡Me han llegado cosas para mi casa! Alfombra, cortinas y una lamparita que se enciende de noche"] },
     "0.26.0": { important: true, lines: ["¡Tengo una vitrina para mis recuerdos! Cada logro deja algo bonito dentro"] },

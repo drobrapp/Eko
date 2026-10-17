@@ -5,6 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.26.0": { important: true, lines: ["¡Tengo una vitrina para mis recuerdos! Cada logro deja algo bonito dentro"] },
+    "0.25.0": { important: true, lines: ["¡Ya cuelgo mis cuadros! Y puedo tener hasta tres en la pared"] },
     "0.24.0": { important: true, lines: ["¡Tengo cámara! Haré fotos de nuestros momentos importantes y las guardo en el álbum de mi libreta", "Y a veces me llegan cartas, te invito a una pausa en mi casa y guardo recuerdos en mi balda"] },
     "0.23.0": { important: true, lines: ["Ya puedes ponerme gafas, pajarita o auriculares desde el armario y me los dejo puestos", "Y en Ajustes puedes guardar una copia de mí, por si cambias de ordenador"] },
     "0.22.0": { important: true, lines: ["Mi casa tiene ahora su propio botón en el menú", "¡Y hay logros nuevos de la casa! Mira mi libreta"] },

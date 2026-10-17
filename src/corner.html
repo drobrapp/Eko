@@ -67,12 +67,12 @@
       keep.add(it.id);
       let el = els[it.id];
       if (!el) { el = els[it.id] = document.createElement("div"); el.innerHTML = '<img alt="" draggable="false">'; layer.appendChild(el); }
-      const wall = it.id === "frame";
+      const wall = it.id === "frame" || it.id === "pic1" || it.id === "pic2";
       el.className = "d " + (wall ? "wall" : "floor");
       const img = el.firstChild;
       if (img.getAttribute("src") !== it.src) img.src = it.src;
       Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.z >= 1 ? 2 : 3 + Math.round((1 - it.z) * 10) });
-      if (wall && !el.dataset.anim) img.style.transform = `rotate(${tilt}deg)`;
+      if (it.id === "frame" && !el.dataset.anim) img.style.transform = `rotate(${tilt}deg)`;
     }
     for (const id in els) if (!keep.has(id) && !els[id].dataset.leaving) { els[id].remove(); delete els[id]; }
     const pc = p.parcel;
@@ -124,7 +124,7 @@
     if (kind === "water") anim(img, "wig .7s ease");
     if (kind === "happy") { anim(img, "hop .6s ease"); sparkles(el, 4); }
     if (kind === "shine") sparkles(el, 6);
-    if (kind === "appear") { el.dataset.anim = 1; puffAt(el, 9); anim(img, "pop .5s cubic-bezier(.3,1.5,.5,1) forwards"); setTimeout(() => { delete el.dataset.anim; img.style.animation = ""; img.style.transform = el.classList.contains("wall") ? `rotate(${tilt}deg)` : ""; }, 550); sparkles(el, 4); }
+    if (kind === "appear") { el.dataset.anim = 1; puffAt(el, 9); anim(img, "pop .5s cubic-bezier(.3,1.5,.5,1) forwards"); setTimeout(() => { delete el.dataset.anim; img.style.animation = ""; img.style.transform = id === "frame" ? `rotate(${tilt}deg)` : ""; }, 550); sparkles(el, 4); }
     if (kind === "vanish") { el.dataset.leaving = 1; puffAt(el, 9); anim(img, "gone .3s ease forwards"); setTimeout(() => { el.remove(); delete els[id]; }, 320); }
     if (kind === "fix") {
       el.dataset.anim = 1; img.style.animation = "none"; const a0 = tilt, t0 = performance.now();

@@ -43,8 +43,26 @@
 #parcel.floor .bal,#parcel.open .bal{opacity:0}
 #parcel.open .box{animation:wig .5s ease}
 @keyframes fall{0%{transform:translateY(-220px) rotate(-6deg)}50%{transform:translateY(-90px) rotate(5deg)}80%{transform:translateY(-12px) rotate(-2deg)}100%{transform:none}}
+#wallT{position:absolute;left:0;width:100%;pointer-events:none;mix-blend-mode:multiply;-webkit-mask-image:url(art/room-wallmask.webp);mask-image:url(art/room-wallmask.webp);-webkit-mask-size:100% 100%;mask-size:100% 100%}
+#tools{position:absolute;left:6px;right:6px;top:6px;height:44px;display:none;align-items:center;gap:6px;padding:0 6px 0 10px;border-radius:16px;background:#fffaf6;box-shadow:0 4px 14px rgba(50,30,20,.3);font:600 12px "Segoe UI",system-ui,sans-serif;color:#3b2f2a;z-index:50}
+body.edit #tools{display:flex}
+#tName{white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+#sw{flex:1;display:flex;gap:5px;overflow:hidden;align-items:center}
+#sw i{font:400 10.5px "Segoe UI",system-ui,sans-serif;color:#8a7468;font-style:normal;white-space:nowrap}
+.swc{width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #e3d2c7;padding:0;cursor:pointer;flex:none;display:grid;place-items:center;overflow:hidden;background:#f6ece4;position:relative}
+.swc img{width:20px;height:20px;object-fit:contain}
+.swc.on{box-shadow:0 0 0 2px #D0795A}
+.swc.lock{opacity:.45}
+.swc.lock::after{content:"🔒";position:absolute;font-size:9px;right:-2px;bottom:-3px}
+#tools button:not(.swc){border:none;border-radius:12px;background:#efe3da;color:#6b5348;font:700 13px "Segoe UI",system-ui,sans-serif;height:28px;min-width:28px;padding:0 8px;cursor:pointer}
+#tools #tDone{background:#6b5348;color:#fff}
+body.edit .d{pointer-events:auto;cursor:grab}
+body.edit .d.fixed{cursor:default}
+body.edit .d.drag{cursor:grabbing}
+.d.shake{animation:shake .35s ease}
+@keyframes shake{25%{translate:-4px 0}75%{translate:4px 0}}
 </style></head><body>
-<div id="room"><div id="inner"><img class="bg" id="bg" alt="" draggable="false"><div id="sky"></div><div id="layer"></div><div id="parcel"><img class="bal" src="art/balloon.webp" alt=""><img class="box" src="art/parcel.webp" alt=""></div></div></div>
+<div id="tools"><b id="tName">Decorar</b><div id="sw"></div><button id="tUndo" title="Deshacer">↶</button><button id="tReset" title="Restablecer">⟲</button><button id="tDone">Listo</button></div><div id="room"><div id="inner"><img class="bg" id="bg" alt="" draggable="false"><div id="wallT"></div><img class="bg" id="floorL" src="art/room-floor.webp" alt="" draggable="false"><div id="sky"></div><div id="layer"></div><div id="parcel"><img class="bal" src="art/balloon.webp" alt=""><img class="box" src="art/parcel.webp" alt=""></div></div></div>
 <script>
 // Casa de Eko: aparece entre nubes, ventana según la hora, muebles con perspectiva y los efectos de colocar/guardar.
 (() => {
@@ -59,6 +77,9 @@
     room.style.top = "0px";
     const bg = $("#bg"); if (bg.getAttribute("src") !== p.room) bg.src = p.room;
     bg.style.top = top + "px"; bg.style.height = "auto";
+    const fl = $("#floorL"); fl.style.top = top + "px"; fl.style.filter = p.floorF || "";
+    const wt = $("#wallT"); wt.style.top = top + "px"; wt.style.height = (bg.offsetHeight || 205) + "px"; wt.style.background = p.wallC || "transparent";
+    last = {};
     const g = p.glass; Object.assign(sky.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px", background: SKY[p.sky] || SKY.day });
     sky.className = p.sky + (p.weather ? " " + p.weather : "");
     if (p.weather !== sky.dataset.w) { sky.dataset.w = p.weather || ""; sky.querySelectorAll("b").forEach((b) => b.remove()); if (p.weather) for (let i = 0; i < 8; i++) { const b = document.createElement("b"); b.style.left = Math.random() * 100 + "%"; b.style.animationDelay = (-Math.random() * 3) + "s"; if (p.weather === "leaves") b.style.background = ["#D0795A", "#E9A93B", "#C9A27A"][i % 3]; sky.appendChild(b); } }   // solo cambia el cielo; la habitación tiene siempre la misma luz
@@ -68,22 +89,103 @@
     } else if (shelfEl) { shelfEl.remove(); shelfEl = null; }
     const keep = new Set();
     for (const it of p.items || []) {
-      keep.add(it.id);
+      keep.add(it.id); last[it.id] = it;
       let el = els[it.id];
       if (!el) { el = els[it.id] = document.createElement("div"); el.innerHTML = '<img alt="" draggable="false">'; layer.appendChild(el); }
       const wall = it.id === "frame" || it.id === "pic1" || it.id === "pic2" || it.id === "curtains";
       el.className = "d " + (it.id === "rug" ? "flat" : wall ? "wall" : "floor") + (it.id === "lamp" ? " lamp" + (p.lampOn ? " lit" : "") : "");
       const img = el.firstChild;
       if (img.getAttribute("src") !== it.src) img.src = it.src;
-      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.id === "rug" ? 1 : it.z >= 1 ? 2 : 3 + Math.round((1 - it.z) * 10) });
+      if (drag && drag.id === it.id) continue;
+      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.id === "rug" ? 1 : it.z >= 1 ? 2 : 3 + Math.round((1 - it.z) * 100) });
+      el.dataset.id = it.id; el.classList.toggle("fixed", !it.move); el.classList.toggle("sel", sel === it.id);
+      img.style.filter = (it.f || "") + (it.id === "lamp" && p.lampOn ? " brightness(1.08) drop-shadow(0 0 6px rgba(255,200,120,.7))" : "") + (sel === it.id ? " drop-shadow(0 0 2px #fff) drop-shadow(0 0 3px #D0795A)" : "");
       if (it.id === "frame" && !el.dataset.anim) img.style.transform = `rotate(${tilt}deg)`;
     }
     for (const id in els) if (!keep.has(id) && !els[id].dataset.leaving) { els[id].remove(); delete els[id]; }
+    if (mode) { mode.sel = mode.sel || {}; tools(); }
     const pc = p.parcel;
     if (pc) {
       Object.assign(parcel.style, { left: pc.x + "px", top: pc.y + "px", width: pc.w + "px", height: pc.h + "px", zIndex: 8 });
       if (!parcel.classList.contains(pc.state)) parcel.className = pc.state;
     } else if (!parcel.dataset.leaving) parcel.className = "";
+  });
+  // ---------- Modo decorar ----------
+  let mode = null, sel = null, drag = null, last = {};
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const depth = (b) => clamp((184 - b) / 38, 0, 1), persp = (z) => 1 - 0.22 * z;
+  const emit = (n, p) => T.event.emit(n, p || {});
+  T.event.listen("corner-mode", (e) => {
+    const p = e.payload || {};
+    if (!p.on) { mode = null; sel = null; document.body.classList.remove("edit"); for (const id in els) els[id].classList.remove("sel"); return; }
+    mode = p; document.body.classList.add("edit"); tools();
+  });
+  $("#tDone").onclick = () => emit("corner-done");
+  $("#tUndo").onclick = () => emit("corner-undo");
+  $("#tReset").onclick = () => emit("corner-reset");
+  addEventListener("keydown", (e) => { if (mode && e.key === "Escape") emit("corner-done"); });
+  const NAME = { bed: "Camita", pot: "Maceta", rug: "Alfombra", curtains: "Cortinas", lamp: "Lamparita", cabinet: "Vitrina", frame: "Cuadro", pic1: "Cuadro", pic2: "Cuadro", season: "Calabaza", trophy: "Trofeo" };
+  function tools() {
+    if (!mode) return;
+    const sw = $("#sw"); sw.innerHTML = "";
+    const it = sel && last[sel];
+    const btn = (html, on, lock, fn, title) => { const b = document.createElement("button"); b.className = "swc" + (on ? " on" : "") + (lock ? " lock" : ""); b.innerHTML = html; b.title = title || ""; b.onclick = (ev) => { ev.stopPropagation(); fn(); }; sw.appendChild(b); };
+    if (it) {
+      $("#tName").textContent = NAME[sel] || "Objeto";
+      const cs = mode.colors[sel];
+      if (cs) cs.forEach((c, i) => btn(`<img src="${it.src}" style="filter:${c.f}">`, (it.color || 0) === i, c.locked, () => (c.locked ? emit("corner-locked", { lv: c.lv }) : emit("corner-edit", { id: sel, color: i })), c.n + (c.locked ? " · Nivel " + c.lv : "")));
+      else sw.innerHTML = it.move ? "<i>Arrástralo para moverlo</i>" : "<i>Este no se mueve</i>";
+    } else {
+      $("#tName").textContent = "Pared y suelo";
+      mode.walls.forEach((w, i) => btn("", mode.sel.wallC === i, w.locked, () => (w.locked ? emit("corner-locked", { lv: w.lv }) : (mode.sel.wallC = i, emit("corner-edit", { wallC: i }), tools())), w.n + (w.locked ? " · Nivel " + w.lv : "")));
+      [...sw.children].forEach((b, i) => (b.style.background = mode.walls[i].c || "#FFF4E8"));
+      mode.floors.forEach((f, i) => btn(`<img src="art/room-floor.webp" style="width:60px;height:30px;object-fit:cover;object-position:50% 80%;filter:${f.f}">`, mode.sel.floorC === i, false, () => { mode.sel.floorC = i; emit("corner-edit", { floorC: i }); tools(); }, "Suelo: " + f.n));
+    }
+  }
+  function select(id) { sel = id; for (const k in els) els[k].classList.toggle("sel", k === id); tools(); }
+  document.addEventListener("pointerdown", (e) => {
+    if (!mode) return;
+    if (e.target.closest("#tools")) return;
+    const el = e.target.closest(".d"); const id = el && el.dataset.id;
+    if (!id) { select(null); return; }
+    const it = last[id]; if (!it) return;
+    select(it.id.startsWith("sv:") || (it.id === "trophy" && !it.move) ? "cabinet" : id);
+    if (!it.move) return;
+    drag = { id, el, it, sx: e.clientX, sy: e.clientY, moved: false, w0: it.w / (it.s || 1), h0: it.h / (it.s || 1), b0: it.base ? it.base.b0 : null };
+    el.setPointerCapture(e.pointerId); el.classList.add("drag");
+    if (id === "cabinet") for (const k in els) if (k.startsWith("sv:") || k === "trophy") els[k].style.opacity = "0";
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    const it = drag.it, el = drag.el;
+    if (it.wall) {
+      const t = clamp(it.t + dy, mode.wall.t0, mode.wall.t1 - it.h), cx = clamp(it.cx + dx, mode.wall.x0 + it.w / 2, mode.wall.x1 - it.w / 2);
+      drag.cx = cx; drag.t = t;
+      Object.assign(el.style, { left: cx - it.w / 2 + "px", top: mode.top + t + "px" });
+    } else {
+      const b = clamp(it.b + dy, mode.floor.b0, mode.floor.b1);
+      const s = it.flat ? 1 : persp(depth(b)) / persp(depth(drag.b0 != null ? drag.b0 : b));
+      const w = drag.w0 * s, h = drag.h0 * s, cx = clamp(it.cx + dx, mode.floor.x0 + w / 2, mode.floor.x1 - w / 2);
+      drag.cx = cx; drag.b = b; drag.box = { x: cx - w / 2, y: mode.top + b - h, w, h };
+      Object.assign(el.style, { left: drag.box.x + "px", top: drag.box.y + "px", width: w + "px", height: h + "px", zIndex: it.flat ? 1 : 3 + Math.round(depth(b) < 1 ? (1 - depth(b)) * 100 : 0) });
+    }
+  });
+  const inter = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  document.addEventListener("pointerup", () => {
+    if (!drag) return;
+    const d = drag; drag = null; d.el.classList.remove("drag");
+    for (const k in els) if (k.startsWith("sv:") || k === "trophy") els[k].style.opacity = "";
+    if (!d.moved) return;
+    const it = d.it;
+    const box = it.wall ? { x: d.cx - it.w / 2, y: mode.top + d.t, w: it.w, h: it.h } : d.box;
+    // que no se amontonen: si pisa mucho a otro, vuelve a su sitio
+    const others = Object.values(last).filter((o) => o.id !== it.id && !o.id.startsWith("sv:") && o.id !== "trophy" && !o.flat && !!o.wall === !!it.wall);
+    if (it.wall) others.push({ x: mode.window.x, y: mode.window.y, w: mode.window.w, h: mode.window.h });
+    const bad = !it.flat && others.some((o) => inter(box, o) > 0.3 * Math.min(box.w * box.h, o.w * o.h));
+    if (bad) { Object.assign(d.el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px" }); d.el.classList.remove("shake"); void d.el.offsetWidth; d.el.classList.add("shake"); return; }
+    emit("corner-edit", it.wall ? { id: it.id, cx: d.cx, t: d.t } : { id: it.id, cx: d.cx, b: d.b });
   });
   function clouds(x, y, w, h, n) {
     for (let i = 0; i < n; i++) setTimeout(() => {

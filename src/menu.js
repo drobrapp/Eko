@@ -253,7 +253,7 @@
   const NAMES = ES ? { foryou: "Para ti", play: "Jugar", care: "Cuidarme", wardrobe: "Armario", util: "Te ayudo", notebook: "Libreta", house: "Mi casa" }
                    : { foryou: "For you", play: "Play", care: "Care", wardrobe: "Wardrobe", util: "Helper", notebook: "Notebook", house: "My home" };
   const CATS = [["foryou", "sparkle"], ["play", "play"], ["care", "cookie"], ["wardrobe", "hanger"], ["util", "util"], ["notebook", "book"]];
-  const SUBS = { rps: "play", tricks: "play", remind: "util", shortcuts: "util" };
+  const SUBS = { rps: "play", tricks: "play", housethings: "house", remind: "util", shortcuts: "util" };
   const lockLvl = (id) => { const P = PG(); if (!P) return 0; for (const [n, d] of Object.entries(P.LEVELS)) if (d.id === id) return +n; return 0; };
   // Lo que hay en cada categoría
   const HATS = [["witch", "artHatWitch", "halloween"], ["pumpkin", "artHatPumpkin", "halloween"], ["vampire", "artCape", "halloween"], ["ghost", "artPuff", "halloween"],
@@ -319,6 +319,7 @@
       return s.slice(0, 6);
     }
     if (c === "rps") return TREE.rps.map((x) => ({ ...x, keep: false }));
+    if (c === "housethings") return window.EkoCorner ? window.EkoCorner.thingsItems() : [];
     if (c === "corner" || c === "house") return window.EkoCorner ? window.EkoCorner.menuItems() : [];
     if (c === "tricks") {
       const T = window.EkoTricks;
@@ -416,7 +417,7 @@
     if (!capText) capText = levelId === "home" || levelId === "foryou" ? pick(GREET())() : CAP[levelId] ? pick(CAP[levelId]) : "";
     greetNext = false;
     const cap = p.querySelector(".mcap");
-    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : levelId === "house" ? (ES ? "Mi casa" : "My home") : NAMES[cat]) : cat ? NAMES[cat] : "";
+    const ttl = isSub ? (levelId === "rps" ? L.rps : levelId === "remind" ? L.remind : levelId === "tricks" ? (ES ? "Trucos" : "Tricks") : levelId === "house" ? (ES ? "Mi casa" : "My home") : levelId === "housethings" ? (ES ? "Mis cosas" : "My things") : NAMES[cat]) : cat ? NAMES[cat] : "";
     cap.querySelector("b").textContent = ttl || capText;
     cap.querySelector("em").textContent = ttl ? capText : "";
     E.talk && E.talk(capText);

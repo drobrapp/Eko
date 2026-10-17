@@ -156,6 +156,15 @@ async fn corner_show(app: AppHandle, x: f64, y: f64, w: f64, h: f64) -> Result<(
     Ok(())
 }
 
+/// Modo decorar: la casa se puede tocar (normalmente deja pasar los clics al escritorio)
+#[tauri::command]
+fn corner_interact(app: AppHandle, on: bool) {
+    if let Some(w) = app.get_webview_window("corner") {
+        let _ = w.set_ignore_cursor_events(!on);
+        if on { let _ = w.set_focus(); }
+    }
+}
+
 #[tauri::command]
 fn corner_hide(app: AppHandle) {
     if let Some(w) = app.get_webview_window("corner") {
@@ -465,7 +474,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc, actions::backup_save, actions::app_restart])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::open_app, actions::lock_pc, actions::backup_save, actions::app_restart])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

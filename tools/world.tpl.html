@@ -51,6 +51,8 @@ body.night #sun{animation:none}
 .prop::before{content:"";position:absolute;left:8%;right:8%;bottom:-4px;height:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.38),rgba(45,60,25,0));z-index:-1;pointer-events:none}
 .prop.held::before{display:none}
 #ekoShadow{position:absolute;z-index:19;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.35),rgba(45,60,25,0));pointer-events:none}
+#sunflowers{position:absolute;z-index:3;pointer-events:none;background:url(art/valley/h-sunflowers.webp) repeat-x left bottom;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.plaque{position:absolute;text-align:center;font:700 20px "Segoe Print","Comic Sans MS",cursive;color:#6b4a33;pointer-events:none}
 </style></head><body>
 <div id="sky"></div><div id="sun"></div><div id="stars"></div><div id="clouds"></div>
 <div class="layer" id="far"></div><div class="layer" id="mid"></div>

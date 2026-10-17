@@ -19,8 +19,8 @@
   const PATH = () => groundTop() + G() * 0.27;              // donde pisa Eko (el camino de tierra)
   const BACK = () => groundTop() + G() * 0.14;              // base de lo que está detrás del camino
   const FRONT = () => groundTop() + G() * 0.42;             // base de lo que está delante
-  const OPEN = { x0: 140, x1: 2050 };                       // zona abierta en la fase 1 (en «unidades de 1080p»)
-  const WORLD = 2600;
+  const OPEN = { x0: 140, x1: 3760 };                       // zona abierta (en «unidades de 1080p»): el prado y el huerto
+  const WORLD = 4200;
   const U = (u) => u * k;                                   // unidades → px
 
   // ---------- Cielo real: hora y estación ----------
@@ -69,27 +69,41 @@
   for (const [gx, gy, gs] of GLOWS) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [gx, gy, gs]; house.el.appendChild(g); }
   prop("tree.webp", 280, 360, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(330, () => say(pick(["Este árbol es mi favorito", "Aquí da una sombrita estupenda", "Algún día le pondré un columpio"]))) });
   prop("bush.webp", 560, 120, "back", "back", { ar: 786 / 710, click: () => goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))) });
-  prop("fence.webp", 1260, 90, "back", "back", { ar: 900 / 338 });
-  prop("tree.webp", 1910, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1860, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
-  const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1430, 260, "front", "front", { ar: 162 / 800 })];
+  prop("fence.webp", 1300, 90, "back", "back", { ar: 900 / 338 });
+  prop("bush.webp", 1560, 100, "back", "back", { ar: 786 / 710 });
+  prop("tree.webp", 1820, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
+  const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1460, 260, "front", "front", { ar: 162 / 800 })];
   for (const l of lamps) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [0.54, 0.17, 120]; l.el.appendChild(g); l.el.addEventListener("click", (e) => { e.stopPropagation(); goTo(l.ux + 40, () => say(phase() === "night" ? "De noche se encienden solas" : "Por la noche esto brilla muchísimo")); }); }
   const sign = prop("sign.webp", 1180, 240, "front", "front", { ar: 379 / 700, click: () => goTo(1140, () => say(`«El Valle de ${name}». ¡Bienvenido a mi valle!`)) });
   const st = document.createElement("div"); st.id = "signText"; st.textContent = `El Valle\nde ${name}`; st.style.whiteSpace = "pre"; sign.el.appendChild(st);
 
-  // ---------- Huerto (fase 2): plantar, regar y cosechar en tiempo real ----------
+  // ---------- El Huerto (fase 2): una zona nueva al otro lado de la niebla ----------
+  // Arco de entrada, girasoles, cobertizo, dos bancales, Don Paja (el espantapájaros), el pozo y la carretilla.
   const testMode = (() => { try { return !!JSON.parse(localStorage.getItem("eko-settings") || "{}").testAll; } catch (_) { return false; } })();
   const GROW = testMode ? 20e3 : 3 * 3600e3;                 // tiempo mínimo entre fases (regada)
-  let GD = { slots: [null, null, null], hv: { carrot: 0, tomato: 0 } };
+  const CAN = 3;                                             // riegos por cada vez que se llena la regadera
+  let GD = { slots: [], hv: { carrot: 0, tomato: 0 }, cart: { carrot: 0, tomato: 0 }, water: CAN, seen: false };
   try { GD = Object.assign(GD, JSON.parse(localStorage.getItem("eko-garden") || "{}")); } catch (_) {}
+  while (GD.slots.length < 6) GD.slots.push(null);
+  GD.cart = GD.cart || { carrot: 0, tomato: 0 }; if (GD.water == null) GD.water = CAN;
   const gSave = () => { try { localStorage.setItem("eko-garden", JSON.stringify(GD)); } catch (_) {} };
-  const BED = { ux: 1640, uh: 66, ar: 1000 / 202 };
-  const bed = prop("g-bed.webp", BED.ux, BED.uh, "back", "back", { ar: BED.ar, click: (p, e) => slotAt(e) });
-  const can = prop("g-can.webp", 1690, 58, "front", "front", { ar: 500 / 265, click: () => waterNext() });
-  prop("g-seeds.webp", 1770, 82, "front", "front", { ar: 436 / 500, click: () => plantNext() });
-  const SX = [0.2, 0.5, 0.8];                                 // huecos del bancal (fracción del ancho)
+  const Z = { arch: 2260, x0: 2300, x1: 3760 };               // la zona del huerto
+  // girasoles: una franja de fondo solo en el huerto
+  const sun1 = document.createElement("div"); sun1.id = "sunflowers"; back.appendChild(sun1);
+  const arch = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: () => goTo(Z.arch + (E.x < Z.arch ? 120 : -120)) });
+  const at = document.createElement("div"); at.className = "plaque"; at.textContent = "Huerto"; arch.el.appendChild(at);
+  prop("h-shed.webp", 2520, 290, "back", "back", { ar: 900 / 820, click: () => goTo(2520, () => say(pick(["Aquí guardo las herramientas", "Huele a madera y a tierra", "Un día ordenaré este cobertizo… algún día", "Dentro hay más macetas que sitio"]))) });
+  const BEDS = [{ ux: 2860 }, { ux: 3290 }], BED = { uh: 66, ar: 1000 / 202 };
+  const beds = BEDS.map((b, j) => prop("g-bed.webp", b.ux, BED.uh, "back", "back", { ar: BED.ar, click: (p, e) => slotAt(j, e) }));
+  prop("h-scarecrow.webp", 3075, 250, "back", "back", { ar: 572 / 800, sway: true, click: () => goTo(3035, () => chatPaja()) });
+  const well = prop("h-well.webp", 3560, 230, "back", "back", { ar: 627 / 800, click: () => goTo(3500, () => fillCan()) });
+  const can = prop("g-can.webp", 2590, 58, "front", "front", { ar: 500 / 265, click: () => waterNext() });
+  prop("g-seeds.webp", 2660, 82, "front", "front", { ar: 436 / 500, click: () => plantNext() });
+  const barrow = prop("h-barrow.webp", 3090, 92, "front", "front", { ar: 600 / 253, click: () => goTo(3030, () => emptyCart()) });
+  const SX = [0.2, 0.5, 0.8];                                 // huecos de cada bancal (fracción del ancho)
   const ART = { 0: ["g-sprout.webp", 347 / 400, 70], 1: ["g-young.webp", 500 / 475, 100], carrot: ["g-carrotplant.webp", 461 / 500, 125], tomato: ["g-tomato.webp", 447 / 600, 170] };
-  const plants = SX.map((fx, i) => { const d = document.createElement("div"); d.className = "plant"; d.innerHTML = `<img alt="" draggable="false"><b class="thirst"></b>`; d.addEventListener("click", (e) => { e.stopPropagation(); act(i); }); back.appendChild(d); return d; });
-  const slotX = (i) => BED.ux + (SX[i] - 0.5) * BED.uh * BED.ar;
+  const plants = GD.slots.map((_, i) => { const d = document.createElement("div"); d.className = "plant"; d.innerHTML = `<img alt="" draggable="false"><b class="thirst"></b>`; d.addEventListener("click", (e) => { e.stopPropagation(); act(i); }); back.appendChild(d); return d; });
+  const slotX = (i) => BEDS[Math.floor(i / 3)].ux + (SX[i % 3] - 0.5) * BED.uh * BED.ar;
   const stage = (s) => (s.st >= 2 ? s.c : s.st);
   const thirsty = (s) => s.st < 2 && !(s.wet > s.since);
   function grow() {
@@ -105,14 +119,19 @@
       if (!img.src.endsWith(src)) img.src = "art/valley/" + src;
       d.dataset.ar = ar; d.dataset.uh = uh; d.classList.toggle("dry", thirsty(s));
     });
-    gLayout();
+    const full = GD.cart.carrot + GD.cart.tomato > 0, im = barrow.el.firstChild;
+    barrow.ar = full ? 600 / 358 : 600 / 253; barrow.uh = full ? 120 : 92;
+    if (!im.src.endsWith(full ? "h-barrowfull.webp" : "h-barrow.webp")) im.src = "art/valley/" + (full ? "h-barrowfull.webp" : "h-barrow.webp");
+    layout();
   }
   function gLayout() {
-    const bh = U(BED.uh), top = BACK() - bh, base = top + bh * 0.42;
+    const bh = U(BED.uh), base = BACK() - bh + bh * 0.42;
     plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });
-    bed.el.style.zIndex = 6;
+    for (const b of beds) b.el.style.zIndex = 6;
+    Object.assign(sun1.style, { left: U(Z.x0) + "px", width: U(Z.x1 - Z.x0 + 200) + "px", top: BACK() - U(230) + "px", height: U(240) + "px", backgroundSize: "auto 100%" });
+    Object.assign(at.style, { left: "32%", width: "36%", top: "19%", height: "10%", fontSize: U(20) + "px", lineHeight: U(34) + "px" });
   }
-  function slotAt(e) { const r = bed.el.getBoundingClientRect(); const f = (e.clientX - r.left) / r.width; act(f < 0.35 ? 0 : f < 0.65 ? 1 : 2); }
+  function slotAt(j, e) { const r = beds[j].el.getBoundingClientRect(); const f = (e.clientX - r.left) / r.width; act(j * 3 + (f < 0.35 ? 0 : f < 0.65 ? 1 : 2)); }
   // efectos
   function fx(cls, x, y, n, life) {
     for (let j = 0; j < n; j++) { const d = document.createElement("i"); d.className = cls; Object.assign(d.style, { left: x + (Math.random() - 0.5) * U(50) + "px", top: y + "px", animationDelay: j * (life / n) + "ms", "--dx": (Math.random() - 0.5) * U(80) + "px" }); front.appendChild(d); setTimeout(() => d.remove(), life + 1200); }
@@ -122,13 +141,19 @@
   function work(pose, ms, done) { gBusy = true; E.pose = pose; E.poseT = E.t; setTimeout(() => { E.pose = null; gBusy = false; done && done(); }, ms); }
   const GL = {
     plant: ["¡A plantar!", "Una semillita aquí…", "Crece fuerte, ¿eh?", "Tapadita con tierra"],
-    planted: ["¡Listo! Ahora hay que regarla", "Ya está plantada. Le falta agua", "Hecho. ¿Me pasas la regadera?"],
+    planted: ["¡Listo! Ahora hay que regarla", "Ya está plantada. Le falta agua", "Hecho. Ahora, la regadera"],
     water: ["¡Agüita!", "Glu, glu, glu…", "Que no le falte de nada", "Riego, riego…"],
     wait: ["Aún está creciendo, hay que tener paciencia", "Todavía le falta un poco", "Ya está regada. Ahora, a esperar", "Crece despacito, como todo lo bueno"],
     carrot: ["¡Una zanahoria enorme!", "¡Mira qué zanahoria!", "¡Zanahoria recién sacada!"],
     tomato: ["¡Tomates rojitos!", "¡Qué tomates más buenos!", "¡Cosecha de tomates!"],
-    full: ["El bancal ya está lleno", "No queda sitio para más semillas"],
+    full: ["Los bancales ya están llenos", "No queda sitio para más semillas"],
     nodry: ["Ahora mismo nada necesita agua", "Todo está regado"],
+    empty: ["Uy, la regadera está vacía. Voy al pozo", "Sin agua… ¡al pozo!", "Me he quedado seco. Un momento"],
+    fill: ["¡Regadera llena!", "Agua fresquita del pozo", "Clonc, clonc… ¡llena!"],
+    full2: ["La regadera ya está llena", "Todavía me queda agua"],
+    paja: ["Hola, Don Paja. ¿Algún pájaro por aquí?", "Don Paja no habla mucho, pero escucha muy bien", "Don Paja vigila el huerto mientras no estamos", "¿Te gusta tu sombrero nuevo, Don Paja?", "Don Paja dice que los girasoles han crecido", "Le cuento mis secretos a Don Paja. No se los dice a nadie"],
+    cartEmpty: ["La carretilla está vacía. ¡A cosechar!", "Aquí irá la cosecha", "Cuando cosechemos, la traigo aquí"],
+    hello: ["¡Bienvenido al huerto!", "¡Ya estamos en el huerto!", "Mira, los girasoles nos saludan", "Huele a tierra mojada… me encanta"],
   };
   function act(i) {
     if (gBusy || E.exiting) return;
@@ -140,26 +165,52 @@
         work("dig", 1500, () => { const c = (GD.hv.carrot || 0) <= (GD.hv.tomato || 0) ? (Math.random() < 0.65 ? "carrot" : "tomato") : (Math.random() < 0.65 ? "tomato" : "carrot"); GD.slots[i] = { c, st: 0, since: Date.now(), wet: 0 }; gSave(); drawPlants(); plants[i].classList.add("pop"); setTimeout(() => plants[i].classList.remove("pop"), 600); fx("dirt", bx, by, 8, 300); say(pick(GL.planted), 2200); });
         fx("dirt", bx, by, 10, 1200);
       } else if (thirsty(s)) {
+        if (GD.water <= 0) { say(pick(GL.empty), 1800); setTimeout(() => goTo(3500, () => fillCan(() => act(i))), 900); return; }
         say(pick(GL.water), 1800);
-        can.el.classList.add("held"); work("water", 1900, () => { can.el.classList.remove("held"); can.el.style.transform = ""; layout(); s.wet = Date.now(); gSave(); drawPlants(); say(pick(GL.wait), 2200); });
+        can.el.classList.add("held"); work("water", 1900, () => { can.el.classList.remove("held"); can.el.style.transform = ""; GD.water--; s.wet = Date.now(); gSave(); drawPlants(); say(pick(GL.wait) + (GD.water === 0 ? " Y la regadera se ha vaciado." : ""), 2400); });
         setTimeout(() => fx("drop", bx, by - U(110), 14, 1200), 400);
       } else if (s.st < 2) {
         const left = Math.max(0, GROW - (Date.now() - s.since)), hrs = Math.ceil(left / 3600e3);
         say(left > 0 && !testMode ? `${pick(GL.wait)} (unas ${hrs} h)` : pick(GL.wait), 2600);
       } else {
         work("dig", 1100, () => {
-          GD.hv[s.c] = (GD.hv[s.c] || 0) + (s.c === "tomato" ? 3 : 1);
+          const n = s.c === "tomato" ? 3 : 1;
+          GD.hv[s.c] = (GD.hv[s.c] || 0) + n; GD.cart[s.c] = (GD.cart[s.c] || 0) + n;
           if (s.c === "carrot") { GD.slots[i] = null; const im = document.createElement("img"); im.src = "art/valley/g-carrot.webp"; im.className = "pull"; Object.assign(im.style, { left: bx - U(60) + "px", top: by - U(60) + "px", width: U(120) + "px" }); front.appendChild(im); setTimeout(() => im.remove(), 1800); }
           else { s.st = 1; s.since = Date.now(); s.wet = 0; floatText("+3 tomates", bx, by - U(150)); }
           gSave(); drawPlants(); fx("dirt", bx, by, 8, 300);
-          say(pick(GL[s.c]) + (GD.hv[s.c] > 1 ? ` Ya llevamos ${GD.hv[s.c]}.` : ""), 2600);
+          say(pick(GL[s.c]) + " A la carretilla.", 2600);
         });
       }
     });
   }
-  function plantNext() { const i = GD.slots.findIndex((s) => !s); if (i < 0) { goTo(1740, () => say(pick(GL.full))); return; } act(i); }
-  function waterNext() { const i = GD.slots.findIndex((s) => s && thirsty(s)); if (i < 0) { goTo(1650, () => say(pick(GL.nodry))); return; } act(i); }
-  function gardenTalk() { const n = GD.slots.filter((s) => s && thirsty(s)).length, r = GD.slots.filter((s) => s && s.st >= 2).length; return r ? "¡Hay cosas listas para cosechar en el huerto!" : n ? "Las plantas del huerto tienen sed" : GD.slots.every((s) => !s) ? "¿Plantamos algo en el huerto?" : ""; }
+  function fillCan(then) {
+    if (GD.water >= CAN && !then) { say(pick(GL.full2)); return; }
+    E.face = 1; say("Clonc, clonc…", 1400);
+    work("dig", 1400, () => { GD.water = CAN; gSave(); fx("drop", U(well.ux), BACK() - U(120), 8, 500); say(pick(GL.fill), 1600); if (then) setTimeout(then, 900); });
+  }
+  function emptyCart() {
+    const c = GD.cart, t = c.carrot + c.tomato;
+    if (!t) { say(pick(GL.cartEmpty)); return; }
+    const parts = [c.carrot ? `${c.carrot} zanahoria${c.carrot > 1 ? "s" : ""}` : "", c.tomato ? `${c.tomato} tomate${c.tomato > 1 ? "s" : ""}` : ""].filter(Boolean).join(" y ");
+    say(`¡${parts}! Me lo llevo a casa para cenar`, 3000);
+    work("dig", 900, () => { GD.cart = { carrot: 0, tomato: 0 }; gSave(); drawPlants(); });
+  }
+  let pajaI = -1;
+  function chatPaja() {
+    const r = GD.slots.filter((s) => s && s.st >= 2).length, d = GD.slots.filter((s) => s && thirsty(s)).length;
+    if (r && Math.random() < 0.5) { say("Don Paja dice que hay cosas listas para cosechar", 2600); return; }
+    if (d && Math.random() < 0.5) { say("Don Paja me chiva que alguna planta tiene sed", 2600); return; }
+    pajaI = (pajaI + 1 + Math.floor(Math.random() * (GL.paja.length - 1))) % GL.paja.length; say(GL.paja[pajaI], 2800);
+  }
+  function plantNext() { const i = GD.slots.findIndex((s) => !s); if (i < 0) { goTo(2640, () => say(pick(GL.full))); return; } act(i); }
+  function waterNext() { const i = GD.slots.findIndex((s) => s && thirsty(s)); if (i < 0) { goTo(2570, () => say(pick(GL.nodry))); return; } act(i); }
+  const inGarden = () => E.x > Z.arch;
+  function gardenTalk() {
+    const n = GD.slots.filter((s) => s && thirsty(s)).length, r = GD.slots.filter((s) => s && s.st >= 2).length;
+    if (inGarden()) return r ? "¡Hay cosas listas para cosechar!" : n ? "Algunas plantas tienen sed" : GD.slots.every((s) => !s) ? "¿Plantamos algo?" : pick(["Me encanta este sitio", "Los girasoles siempre miran al sol", "Don Paja hace muy bien su trabajo"]);
+    return r ? "¡Hay cosas listas en el huerto!" : n ? "Las plantas del huerto tienen sed" : "";
+  }
   // niebla: lo que todavía no se puede visitar
   const fogR = document.createElement("div"); fogR.id = "fogR"; back.parentNode.appendChild(fogR);
   const fogL = document.createElement("div"); fogL.id = "fogL"; back.parentNode.appendChild(fogL);
@@ -237,6 +288,7 @@
       else { walking = true; E.face = Math.sign(d); E.x += E.face * Math.min(Math.abs(d), 230 * dt); }
     }
     E.ph += dt * (walking ? 9 : 0);
+    if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { say(GD.seen ? pick(GL.hello) : `¡Mira! ¡Detrás de la niebla había un huerto! Será nuestro`, 3200); if (!GD.seen) { GD.seen = true; gSave(); } } }
     // Eko: posición, entrar/salir por la puerta
     const h = EH(), w = h * 240 / 310;
     let y = PATH(), sc = 1, op = 1;

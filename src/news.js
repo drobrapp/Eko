@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.27.0": { important: true, lines: ["¡Me han llegado cosas para mi casa! Alfombra, cortinas y una lamparita que se enciende de noche"] },
     "0.26.0": { important: true, lines: ["¡Tengo una vitrina para mis recuerdos! Cada logro deja algo bonito dentro"] },
     "0.25.0": { important: true, lines: ["¡Ya cuelgo mis cuadros! Y puedo tener hasta tres en la pared"] },
     "0.24.0": { important: true, lines: ["¡Tengo cámara! Haré fotos de nuestros momentos importantes y las guardo en el álbum de mi libreta", "Y a veces me llegan cartas, te invito a una pausa en mi casa y guardo recuerdos en mi balda"] },

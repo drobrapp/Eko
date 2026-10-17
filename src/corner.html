@@ -24,6 +24,10 @@
 .d.floor::after{content:"";position:absolute;left:8%;right:8%;bottom:-3px;height:9px;border-radius:50%;background:radial-gradient(closest-side,rgba(70,40,20,.38),transparent);z-index:-1}
 .cloud{position:absolute;border-radius:50%;background:#FFF8EF;box-shadow:inset -6px -8px 0 rgba(200,180,165,.35);pointer-events:none;animation:cl 1s ease-out forwards}
 @keyframes cl{0%{transform:scale(.2);opacity:0}25%{opacity:1}100%{transform:scale(1.25) translateY(-12px);opacity:0}}
+.d.flat img{filter:drop-shadow(0 1px 1px rgba(60,35,20,.18))}
+.d.lamp::before{content:"";position:absolute;left:-160%;top:-55%;width:420%;height:110%;background:radial-gradient(closest-side,rgba(255,206,130,.45),rgba(255,206,130,.12) 55%,transparent);opacity:0;transition:opacity 1.2s;pointer-events:none}
+.d.lamp.lit::before{opacity:1}
+.d.lamp.lit img{filter:brightness(1.08) drop-shadow(0 0 6px rgba(255,200,120,.7))}
 .sp{position:absolute;width:14px;height:14px;pointer-events:none;animation:sp .8s ease-out forwards}
 @keyframes sp{0%{transform:scale(.3);opacity:0}30%{opacity:1}100%{transform:scale(1.1) translateY(-14px);opacity:0}}
 @keyframes wig{0%,100%{transform:rotate(0)}20%{transform:rotate(-5deg) scaleY(.96)}45%{transform:rotate(4deg)}70%{transform:rotate(-2deg)}}
@@ -67,11 +71,11 @@
       keep.add(it.id);
       let el = els[it.id];
       if (!el) { el = els[it.id] = document.createElement("div"); el.innerHTML = '<img alt="" draggable="false">'; layer.appendChild(el); }
-      const wall = it.id === "frame" || it.id === "pic1" || it.id === "pic2";
-      el.className = "d " + (wall ? "wall" : "floor");
+      const wall = it.id === "frame" || it.id === "pic1" || it.id === "pic2" || it.id === "curtains";
+      el.className = "d " + (it.id === "rug" ? "flat" : wall ? "wall" : "floor") + (it.id === "lamp" ? " lamp" + (p.lampOn ? " lit" : "") : "");
       const img = el.firstChild;
       if (img.getAttribute("src") !== it.src) img.src = it.src;
-      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.z >= 1 ? 2 : 3 + Math.round((1 - it.z) * 10) });
+      Object.assign(el.style, { left: it.x + "px", top: it.y + "px", width: it.w + "px", height: it.h + "px", zIndex: it.id === "rug" ? 1 : it.z >= 1 ? 2 : 3 + Math.round((1 - it.z) * 10) });
       if (it.id === "frame" && !el.dataset.anim) img.style.transform = `rotate(${tilt}deg)`;
     }
     for (const id in els) if (!keep.has(id) && !els[id].dataset.leaving) { els[id].remove(); delete els[id]; }

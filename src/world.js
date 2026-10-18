@@ -32,6 +32,10 @@
   function sky() {
     const p = phase(), [a, b] = SKY[p];
     $("#sky").style.background = `linear-gradient(${a}, ${b} 70%)`;
+    const houseView = $("#houseView"), houseSun = $("#houseWindowSun");
+    houseView.style.background = `linear-gradient(${a}, ${b} 70%)`;
+    houseSun.src = `art/valley/${p === "night" ? "moon" : "sun"}.webp`;
+    $(".houseWindowCloud").style.opacity = p === "night" ? "0.28" : "0.9";
     document.body.classList.toggle("night", p === "night");
     document.body.classList.toggle("lit", p === "night" || p === "dusk");
     const h = new Date().getHours() + new Date().getMinutes() / 60;
@@ -252,14 +256,23 @@
   const interior = $("#interior"), houseActors = $("#houseActors"), houseProps = $("#houseProps"), houseGallery = $("#houseGallery");
   let inHouse = false, houseX = 9, houseTarget = null, houseDone = null, houseWalk = false, houseLift = 0, houseScale = 1, houseClimb = null, houseSignature = "";
   const HOME_FURNITURE = [
-    { id: "bed", src: "house-bed.png", cx: 105, b: 170, w: 29, ar: 1671 / 941, kind: "floor" },
-    { id: "pot", src: "house-pot.png", cx: 249, b: 187, w: 8, ar: 1374 / 1145, kind: "floor" },
-    { id: "rug", src: "house-rug.png", cx: 197, b: 184, w: 34, ar: 2243 / 701, kind: "rug" },
-    { id: "curtains", src: "house-curtains.png", cx: 284, t: 31, w: 29, ar: 1536 / 1024, kind: "wall" },
-    { id: "lamp", src: "house-lamp.png", cx: 182, b: 151, w: 7, ar: 1024 / 1536, kind: "floor" },
-    { id: "cabinet", src: "house-cabinet.png", cx: 320, b: 189, w: 18, ar: 1024 / 1536, kind: "floor" },
-    { id: "trophy", src: "house-trophy.png", cx: 320, b: 189, w: 5.4, ar: 1199 / 1312, kind: "wall" },
+    { id: "bed", src: "house-bed.png", cx: 105, b: 170, w: 26, ar: 1671 / 941, kind: "floor" },
+    { id: "pot", src: "house-pot.png", cx: 178, b: 187, w: 6, ar: 1374 / 1145, kind: "floor" },
+    { id: "rug", src: "house-rug.png", cx: 197, b: 184, w: 29, ar: 2243 / 701, kind: "rug" },
+    { id: "curtains", src: "house-curtains.png", cx: 284, t: 31, w: 25, ar: 1536 / 1024, kind: "wall" },
+    { id: "lamp", src: "house-lamp.png", cx: 157, b: 151, w: 6, ar: 1024 / 1536, kind: "floor" },
+    { id: "cabinet", src: "house-cabinet.png", cx: 296, b: 189, w: 15, ar: 1024 / 1536, kind: "floor" },
+    { id: "trophy", src: "house-trophy.png", cx: 296, b: 189, w: 4.2, ar: 1199 / 1312, kind: "wall" },
   ];
+  function houseItemX(id) {
+    const d = HOME_FURNITURE.find((v) => v.id === id), p = (roomData().pos || {})[id] || {};
+    let x = d.kind === "wall" ? roomWallX(p.cx == null ? d.cx : p.cx) : roomX(p.cx == null ? d.cx : p.cx);
+    if (id === "rug") x = Math.min(x, 47);
+    if (id === "lamp") x = Math.min(x, 43);
+    if (id === "pot") x = Math.min(x, 62);
+    if (id === "cabinet") x = Math.min(x, 74);
+    return x;
+  }
   const HOUSE_PICS = [
     { id: "portrait", name: "Retrato", src: "art/pic-portrait.webp", origin: "Me llegó en un paquete cuando construimos la casa." },
     { id: "sprout", name: "El brote", src: "art/pic-sprout.webp", origin: "Lo conseguí cuando empezó a crecer nuestro primer brote." },
@@ -297,7 +310,7 @@
   ].map(([id, name, src, origin, rank]) => ({ id, name, src, origin, rank }));
   const EH = () => U(160);                                   // alto de Eko en el valle
   function placeEko() {
-    const h = EH(), w = h * 240 / 310;
+    const h = inHouse ? U(205) : EH(), w = h * 240 / 310;
     svg.style.width = w + "px"; svg.style.height = h + "px";
     eko.style.width = w + "px"; eko.style.height = h + "px";
   }
@@ -347,7 +360,7 @@
     const el = document.createElement("button"); el.type = "button"; el.className = "house-memento"; el.dataset.houseId = "sv:" + item.id; el.setAttribute("aria-label", item.name);
     const img = document.createElement("img"); img.src = item.src; img.alt = ""; img.draggable = false; el.appendChild(img);
     const row = Math.floor(i / 3), col = i % 3;
-    Object.assign(el.style, { left: cabinetBox.x + cabinetBox.w * (0.39 + col * 0.12) - W * 0.011 + "px", top: cabinetBox.y + cabinetBox.h * ([0.36, 0.61, 0.85][row]) - W * 0.026 + "px", width: W * 0.022 + "px", height: W * 0.022 + "px", zIndex: 16 });
+    Object.assign(el.style, { left: cabinetBox.x + cabinetBox.w * ([0.34, 0.5, 0.66][col]) - W * 0.009 + "px", top: cabinetBox.y + cabinetBox.h * ([0.32, 0.49, 0.66][row]) - W * 0.018 + "px", width: W * 0.018 + "px", height: W * 0.018 + "px", zIndex: 16 });
     houseProps.appendChild(el);
   }
   function makeGalleryButton(item, type) {
@@ -369,7 +382,13 @@
     const items = {};
     if (c.built) for (const d of HOME_FURNITURE) {
       if (!got.has(d.id) || off[d.id] || d.id === "trophy") continue;
-      const p = pos[d.id] || {}, x = d.kind === "wall" ? roomWallX(p.cx == null ? d.cx : p.cx) : roomX(p.cx == null ? d.cx : p.cx), bottom = roomBottom(p.b == null ? d.b : p.b), top = roomTop(p.t == null ? d.t : p.t);
+      const p = pos[d.id] || {}, savedX = p.cx == null ? d.cx : p.cx;
+      let x = d.kind === "wall" ? roomWallX(savedX) : roomX(savedX);
+      if (d.id === "rug") x = Math.min(x, 47);
+      if (d.id === "lamp") x = Math.min(x, 43);
+      if (d.id === "pot") x = Math.min(x, 62);
+      if (d.id === "cabinet") x = Math.min(x, 74);
+      const bottom = roomBottom(p.b == null ? d.b : p.b), top = roomTop(p.t == null ? d.t : p.t);
       const color = colors[d.id] || 0;
       items[d.id] = houseAsset(d.id, "house-" + d.id + ".png", x, d.w, d.ar, d.kind, { bottom: d.kind === "wall" ? null : bottom, top: d.kind === "wall" ? top : null, color, z: d.kind === "wall" ? 3 : d.id === "rug" ? 2 : 5 });
     }
@@ -381,11 +400,11 @@
     }
     const picById = new Map(HOUSE_PICS.map((p) => [p.id, p]));
     const hung = Array.isArray(c.hung) ? c.hung : c.pic ? [c.pic] : [];
-    const slots = [{ id: "frame", cx: 203, t: 24 }, { id: "pic1", cx: 120, t: 30 }, { id: "pic2", cx: 334, t: 26 }];
+    const slots = [{ id: "frame", cx: 145, t: 25 }, { id: "pic1", cx: 365, t: 25 }, { id: "pic2", cx: 385, t: 61 }];
     for (let i = 0; i < Math.min(3, hung.length); i++) {
       const pic = picById.get(hung[i]); if (!pic || !got.has("pic:" + pic.id)) continue;
-      const p = pos[slots[i].id] || {}, cx = roomWallX(p.cx == null ? slots[i].cx : p.cx), top = roomTop(p.t == null ? slots[i].t : p.t);
-      pictureAsset(pic, i, cx, top, 10.5);
+      const cx = roomWallX(slots[i].cx), top = roomTop(slots[i].t);
+      pictureAsset(pic, i, cx, top, 7.8);
     }
     const cabinet = items.cabinet;
     if (cabinet) {
@@ -407,16 +426,16 @@
   function openGallery() { renderGallery(); houseGallery.classList.add("on"); }
   function moveHouseTo(x, done) { houseTarget = clamp(x, 7, 94); houseDone = done || null; }
   function explainHouseItem(id) {
-    if (id === "cabinet") { moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), openGallery); return; }
-    if (id === "bed") { moveHouseTo(roomX((roomData().pos || {}).bed?.cx || 105), () => say(pick(["Qué bien se está en mi camita", "Aquí me echo una siestecita", "Mi rincón favorito para descansar"]), 2400)); return; }
-    if (id === "lamp") { moveHouseTo(roomX((roomData().pos || {}).lamp?.cx || 182), () => say(pick(["Esta luz es perfecta para leer", "Me encanta mi lamparita", "Qué acogedor queda este rincón"]), 2200)); return; }
-    if (id === "pot") { moveHouseTo(roomX((roomData().pos || {}).pot?.cx || 249), () => say(pick(["Mi plantita está preciosa", "Hay que acordarse de regarla", "Las hojas nuevas son una monada"]), 2200)); return; }
-    if (id === "rug") { moveHouseTo(roomX((roomData().pos || {}).rug?.cx || 197), () => say("Esta alfombra es muy suave", 2000)); return; }
-    if (id === "curtains") { moveHouseTo(roomX((roomData().pos || {}).curtains?.cx || 284), () => say("Desde aquí entra una luz preciosa", 2200)); return; }
-    if (id === "trophy") { moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), () => say("Mi trofeo, me acuerdo de cómo lo ganamos", 2300)); return; }
+    if (id === "cabinet") { moveHouseTo(houseItemX("cabinet"), openGallery); return; }
+    if (id === "bed") { moveHouseTo(houseItemX("bed"), () => say(pick(["Qué bien se está en mi camita", "Aquí me echo una siestecita", "Mi rincón favorito para descansar"]), 2400)); return; }
+    if (id === "lamp") { moveHouseTo(houseItemX("lamp"), () => say(pick(["Esta luz es perfecta para leer", "Me encanta mi lamparita", "Qué acogedor queda este rincón"]), 2200)); return; }
+    if (id === "pot") { moveHouseTo(houseItemX("pot"), () => say(pick(["Mi plantita está preciosa", "Hay que acordarse de regarla", "Las hojas nuevas son una monada"]), 2200)); return; }
+    if (id === "rug") { moveHouseTo(houseItemX("rug"), () => say("Esta alfombra es muy suave", 2000)); return; }
+    if (id === "curtains") { moveHouseTo(houseItemX("curtains"), () => say("Desde aquí entra una luz preciosa", 2200)); return; }
+    if (id === "trophy") { moveHouseTo(houseItemX("cabinet"), () => say("Mi trofeo, me acuerdo de cómo lo ganamos", 2300)); return; }
     if (id.startsWith("sv:")) {
       const item = HOUSE_SOUVENIRS.find((v) => v.id === id.slice(3)); if (!item) return;
-      moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), () => say(`Me acuerdo de ${item.name}. ${item.origin}`, 3000)); return;
+      moveHouseTo(houseItemX("cabinet"), () => say(`Me acuerdo de ${item.name}. ${item.origin}`, 3000)); return;
     }
     if (id.startsWith("picture:")) {
       const pic = HOUSE_PICS.find((p) => p.id === id.slice(8)); if (!pic) return;
@@ -430,7 +449,7 @@
   function exitHouse() {
     if (!inHouse || houseTarget != null || houseClimb) return;
     moveHouseTo(7.5, () => {
-      inHouse = false; houseTarget = null; houseDone = null; houseGallery.classList.remove("on"); document.body.classList.remove("in-house"); interior.classList.remove("on");
+      inHouse = false; placeEko(); houseTarget = null; houseDone = null; houseGallery.classList.remove("on"); document.body.classList.remove("in-house"); interior.classList.remove("on");
       box.append(eko, bub, shd); E.x = house.ux - 560 * 1102 / 971 * 0.18; E.tx = null; E.then = null; E.entering = E.t; houseSignature = "";
       say(pick(["Ya estamos otra vez en el valle", "¡Qué bien se está en casa! ¿Paseamos?", "Vamos a dar una vuelta por el valle"]), 2500);
     });
@@ -459,7 +478,7 @@
     E.tx = null; E.then = null; E.exiting = E.t;
     say(pick(["¡A casa!", "Hogar, dulce hogar", "Vamos para dentro"]), 1400);
     setTimeout(() => {
-      E.exiting = 0; E.x = house.ux - 560 * 1102 / 971 * 0.18; inHouse = true; houseX = 8.5; houseTarget = null; houseDone = null; houseClimb = null;
+      E.exiting = 0; E.x = house.ux - 560 * 1102 / 971 * 0.18; inHouse = true; placeEko(); houseX = 8.5; houseTarget = null; houseDone = null; houseClimb = null;
       houseActors.append(eko, bub, shd); document.body.classList.add("in-house"); interior.classList.add("on"); renderHouse(true);
     }, 720);
   }
@@ -501,13 +520,13 @@
     E.ph += dt * (walking ? 9 : 0);
     if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { say(GD.seen ? pick(GL.hello) : `¡Mira! ¡Detrás de la niebla había un huerto! Será nuestro`, 3200); if (!GD.seen) { GD.seen = true; gSave(); } } }
     // Eko: pasea por el valle o por la habitación a pantalla completa.
-    const h = EH(), w = h * 240 / 310;
+    const h = inHouse ? U(205) : EH(), w = h * 240 / 310;
     let y = PATH(), sc = 1, op = 1;
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
     if (inHouse) {
-      const floor = H * 0.91 + houseLift, hb = walking ? Math.abs(Math.sin(E.ph)) * U(5) : Math.sin(E.t * 2) * U(1.5);
+      const floor = H * 0.86 + houseLift, hb = walking ? Math.abs(Math.sin(E.ph)) * U(5) : Math.sin(E.t * 2) * U(1.5);
       Object.assign(eko.style, { left: W * houseX / 100 - (w * houseScale) / 2 + "px", top: floor - h * houseScale - hb + "px", transform: `scale(${houseScale})`, transformOrigin: "50% 100%", opacity: 1, zIndex: 8 });
       Object.assign(shd.style, { left: W * houseX / 100 - w * 0.42 + "px", top: floor - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: 0.72 - Math.max(0, -houseLift / H) });
       Object.assign(bub.style, { left: W * houseX / 100 + "px", top: floor - h * houseScale - U(14) + "px", zIndex: 45 });

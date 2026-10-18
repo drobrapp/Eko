@@ -249,6 +249,52 @@
   const shd = document.createElement("div"); shd.id = "ekoShadow"; box.appendChild(shd);
   const el = { pet: svg.querySelector("#pet"), legL: svg.querySelector("#legL"), legR: svg.querySelector("#legR"), armL: svg.querySelector("#armL"), armR: svg.querySelector("#armR"), head: svg.querySelector("#head"), upper: svg.querySelector("#upper") };
   const E = { x: 900 - 560 * 1102 / 971 * 0.18, tx: null, then: null, v: 0, ph: 0, t: 0, face: 1, blinkAt: 2, entering: 0, exiting: 0, talkUntil: 0, wave: 0 };
+  const interior = $("#interior"), houseActors = $("#houseActors"), houseProps = $("#houseProps"), houseGallery = $("#houseGallery");
+  let inHouse = false, houseX = 9, houseTarget = null, houseDone = null, houseWalk = false, houseLift = 0, houseScale = 1, houseClimb = null, houseSignature = "";
+  const HOME_FURNITURE = [
+    { id: "bed", src: "house-bed.png", cx: 105, b: 170, w: 29, ar: 1671 / 941, kind: "floor" },
+    { id: "pot", src: "house-pot.png", cx: 249, b: 187, w: 8, ar: 1374 / 1145, kind: "floor" },
+    { id: "rug", src: "house-rug.png", cx: 197, b: 184, w: 34, ar: 2243 / 701, kind: "rug" },
+    { id: "curtains", src: "house-curtains.png", cx: 284, t: 31, w: 29, ar: 1536 / 1024, kind: "wall" },
+    { id: "lamp", src: "house-lamp.png", cx: 182, b: 151, w: 7, ar: 1024 / 1536, kind: "floor" },
+    { id: "cabinet", src: "house-cabinet.png", cx: 320, b: 189, w: 18, ar: 1024 / 1536, kind: "floor" },
+    { id: "trophy", src: "house-trophy.png", cx: 320, b: 189, w: 5.4, ar: 1199 / 1312, kind: "wall" },
+  ];
+  const HOUSE_PICS = [
+    { id: "portrait", name: "Retrato", src: "art/pic-portrait.webp", origin: "Me llegó en un paquete cuando construimos la casa." },
+    { id: "sprout", name: "El brote", src: "art/pic-sprout.webp", origin: "Lo conseguí cuando empezó a crecer nuestro primer brote." },
+    { id: "cookies", name: "Bodegón de galletas", src: "art/pic-cookies.webp", origin: "Lo gané jugando a Atrapa galletas." },
+    { id: "sleep", name: "Eko dormilón", src: "art/pic-sleep.webp", origin: "Lo desbloqueé al llegar al nivel 16." },
+    { id: "astro", name: "Eko astronauta", src: "art/pic-astro.webp", origin: "Lo desbloqueé al llegar al nivel 19." },
+  ];
+  const HOUSE_SOUVENIRS = [
+    ["catch", "medalla de oro", "art/sv/medal-gold.webp", "La gané al conseguir 30 puntos en Atrapa galletas.", 10],
+    ["catchS", "medalla de plata", "art/sv/medal-silver.webp", "La gané al conseguir 18 puntos en Atrapa galletas.", 8],
+    ["catchB", "medalla de bronce", "art/sv/medal-bronze.webp", "La gané al conseguir 8 puntos en Atrapa galletas.", 4],
+    ["home", "llave de mi casa", "art/sv/key.webp", "Es la llave que llegó con mi casa.", 9],
+    ["first", "pulsera de la amistad", "art/sv/bracelet.webp", "La conseguimos cuando nos hicimos amigos.", 9],
+    ["loyal", "calendario de 30 días", "art/sv/calendar.webp", "Lo gané por cumplir 30 días juntos.", 9],
+    ["gallery", "paleta de pintor", "art/sv/palette.webp", "La gané al llenar la galería de mi libreta.", 8],
+    ["bday", "magdalena de cumpleaños", "art/sv/cupcake.webp", "La guardé de la fiesta de mi cumpleaños.", 8],
+    ["xmas", "bola de nieve", "art/sv/snowglobe.webp", "Es un recuerdo de nuestras navidades.", 7],
+    ["halloween", "farolillo de calabaza", "art/sv/lantern.webp", "Lo conseguí en Halloween.", 7],
+    ["happy", "cuatro corazones", "art/sv/hearts.webp", "Lo celebramos cuando llegamos a cuatro corazones.", 7],
+    ["reunion", "postal de reencuentro", "art/sv/postcard.webp", "La guardé de nuestro reencuentro.", 7],
+    ["glutton", "bote de galletas", "art/sv/cookie-jar.webp", "Lo conseguí por zampar un montón de galletas.", 6],
+    ["gardener", "regadera dorada", "art/sv/can-gold.webp", "La gané por cuidar mucho las plantas.", 6],
+    ["rps", "copa de piedra, papel o tijera", "art/sv/rps-cup.webp", "La gané jugando a piedra, papel o tijera.", 6],
+    ["detective", "lupa de detective", "art/sv/magnifier.webp", "La conseguí resolviendo un misterio.", 6],
+    ["eye", "canica de buen ojo", "art/sv/eye-marble.webp", "La gané en un reto de buen ojo.", 6],
+    ["voice", "micrófono", "art/sv/mic.webp", "Es un recuerdo de nuestras primeras charlas.", 5],
+    ["chat", "bocadillo de charla", "art/sv/bubble.webp", "Lo gané por charlar mucho contigo.", 5],
+    ["explorer", "brújula de explorador", "art/sv/compass.webp", "La conseguí explorando el valle.", 5],
+    ["early", "solecito de madrugador", "art/sv/sun.webp", "Lo gané por levantarme tempranito.", 5],
+    ["night", "luna de noctámbulo", "art/sv/moon.webp", "La conseguí por trasnochar contigo.", 5],
+    ["mail", "sobre", "art/sv/envelope.webp", "Es un recuerdo de nuestra primera carta.", 5],
+    ["napper", "antifaz de dormir", "art/sv/sleepmask.webp", "Lo conseguí después de muchas siestas.", 5],
+    ["tidy", "nivel de burbuja", "art/sv/level.webp", "Lo gané por dejarlo todo en su sitio.", 4],
+    ["shiny", "trapito de sacar brillo", "art/sv/cloth.webp", "Lo conseguí cuidando y sacando brillo a mis cosas.", 4],
+  ].map(([id, name, src, origin, rank]) => ({ id, name, src, origin, rank }));
   const EH = () => U(160);                                   // alto de Eko en el valle
   function placeEko() {
     const h = EH(), w = h * 240 / 310;
@@ -261,50 +307,217 @@
   }
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   function goTo(ux, then) { if (E.entering || E.exiting) return; E.tx = clamp(ux, OPEN.x0 + 20, OPEN.x1 - 60); E.then = then || null; if (ux > OPEN.x1 - 60) E.fog = true; }
+  const roomData = () => { try { return JSON.parse(localStorage.getItem("eko-corner") || "{}"); } catch (_) { return {}; } };
+  const roomX = (cx) => clamp(8 + ((cx - 30) / 342) * 84, 8, 92);
+  const roomBottom = (b) => 21 - clamp((b - 146) / 44, 0, 1) * 13;
+  const roomTop = (t) => 11 + clamp(t / 125, 0, 1) * 13;
+  const roomWallX = (cx) => clamp(roomX(cx) - 20, 10, 90);
+  const HOUSE_COLORS = {
+    bed: ["", "hue-rotate(125deg) saturate(1.1)", "hue-rotate(-75deg) saturate(.8)", "hue-rotate(35deg)", "hue-rotate(170deg) saturate(1.3)"],
+    rug: ["", "hue-rotate(190deg)", "hue-rotate(240deg)", "hue-rotate(120deg) saturate(.8)", "hue-rotate(25deg) saturate(1.5)"],
+    curtains: ["", "hue-rotate(80deg)", "hue-rotate(-110deg) saturate(.8)", "hue-rotate(-40deg)", "hue-rotate(160deg) saturate(1.2)"],
+    lamp: ["", "hue-rotate(240deg)", "hue-rotate(120deg)", "hue-rotate(190deg)"],
+    cabinet: ["", "brightness(1.12) saturate(.85)", "brightness(.72) saturate(1.1)", "grayscale(.6) brightness(1.3)"],
+    pot: ["", "brightness(1.1) saturate(.8)", "brightness(.8) saturate(1.1)"],
+  };
+  const PICTURE_ORIGINS = {
+    portrait: "Me llegó en un paquete cuando construimos la casa.", sprout: "Lo conseguí cuando empezó a crecer nuestro primer brote.",
+    cookies: "Lo gané jugando a Atrapa galletas.", sleep: "Lo desbloqueé al llegar al nivel 16.", astro: "Lo desbloqueé al llegar al nivel 19.",
+  };
+  function houseAsset(id, src, xPct, widthPct, ar, kind, extra = {}) {
+    const el = document.createElement("button"), w = W * widthPct / 100, h = w / ar;
+    el.type = "button"; el.className = `house-item ${kind}`; el.dataset.houseId = id;
+    el.setAttribute("aria-label", extra.label || id);
+    const img = document.createElement("img"); img.src = "art/" + src; img.alt = ""; img.draggable = false; el.appendChild(img);
+    Object.assign(el.style, { left: xPct + "%", width: w + "px", height: h + "px", zIndex: extra.z || 4 });
+    if (extra.top != null) el.style.top = extra.top + "%";
+    else el.style.bottom = (extra.bottom == null ? 10 : extra.bottom) + "%";
+    const filter = HOUSE_COLORS[id] && HOUSE_COLORS[id][extra.color || 0]; if (filter) img.style.filter = filter;
+    houseProps.appendChild(el); return { el, xPct, top: extra.top, bottom: extra.bottom, w, h };
+  }
+  function pictureAsset(pic, slot, cx, topPct, widthPct) {
+    const el = document.createElement("button"); el.type = "button"; el.className = "house-frame"; el.dataset.houseId = "picture:" + pic.id;
+    el.setAttribute("aria-label", pic.name); const w = W * widthPct / 100, h = w / (400 / 500);
+    Object.assign(el.style, { left: cx + "%", top: topPct + "%", width: w + "px", height: h + "px", zIndex: 3 });
+    const art = document.createElement("img"); art.className = "art"; art.src = pic.src; art.alt = ""; art.draggable = false;
+    const frame = document.createElement("img"); frame.src = "art/house-frame.png"; frame.alt = ""; frame.draggable = false;
+    el.append(art, frame); houseProps.appendChild(el); return el;
+  }
+  function houseSouvenirButton(item, cabinetBox, i) {
+    const el = document.createElement("button"); el.type = "button"; el.className = "house-memento"; el.dataset.houseId = "sv:" + item.id; el.setAttribute("aria-label", item.name);
+    const img = document.createElement("img"); img.src = item.src; img.alt = ""; img.draggable = false; el.appendChild(img);
+    const row = Math.floor(i / 3), col = i % 3;
+    Object.assign(el.style, { left: cabinetBox.x + cabinetBox.w * (0.39 + col * 0.12) - W * 0.011 + "px", top: cabinetBox.y + cabinetBox.h * ([0.36, 0.61, 0.85][row]) - W * 0.026 + "px", width: W * 0.022 + "px", height: W * 0.022 + "px", zIndex: 16 });
+    houseProps.appendChild(el);
+  }
+  function makeGalleryButton(item, type) {
+    const b = document.createElement("button"); b.type = "button"; b.dataset.houseId = type === "picture" ? "picture:" + item.id : "sv:" + item.id;
+    const img = document.createElement("img"); img.src = item.src; img.alt = ""; img.draggable = false;
+    const label = document.createElement("span"); label.textContent = item.name;
+    b.append(img, label); return b;
+  }
+  function renderHouse(force = false) {
+    const c = roomData(), sig = JSON.stringify([c.built, c.pos, c.color, c.wallC, c.floorC, c.off, c.got, c.hung, c.pic]);
+    if (!force && sig === houseSignature) return; houseSignature = sig;
+    const pos = c.pos || {}, colors = c.color || {}, off = c.off || {}, got = new Set(Array.isArray(c.got) ? c.got : []);
+    houseProps.replaceChildren();
+    const wallColors = ["", "rgba(246,213,210,.5)", "rgba(216,235,221,.5)", "rgba(225,217,242,.5)", "rgba(214,228,243,.5)", "rgba(247,227,181,.5)"];
+    $("#houseWallTint").style.background = wallColors[c.wallC || 0] || "transparent";
+    const floorTint = $("#houseFloorTint");
+    floorTint.style.background = c.floorC === 1 ? "rgba(255,255,255,.28)" : c.floorC === 2 ? "rgba(84,51,30,.25)" : "transparent";
+    floorTint.style.mixBlendMode = c.floorC === 1 ? "screen" : "multiply";
+    const items = {};
+    if (c.built) for (const d of HOME_FURNITURE) {
+      if (!got.has(d.id) || off[d.id] || d.id === "trophy") continue;
+      const p = pos[d.id] || {}, x = d.kind === "wall" ? roomWallX(p.cx == null ? d.cx : p.cx) : roomX(p.cx == null ? d.cx : p.cx), bottom = roomBottom(p.b == null ? d.b : p.b), top = roomTop(p.t == null ? d.t : p.t);
+      const color = colors[d.id] || 0;
+      items[d.id] = houseAsset(d.id, "house-" + d.id + ".png", x, d.w, d.ar, d.kind, { bottom: d.kind === "wall" ? null : bottom, top: d.kind === "wall" ? top : null, color, z: d.kind === "wall" ? 3 : d.id === "rug" ? 2 : 5 });
+    }
+    if (c.built && got.has("trophy") && !off.trophy && items.cabinet) {
+      const t = HOME_FURNITURE.find((d) => d.id === "trophy"), cab = items.cabinet, w = W * t.w / 100, h = w / t.ar;
+      const el = document.createElement("button"); el.type = "button"; el.className = "house-item wall"; el.dataset.houseId = "trophy"; el.setAttribute("aria-label", "Trofeo");
+      const img = document.createElement("img"); img.src = "art/house-trophy.png"; img.alt = ""; img.draggable = false; el.appendChild(img);
+      Object.assign(el.style, { left: cab.xPct + "%", bottom: `calc(${cab.bottom}% + ${cab.h - h * 0.55}px)`, width: w + "px", height: h + "px", zIndex: 10 }); houseProps.appendChild(el);
+    }
+    const picById = new Map(HOUSE_PICS.map((p) => [p.id, p]));
+    const hung = Array.isArray(c.hung) ? c.hung : c.pic ? [c.pic] : [];
+    const slots = [{ id: "frame", cx: 203, t: 24 }, { id: "pic1", cx: 120, t: 30 }, { id: "pic2", cx: 334, t: 26 }];
+    for (let i = 0; i < Math.min(3, hung.length); i++) {
+      const pic = picById.get(hung[i]); if (!pic || !got.has("pic:" + pic.id)) continue;
+      const p = pos[slots[i].id] || {}, cx = roomWallX(p.cx == null ? slots[i].cx : p.cx), top = roomTop(p.t == null ? slots[i].t : p.t);
+      pictureAsset(pic, i, cx, top, 10.5);
+    }
+    const cabinet = items.cabinet;
+    if (cabinet) {
+      const rect = cabinet.el.getBoundingClientRect();
+      const souvenirList = HOUSE_SOUVENIRS.filter((v) => got.has("sv:" + v.id)).sort((a, b) => b.rank - a.rank).slice(0, 9);
+      souvenirList.forEach((v, i) => houseSouvenirButton(v, { x: rect.left, y: rect.top, w: rect.width, h: rect.height }, i));
+    }
+    if (houseGallery.classList.contains("on")) renderGallery(c);
+  }
+  function renderGallery(c = roomData()) {
+    houseGallery.replaceChildren();
+    const title = document.createElement("h2"); title.textContent = "Mis recuerdos"; title.style.cssText = "grid-column:1/-1;margin:0 0 4px;color:#634734;font:700 26px 'Segoe Print','Comic Sans MS',cursive"; houseGallery.appendChild(title);
+    const got = new Set(Array.isArray(c.got) ? c.got : []), souvenirs = HOUSE_SOUVENIRS.filter((v) => got.has("sv:" + v.id)).sort((a, b) => b.rank - a.rank);
+    const pictures = HOUSE_PICS.filter((p) => got.has("pic:" + p.id));
+    souvenirs.forEach((v) => houseGallery.appendChild(makeGalleryButton(v, "souvenir")));
+    pictures.forEach((p) => houseGallery.appendChild(makeGalleryButton(p, "picture")));
+    if (!souvenirs.length && !pictures.length) { const empty = document.createElement("p"); empty.textContent = "Cuando lleguen nuevos recuerdos, los guardaré aquí."; empty.style.cssText = "grid-column:1/-1;color:#795e4a"; houseGallery.appendChild(empty); }
+  }
+  function openGallery() { renderGallery(); houseGallery.classList.add("on"); }
+  function moveHouseTo(x, done) { houseTarget = clamp(x, 7, 94); houseDone = done || null; }
+  function explainHouseItem(id) {
+    if (id === "cabinet") { moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), openGallery); return; }
+    if (id === "bed") { moveHouseTo(roomX((roomData().pos || {}).bed?.cx || 105), () => say(pick(["Qué bien se está en mi camita", "Aquí me echo una siestecita", "Mi rincón favorito para descansar"]), 2400)); return; }
+    if (id === "lamp") { moveHouseTo(roomX((roomData().pos || {}).lamp?.cx || 182), () => say(pick(["Esta luz es perfecta para leer", "Me encanta mi lamparita", "Qué acogedor queda este rincón"]), 2200)); return; }
+    if (id === "pot") { moveHouseTo(roomX((roomData().pos || {}).pot?.cx || 249), () => say(pick(["Mi plantita está preciosa", "Hay que acordarse de regarla", "Las hojas nuevas son una monada"]), 2200)); return; }
+    if (id === "rug") { moveHouseTo(roomX((roomData().pos || {}).rug?.cx || 197), () => say("Esta alfombra es muy suave", 2000)); return; }
+    if (id === "curtains") { moveHouseTo(roomX((roomData().pos || {}).curtains?.cx || 284), () => say("Desde aquí entra una luz preciosa", 2200)); return; }
+    if (id === "trophy") { moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), () => say("Mi trofeo, me acuerdo de cómo lo ganamos", 2300)); return; }
+    if (id.startsWith("sv:")) {
+      const item = HOUSE_SOUVENIRS.find((v) => v.id === id.slice(3)); if (!item) return;
+      moveHouseTo(roomX((roomData().pos || {}).cabinet?.cx || 320), () => say(`Me acuerdo de ${item.name}. ${item.origin}`, 3000)); return;
+    }
+    if (id.startsWith("picture:")) {
+      const pic = HOUSE_PICS.find((p) => p.id === id.slice(8)); if (!pic) return;
+      moveHouseTo(50, () => say(`${pic.name}: ${PICTURE_ORIGINS[pic.id] || "Es uno de mis recuerdos favoritos."}`, 3000)); return;
+    }
+  }
+  function beginClimb() {
+    if (houseClimb) return;
+    moveHouseTo(84, () => { houseClimb = { t: E.t, told: false }; });
+  }
+  function exitHouse() {
+    if (!inHouse || houseTarget != null || houseClimb) return;
+    moveHouseTo(7.5, () => {
+      inHouse = false; houseTarget = null; houseDone = null; houseGallery.classList.remove("on"); document.body.classList.remove("in-house"); interior.classList.remove("on");
+      box.append(eko, bub, shd); E.x = house.ux - 560 * 1102 / 971 * 0.18; E.tx = null; E.then = null; E.entering = E.t; houseSignature = "";
+      say(pick(["Ya estamos otra vez en el valle", "¡Qué bien se está en casa! ¿Paseamos?", "Vamos a dar una vuelta por el valle"]), 2500);
+    });
+  }
+  $("#houseExit").addEventListener("click", (e) => { e.stopPropagation(); exitHouse(); });
+  $("#houseStairs").addEventListener("click", (e) => { e.stopPropagation(); beginClimb(); });
+  $("#houseGalleryClose").addEventListener("click", (e) => { e.stopPropagation(); houseGallery.classList.remove("on"); });
+  houseGallery.addEventListener("click", (e) => { const b = e.target.closest("button[data-house-id]"); if (!b) return; houseGallery.classList.remove("on"); explainHouseItem(b.dataset.houseId); });
+  interior.addEventListener("click", (e) => {
+    if (!inHouse || houseGallery.classList.contains("on")) return;
+    const item = e.target.closest("[data-house-id]"); if (item) { e.stopPropagation(); explainHouseItem(item.dataset.houseId); return; }
+    if (e.target.closest("#houseStairs,#houseExit")) return;
+    if (e.clientX < W * 0.105 && e.clientY > H * 0.48) { exitHouse(); return; }
+    moveHouseTo(e.clientX / W * 100);
+  });
   document.addEventListener("click", (e) => {
+    if (inHouse) return;
     if (e.target.closest("#back") || e.target.closest(".prop") || e.target.closest("#eko")) return;
     goTo((e.clientX + cam) / k);
   });
   eko.addEventListener("click", (e) => { e.stopPropagation(); E.wave = E.t; say(pick(["¡Hola!", "¿Damos un paseo?", "¡Qué bien se está aquí fuera!", "¿A dónde vamos?"])); });
 
-  // Entrar en casa = volver al escritorio
+  // La casa del valle abre el interior; el botón superior sigue devolviendo al escritorio.
   function enterHouse() {
-    if (E.exiting) return;
-    E.exiting = E.t;
+    if (E.exiting || inHouse) return;
+    E.tx = null; E.then = null; E.exiting = E.t;
     say(pick(["¡A casa!", "Hogar, dulce hogar", "Vamos para dentro"]), 1400);
+    setTimeout(() => {
+      E.exiting = 0; E.x = house.ux - 560 * 1102 / 971 * 0.18; inHouse = true; houseX = 8.5; houseTarget = null; houseDone = null; houseClimb = null;
+      houseActors.append(eko, bub, shd); document.body.classList.add("in-house"); interior.classList.add("on"); renderHouse(true);
+    }, 720);
+  }
+  function leaveValley() {
+    if (E.exiting) return;
+    E.exiting = E.t; say(pick(["¡De vuelta al escritorio!", "Luego volvemos al valle", "Bueno, voy contigo"]), 1400);
     setTimeout(() => $("#cover").classList.remove("off"), 900);
     setTimeout(() => emit("world-exit"), 2100);
   }
-  $("#back").addEventListener("click", (e) => { e.stopPropagation(); goTo(house.ux - 560 * 1102 / 971 * 0.18, () => enterHouse()); });
-  addEventListener("keydown", (e) => { if (e.key === "Escape") { E.tx = null; enterHouse(); } });
+  $("#back").addEventListener("click", (e) => { e.stopPropagation(); if (inHouse) { exitHouse(); return; } goTo(house.ux - 560 * 1102 / 971 * 0.18, () => leaveValley()); });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") { if (inHouse) { if (houseGallery.classList.contains("on")) houseGallery.classList.remove("on"); else exitHouse(); } else { E.tx = null; leaveValley(); } } });
   addEventListener("resize", layout);
+  addEventListener("resize", () => { if (inHouse) renderHouse(true); });
+  setInterval(() => { if (inHouse) renderHouse(); }, 900);
 
   // ---------- Bucle ----------
   let cam = 0, last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; E.t += dt;
     // paseo
-    let walking = false;
-    if (E.tx != null && !E.exiting) {
+    let walking = false; houseWalk = false;
+    if (inHouse && houseTarget != null) {
+      const d = houseTarget - houseX;
+      if (Math.abs(d) < 0.45) { houseX = houseTarget; houseTarget = null; const f = houseDone; houseDone = null; if (f) f(); }
+      else { houseWalk = true; E.face = Math.sign(d); houseX += E.face * Math.min(Math.abs(d), 35 * dt); }
+    } else if (!inHouse && E.tx != null && !E.exiting) {
       const d = E.tx - E.x;
       if (Math.abs(d) < 4) { E.tx = null; const f = E.then; E.then = null; if (E.fog) { E.fog = false; say(pick(["Más allá hay niebla… algún día exploraremos", "Uy, por ahí aún no se puede pasar", "¿Qué habrá detrás de la niebla?"])); } if (f) f(); }
       else { walking = true; E.face = Math.sign(d); E.x += E.face * Math.min(Math.abs(d), 230 * dt); }
     }
+    if (inHouse && houseClimb) {
+      const q = E.t - houseClimb.t;
+      if (q < 0.75) { const a = q / 0.75; houseLift = -H * 0.34 * (a * a * (3 - 2 * a)); houseScale = 1 - 0.13 * a; }
+      else if (q < 1.35) { houseLift = -H * 0.34; houseScale = 0.87; if (!houseClimb.told) { houseClimb.told = true; say("Aún no se puede subir. Esa puerta la abriremos más adelante", 2800); } }
+      else if (q < 2.1) { const a = (q - 1.35) / 0.75; houseLift = -H * 0.34 * (1 - a * a * (3 - 2 * a)); houseScale = 0.87 + 0.13 * a; }
+      else { houseLift = 0; houseScale = 1; houseClimb = null; }
+    }
+    if (inHouse) walking = houseWalk;
     E.ph += dt * (walking ? 9 : 0);
     if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { say(GD.seen ? pick(GL.hello) : `¡Mira! ¡Detrás de la niebla había un huerto! Será nuestro`, 3200); if (!GD.seen) { GD.seen = true; gSave(); } } }
-    // Eko: posición, entrar/salir por la puerta
+    // Eko: pasea por el valle o por la habitación a pantalla completa.
     const h = EH(), w = h * 240 / 310;
     let y = PATH(), sc = 1, op = 1;
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
-    // The arch is a foreground prop; briefly bring Eko over it while crossing its opening.
-    const crossingArch = E.x > Z.arch - 95 && E.x < Z.arch + 95;
-    arch.el.style.zIndex = 30;
-    eko.style.zIndex = crossingArch ? 32 : 20;
-    Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op });
-    Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
-    Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });
+    if (inHouse) {
+      const floor = H * 0.91 + houseLift, hb = walking ? Math.abs(Math.sin(E.ph)) * U(5) : Math.sin(E.t * 2) * U(1.5);
+      Object.assign(eko.style, { left: W * houseX / 100 - (w * houseScale) / 2 + "px", top: floor - h * houseScale - hb + "px", transform: `scale(${houseScale})`, transformOrigin: "50% 100%", opacity: 1, zIndex: 8 });
+      Object.assign(shd.style, { left: W * houseX / 100 - w * 0.42 + "px", top: floor - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: 0.72 - Math.max(0, -houseLift / H) });
+      Object.assign(bub.style, { left: W * houseX / 100 + "px", top: floor - h * houseScale - U(14) + "px", zIndex: 45 });
+    } else {
+      const crossingArch = E.x > Z.arch - 95 && E.x < Z.arch + 95;
+      arch.el.style.zIndex = 30; eko.style.zIndex = crossingArch ? 32 : 20;
+      Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op });
+      Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
+      Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });
+    }
     // cuerpo: patas, brazos, cabeza, parpadeo
     const s = Math.sin(E.ph), wav = E.t - E.wave < 1.4 ? Math.sin((E.t - E.wave) * 14) : 0;
     el.legL.setAttribute("transform", `rotate(${(walking ? s * 22 : 0).toFixed(1)} -21 122)`);
@@ -330,7 +543,7 @@
 
   // Comentarios sueltos mientras paseáis
   setInterval(() => {
-    if (E.t < E.talkUntil + 6 || E.exiting || gBusy || Math.random() < 0.5) return;
+    if (inHouse || E.t < E.talkUntil + 6 || E.exiting || gBusy || Math.random() < 0.5) return;
     const gt = gardenTalk(); if (gt && Math.random() < 0.4) { say(gt, 2800); return; }
     const p = phase();
     say(pick(p === "night" ? ["Mira cuántas estrellas", "Qué tranquilo está el valle de noche", "Los farolillos de casa son mi parte favorita"] : p === "dusk" ? ["Qué atardecer más bonito", "El cielo se está poniendo naranja"] : sky.w === "snow" ? ["¡Está nevando!", "Brrr… qué frío"] : sky.w === "leaves" ? ["Me encanta el ruido de las hojas", "Ya es otoño en el valle"] : ["Qué buen día hace", "Me encanta pasear contigo", "¿Oyes los pájaros?", "Huele a hierba recién cortada"]), 2800);

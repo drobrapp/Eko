@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.29.10": { important: true, lines: ["He ordenado mi habitación: los muebles y recuerdos se ven en su sitio, sin marcos duplicados", "Ahora mis plantas asoman desde la tierra y puedo pasar bajo el arco", "Por la ventana cambian el cielo, el sol y las hojas o la nieve según la hora y la estación"] },
     "0.29.6": { important: true, lines: ["¡La niebla se ha apartado! Al otro lado del valle hay un huerto entero: cruza el arco y conoce a Don Paja", "La regadera se vacía: rellénala en el pozo. Y lo que cosechéis va a la carretilla"] },
     "0.29.3": { important: true, lines: ["¡Ya tenemos huerto en el valle! Toca el bancal para plantar, la regadera para regar y las plantas para cosechar", "Las plantas crecen de verdad con el tiempo… si no se te olvida regarlas"] },
     "0.29.0": { important: true, lines: ["¡Ya puedes visitar mi valle! Entra en Mi casa y pulsa «Ir al Valle»", "Por ahora solo se puede ver mi casa por fuera y el camino… ¡pero más allá de la niebla hay más cosas esperando!"] },

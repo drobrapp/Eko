@@ -35,6 +35,10 @@
     const houseView = $("#houseView"), houseSun = $("#houseWindowSun");
     houseView.style.background = `linear-gradient(${a}, ${b} 70%)`;
     houseSun.src = `art/valley/${p === "night" ? "moon" : "sun"}.webp`;
+    const clockHour = new Date().getHours() + new Date().getMinutes() / 60;
+    const skyT = p === "night" ? ((clockHour + 24 - 21.5) % 24) / 9 : clamp((clockHour - 6.5) / 15, 0, 1);
+    houseSun.style.left = lerp(8, 72, skyT) + "%";
+    houseSun.style.top = (28 - Math.sin(Math.PI * skyT) * 18) + "%";
     $(".houseWindowCloud").style.opacity = p === "night" ? "0.28" : "0.9";
     document.body.classList.toggle("night", p === "night");
     document.body.classList.toggle("lit", p === "night" || p === "dusk");
@@ -51,6 +55,16 @@
     if (w !== sky.w) {
       sky.w = w; document.querySelectorAll(".flake").forEach((f) => f.remove());
       if (w) for (let i = 0; i < 40; i++) { const f = document.createElement("div"); f.className = "flake" + (w === "leaves" ? " leaf" : ""); f.style.left = Math.random() * 100 + "%"; f.style.animationDuration = 6 + Math.random() * 8 + "s"; f.style.animationDelay = -Math.random() * 12 + "s"; if (w === "leaves") f.style.background = ["#D0795A", "#E9A93B", "#C9A27A"][i % 3]; document.body.appendChild(f); }
+    }
+    const seasonView = $("#houseSeason"), seasonName = w || "none";
+    if (seasonView.dataset.season !== seasonName) {
+      seasonView.dataset.season = seasonName; seasonView.replaceChildren();
+      if (w) for (let i = 0; i < 10; i++) {
+        const f = document.createElement("i"); f.className = w === "leaves" ? "leaf" : "snow";
+        f.style.left = Math.random() * 100 + "%"; f.style.animationDuration = 5 + Math.random() * 7 + "s"; f.style.animationDelay = -Math.random() * 10 + "s";
+        if (w === "leaves") f.style.background = ["#D0795A", "#E9A93B", "#C9A27A"][i % 3];
+        seasonView.appendChild(f);
+      }
     }
   }
 
@@ -99,6 +113,7 @@
   prop("h-shed.webp", 2520, 290, "back", "back", { ar: 900 / 820, click: () => goTo(2520, () => say(pick(["Aquí guardo las herramientas", "Huele a madera y a tierra", "Un día ordenaré este cobertizo… algún día", "Dentro hay más macetas que sitio"]))) });
   const BEDS = [{ ux: 2860 }, { ux: 3290 }], BED = { uh: 66, ar: 1000 / 202 };
   const beds = BEDS.map((b, j) => prop("g-bed.webp", b.ux, BED.uh, "back", "back", { ar: BED.ar, click: (p, e) => slotAt(j, e) }));
+  const bedFronts = BEDS.map(() => { const img = document.createElement("img"); img.className = "bed-front"; img.src = "art/valley/g-bed.webp"; img.alt = ""; img.draggable = false; back.appendChild(img); return img; });
   prop("h-scarecrow.webp", 3075, 250, "back", "back", { ar: 572 / 800, sway: true, click: () => goTo(3035, () => chatPaja()) });
   const well = prop("h-well.webp", 3560, 230, "back", "back", { ar: 627 / 800, click: () => goTo(3500, () => fillCan()) });
   const can = prop("g-can.webp", 2590, 58, "front", "front", { ar: 500 / 265, click: () => waterNext() });
@@ -129,10 +144,11 @@
     layout();
   }
   function gLayout() {
-    const bh = U(BED.uh), base = BACK() - bh + bh * 0.42;
+    const bh = U(BED.uh), bw = bh * BED.ar, bedTop = BACK() - bh, base = bedTop + bh * 0.25;
+    beds.forEach((b) => { b.el.style.zIndex = 5; });
+    bedFronts.forEach((img, i) => Object.assign(img.style, { left: U(BEDS[i].ux) - bw / 2 + "px", top: bedTop + "px", width: bw + "px", height: bh + "px", zIndex: 8 }));
     plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });
-    for (const b of beds) b.el.style.zIndex = 6;
-    // Keep crops in front of the wooden bed rim so they read as planted in the soil.
+    // Las hojas quedan sobre la tierra; el frente del bancal tapa la base y las integra en el parterre.
     for (const d of plants) d.style.zIndex = 7;
     Object.assign(sun1.style, { left: U(Z.x0) + "px", width: U(Z.x1 - Z.x0 + 200) + "px", top: groundTop() + G() * 0.14 - U(230) + "px", height: U(240) + "px", backgroundSize: "auto 100%" });
     Object.assign(at.style, { left: "32%", width: "36%", top: "19%", height: "10%", fontSize: U(20) + "px", lineHeight: U(34) + "px" });
@@ -259,7 +275,7 @@
     { id: "bed", src: "house-bed.png", cx: 105, b: 170, w: 26, ar: 1671 / 941, kind: "floor" },
     { id: "pot", src: "house-pot.png", cx: 178, b: 187, w: 6, ar: 1374 / 1145, kind: "floor" },
     { id: "rug", src: "house-rug.png", cx: 197, b: 184, w: 29, ar: 2243 / 701, kind: "rug" },
-    { id: "curtains", src: "house-curtains.png", cx: 284, t: 31, w: 25, ar: 1536 / 1024, kind: "wall" },
+    { id: "curtains", src: "house-curtains.png", cx: 284, t: 31, w: 30, ar: 1536 / 1024, kind: "wall" },
     { id: "lamp", src: "house-lamp.png", cx: 157, b: 151, w: 6, ar: 1024 / 1536, kind: "floor" },
     { id: "cabinet", src: "house-cabinet.png", cx: 296, b: 189, w: 15, ar: 1024 / 1536, kind: "floor" },
     { id: "trophy", src: "house-trophy.png", cx: 296, b: 189, w: 4.2, ar: 1199 / 1312, kind: "wall" },
@@ -270,7 +286,7 @@
     if (id === "rug") x = Math.min(x, 47);
     if (id === "lamp") x = Math.min(x, 43);
     if (id === "pot") x = Math.min(x, 62);
-    if (id === "cabinet") x = Math.min(x, 74);
+    if (id === "cabinet") x = Math.min(x, 69);
     return x;
   }
   const HOUSE_PICS = [
@@ -310,7 +326,7 @@
   ].map(([id, name, src, origin, rank]) => ({ id, name, src, origin, rank }));
   const EH = () => U(160);                                   // alto de Eko en el valle
   function placeEko() {
-    const h = inHouse ? U(205) : EH(), w = h * 240 / 310;
+    const h = inHouse ? U(235) : EH(), w = h * 240 / 310;
     svg.style.width = w + "px"; svg.style.height = h + "px";
     eko.style.width = w + "px"; eko.style.height = h + "px";
   }
@@ -352,9 +368,9 @@
     const el = document.createElement("button"); el.type = "button"; el.className = "house-frame"; el.dataset.houseId = "picture:" + pic.id;
     el.setAttribute("aria-label", pic.name); const w = W * widthPct / 100, h = w / (400 / 500);
     Object.assign(el.style, { left: cx + "%", top: topPct + "%", width: w + "px", height: h + "px", zIndex: 3 });
+    // Los cuadros del álbum ya incluyen su propio marco; no se superpone el marco vacío de la habitación.
     const art = document.createElement("img"); art.className = "art"; art.src = pic.src; art.alt = ""; art.draggable = false;
-    const frame = document.createElement("img"); frame.src = "art/house-frame.png"; frame.alt = ""; frame.draggable = false;
-    el.append(art, frame); houseProps.appendChild(el); return el;
+    el.appendChild(art); houseProps.appendChild(el); return el;
   }
   function houseSouvenirButton(item, cabinetBox, i) {
     const el = document.createElement("button"); el.type = "button"; el.className = "house-memento"; el.dataset.houseId = "sv:" + item.id; el.setAttribute("aria-label", item.name);
@@ -387,7 +403,7 @@
       if (d.id === "rug") x = Math.min(x, 47);
       if (d.id === "lamp") x = Math.min(x, 43);
       if (d.id === "pot") x = Math.min(x, 62);
-      if (d.id === "cabinet") x = Math.min(x, 74);
+      if (d.id === "cabinet") x = Math.min(x, 69);
       const bottom = roomBottom(p.b == null ? d.b : p.b), top = roomTop(p.t == null ? d.t : p.t);
       const color = colors[d.id] || 0;
       items[d.id] = houseAsset(d.id, "house-" + d.id + ".png", x, d.w, d.ar, d.kind, { bottom: d.kind === "wall" ? null : bottom, top: d.kind === "wall" ? top : null, color, z: d.kind === "wall" ? 3 : d.id === "rug" ? 2 : 5 });
@@ -400,10 +416,10 @@
     }
     const picById = new Map(HOUSE_PICS.map((p) => [p.id, p]));
     const hung = Array.isArray(c.hung) ? c.hung : c.pic ? [c.pic] : [];
-    const slots = [{ id: "frame", cx: 145, t: 25 }, { id: "pic1", cx: 365, t: 25 }, { id: "pic2", cx: 385, t: 61 }];
+    const slots = [{ id: "frame", cx: 25, t: 24 }, { id: "pic1", cx: 72, t: 24 }, { id: "pic2", cx: 88, t: 24 }];
     for (let i = 0; i < Math.min(3, hung.length); i++) {
       const pic = picById.get(hung[i]); if (!pic || !got.has("pic:" + pic.id)) continue;
-      const cx = roomWallX(slots[i].cx), top = roomTop(slots[i].t);
+      const cx = slots[i].cx, top = roomTop(slots[i].t);
       pictureAsset(pic, i, cx, top, 7.8);
     }
     const cabinet = items.cabinet;
@@ -520,8 +536,11 @@
     E.ph += dt * (walking ? 9 : 0);
     if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { say(GD.seen ? pick(GL.hello) : `¡Mira! ¡Detrás de la niebla había un huerto! Será nuestro`, 3200); if (!GD.seen) { GD.seen = true; gSave(); } } }
     // Eko: pasea por el valle o por la habitación a pantalla completa.
-    const h = inHouse ? U(205) : EH(), w = h * 240 / 310;
-    let y = PATH(), sc = 1, op = 1;
+    const h = inHouse ? U(235) : EH(), w = h * 240 / 310;
+    const archDepth = !inHouse ? clamp((155 - Math.abs(E.x - Z.arch)) / 75, 0, 1) : 0;
+    const archPass = archDepth > 0.5;
+    const archBlend = archDepth * archDepth * (3 - 2 * archDepth);
+    let y = lerp(PATH(), FRONT(), archBlend), sc = 1, op = 1;
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
@@ -531,8 +550,7 @@
       Object.assign(shd.style, { left: W * houseX / 100 - w * 0.42 + "px", top: floor - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: 0.72 - Math.max(0, -houseLift / H) });
       Object.assign(bub.style, { left: W * houseX / 100 + "px", top: floor - h * houseScale - U(14) + "px", zIndex: 45 });
     } else {
-      const crossingArch = E.x > Z.arch - 95 && E.x < Z.arch + 95;
-      arch.el.style.zIndex = 30; eko.style.zIndex = crossingArch ? 32 : 20;
+      arch.el.style.zIndex = 30; eko.style.zIndex = archPass ? 32 : 20;
       Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op });
       Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
       Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });

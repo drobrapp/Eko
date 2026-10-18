@@ -10,7 +10,8 @@ window.EkoNeeds = (() => {
   const KEY = "eko-needs";
   const cfg = () => (window.EkoSettings ? window.EkoSettings.get() : {});
   const on = () => cfg().needs !== false;
-  const mult = () => ({ relax: 0.6, normal: 1, hard: 1.5 })[cfg().needsMode] || 1;
+  const decayMult = () => ({ relax: 0.55, normal: 1, hard: 1.5 })[cfg().needsMode] || 1;
+  const recoveryMult = () => ({ relax: 1.7, normal: 1, hard: 0.8 })[cfg().needsMode] || 1;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -21,7 +22,7 @@ window.EkoNeeds = (() => {
   const WISH = { hunger: "artCookie", energy: "artNightcap", fun: "artBall", love: "artHeart" };
 
   let saved = null; try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
-  const N = Object.assign({ hunger: 75, energy: 85, fun: 70, love: 70, t: Date.now(), hintAt: 0, happyAt: 0, napping: false, log: [] }, saved || {});
+  const N = Object.assign({ hunger: 75, energy: 85, fun: 70, love: 70, t: Date.now(), hintAt: 0, happyAt: 0, log: [] }, saved || {});
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(N)); } catch (_) {} };
 
   // ---------- Lo que ha pasado con el PC apagado o Eko cerrado ----------
@@ -29,12 +30,12 @@ window.EkoNeeds = (() => {
   (function offline() {
     const h = (Date.now() - (N.t || Date.now())) / 3600000;
     if (h < 0.1) return;
-    const k = Math.min(h, 12) * mult() / 3;
+    const k = Math.min(h, 12) * decayMult() / 3;
     N.hunger = Math.max(Math.min(N.hunger, 30), N.hunger - RATE.hunger * k);
     N.fun = Math.max(Math.min(N.fun, 40), N.fun - RATE.fun * k);
     N.love = Math.max(Math.min(N.love, 30), N.love - RATE.love * k);
-    N.energy = clamp(N.energy + h * 12, 0, 100);          // apagado = ha dormido
-    N.t = Date.now(); N.napping = false; save();
+    N.energy = clamp(N.energy + h * 12 * recoveryMult(), 0, 100); // apagado = ha dormido
+    N.t = Date.now(); save();
   })();
 
   // ---------- Paso del tiempo ----------
@@ -43,11 +44,10 @@ window.EkoNeeds = (() => {
     N.t = now;
     if (!on() || E.A.hidden) return;
     const quiet = E.lastSenses && (E.lastSenses.fullscreen || E.lastSenses.in_call);
-    const m = mult() * (quiet ? 0.5 : 1);                 // si estás a lo tuyo, no te lo pone difícil
+    const m = decayMult() * (quiet ? 0.5 : 1);            // si estás a lo tuyo, no te lo pone difícil
     if (S.sleeping) {
-      N.energy = clamp(N.energy + 30 * h, 0, 100);        // dormir recarga (≈3 h de 0 a 100)
+      N.energy = clamp(N.energy + 30 * h * recoveryMult(), 0, 100); // dormir recarga energía
       N.hunger = clamp(N.hunger - RATE.hunger * 0.4 * h * m, 0, 100);
-      if (N.napping && N.energy >= 96) { N.napping = false; E.wakeUp(); }
     } else {
       for (const k of KINDS) N[k] = clamp(N[k] - RATE[k] * h * m, 0, 100);
     }
@@ -72,7 +72,7 @@ window.EkoNeeds = (() => {
     const now = Date.now();
     N.log = (N.log || []).filter((x) => now - x.t < 1800000);
     const reps = N.log.filter((x) => x.s === src).length;
-    const f = 1 / (1 + reps / 3);
+    const f = recoveryMult() / (1 + reps / 3);
     N.log.push({ s: src, t: now });
     const before = { ...N };
     for (const k in g) N[k] = clamp(N[k] + (g[k] > 0 ? g[k] * f : g[k]), 0, 100);
@@ -177,7 +177,7 @@ window.EkoNeeds = (() => {
     const now = Date.now(), k = low(), v = N[k];
     const idleMin = (now - E.lastInteraction()) / 60000;
     // Siesta sola si está agotado y no le estás haciendo caso
-    if (k === "energy" && v < 12 && idleMin > 2) { N.napping = true; save(); say(L.nap, 2400); setTimeout(() => E.goToSleep(false), 1800); return; }
+    if (k === "energy" && v < 12 && idleMin > 2) { say(L.nap, 2400); setTimeout(() => E.goToSleep(false), 1800); return; }
     if (v >= 40) {
       // Todo bien: de vez en cuando lo celebra
       if (KINDS.every((x) => N[x] >= 75) && now > N.happyAt) {

@@ -79,11 +79,11 @@
       const now = performance.now();
       if (now - lastLook > 6000 && !E.S.sleeping) { lastLook = now; E.fx("ask", 1); E.express("confundido", 1.6); if (Math.random() < 0.3) E.say(pick(["¿Cómo?", "¿Eh? No te he pillado", "Repite, porfa"]), 1600, true); }
     } else if (v.kind === "cmd" && v.conf <= 2) {
+      if (E.S.sleeping) return;
       const fn = MAP.get(norm(v.text).replace(/,/g, ""));
       if (!fn) { status("unknown", v.text, v.conf); return; }
       lastCmd = performance.now();
       if (window.EkoNeeds) window.EkoNeeds.give("voice");
-      if (E.S.sleeping && !/despierta|arriba|buenos días/.test(norm(v.text))) { E.wakeUp(); setTimeout(fn, 1600); return; }
       fn();
     } else if (v.kind === "error" && !onVoice.warned) {
       onVoice.warned = true;
@@ -104,6 +104,7 @@
       MAP = newMap; start();
     } else stop();
   }
+  sync();
   setInterval(sync, 3000);
   if (window.EkoSettings && window.EkoSettings.onChange) window.EkoSettings.onChange(sync);
   window.EkoVoice = { simulate: (text) => { const was = on; on = true; onVoice({ kind: "cmd", text, conf: 0 }); on = was; }, hear: () => { const was = on; on = true; onVoice({ kind: "speech" }); on = was; }, phrases: () => [...MAP.keys()] };

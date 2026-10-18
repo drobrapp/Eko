@@ -18,7 +18,7 @@ window.EkoSettings = (() => {
     menuAsk: true,
     needs: true,             // modo tamagotchi: hambre, energía, diversión y cariño
     needsMode: "normal",     // relax · normal · hard
-    listen: false,
+    listen: true,
     ai: false,               // PRUEBA: hablar con Eko usando una IA local (Ollama)
     aiModel: "gemma3:4b",
     aiCpu: false,
@@ -41,7 +41,16 @@ window.EkoSettings = (() => {
     },
   };
   const read = () => {
-    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (_) { return { ...DEFAULTS }; }
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+      // La escucha queda disponible desde que abre Eko; el interruptor sigue permitiendo apagarla.
+      if (!localStorage.getItem("eko-mic-autostart-v1")) {
+        saved.listen = true;
+        localStorage.setItem(KEY, JSON.stringify(saved));
+        localStorage.setItem("eko-mic-autostart-v1", "1");
+      }
+      return { ...DEFAULTS, ...saved };
+    } catch (_) { return { ...DEFAULTS }; }
   };
   let cache = read();
   const listeners = [];

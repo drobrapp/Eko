@@ -98,13 +98,14 @@ window.EkoGames = (() => {
   E.HOOKS.tick.push(() => { if (game && (E.A.hidden || S.sleeping)) stop(true); });
 
   function begin(id, obj) {
+    if (S.sleeping || E.A.hidden) return false;
     if (game) stop(true);
     if (M()) { M().close(); M().closeCard(); }
-    if (S.sleeping) E.wakeUp(false);
     A.action = null;
     game = Object.assign({ id, t0: A.t }, obj);
     A.gameMode = id;
     E.hold(1e6);
+    return true;
   }
   function stop(quiet) {
     if (!game) return;
@@ -522,6 +523,7 @@ window.EkoGames = (() => {
   // ---------- Entrada ----------
   const START = { hand: startHand, catch: startCatch, glow: startGlow, guess: startGuess };
   function start(id) {
+    if (S.sleeping || E.A.hidden) return false;
     const f = START[id]; if (!f) return false;
     f();
     return true;

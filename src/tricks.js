@@ -467,7 +467,7 @@ window.EkoTricks = (() => {
   function run(id, force) {
     const t = LIST.find((x) => x.id === id); if (!t) return false;
     if (!force && !has(t)) return false;
-    if (S.sleeping) E.wakeUp(false);
+    if (S.sleeping || E.A.hidden) return false;
     if (A.action) A.action = null;
     S.mode = "idle"; S.modeUntil = A.t + E.ACTIONS[id].dur + 0.8; S.vx = 0;
     if (cur) { cur = null; clear(); }

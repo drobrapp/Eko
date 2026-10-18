@@ -120,7 +120,7 @@
   prop("g-seeds.webp", 2660, 82, "front", "front", { ar: 436 / 500, click: () => plantNext() });
   const barrow = prop("h-barrow.webp", 3090, 92, "front", "front", { ar: 600 / 253, click: () => goTo(3030, () => emptyCart()) });
   const SX = [0.2, 0.5, 0.8];                                 // huecos de cada bancal (fracción del ancho)
-  const ART = { 0: ["g-sprout.webp", 347 / 400, 70], 1: ["g-young.webp", 500 / 475, 100], carrot: ["g-carrotplant.webp", 461 / 500, 125], tomato: ["g-tomato.webp", 447 / 600, 170] };
+  const ART = { 0: ["g-sprout.webp", 347 / 400, 62], 1: ["g-young.webp", 500 / 475, 88], carrot: ["g-carrotplant.webp", 461 / 500, 108], tomato: ["g-tomato.webp", 447 / 600, 146] };
   const plants = GD.slots.map((_, i) => { const d = document.createElement("div"); d.className = "plant"; d.innerHTML = `<img alt="" draggable="false"><b class="thirst"></b>`; d.addEventListener("click", (e) => { e.stopPropagation(); act(i); }); back.appendChild(d); return d; });
   const slotX = (i) => BEDS[Math.floor(i / 3)].ux + (SX[i % 3] - 0.5) * BED.uh * BED.ar;
   const stage = (s) => (s.st >= 2 ? s.c : s.st);
@@ -144,7 +144,7 @@
     layout();
   }
   function gLayout() {
-    const bh = U(BED.uh), bw = bh * BED.ar, bedTop = BACK() - bh, base = bedTop + bh * 0.25;
+    const bh = U(BED.uh), bw = bh * BED.ar, bedTop = BACK() - bh, base = bedTop + bh * 0.40;
     beds.forEach((b) => { b.el.style.zIndex = 5; });
     bedFronts.forEach((img, i) => Object.assign(img.style, { left: U(BEDS[i].ux) - bw / 2 + "px", top: bedTop + "px", width: bw + "px", height: bh + "px", zIndex: 8 }));
     plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });

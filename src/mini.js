@@ -59,7 +59,7 @@ window.EkoMini = (() => {
   }
   // Varita → ¡puf! → nuevo tamaño (with: frase antes; after: al terminar)
   function cast(target, before, done) {
-    if (S.sleeping) E.wakeUp(false);
+    if (S.sleeping || E.A.hidden) return;
     S.mode = "idle"; S.modeUntil = A.t + 2.4; S.vx = 0;
     A.action = null;
     if (before) E.say(before, 1600, true);

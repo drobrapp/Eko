@@ -200,8 +200,14 @@
     add(1.5, { id: "trick", react: "picaro", icon: "star", label: L.trick, run: trick });
     add(1, { id: "note", react: "curioso", icon: "pencil", label: L.note, run: askNote });
     c.sort((a, b) => b.score - a.score);
-    const out = [], seen = new Set();
-    for (const { item } of c) { if (seen.has(item.id)) continue; seen.add(item.id); out.push(item); if (out.length === (open ? 5 : 2)) break; }
+    const out = [], seen = new Set(), seenLabels = new Set();
+    for (const { item } of c) {
+      const id = item.id || "";
+      const label = String(item.dyn ? item.dyn() : item.label || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      if (seen.has(id) || label && seenLabels.has(label)) continue;
+      if (id) seen.add(id); if (label) seenLabels.add(label);
+      out.push(item); if (out.length === (open ? 5 : 2)) break;
+    }
     out.push({ icon: "sparkle", label: L.other, go: "root", react: "curioso" });
     return out;
   }
@@ -680,9 +686,12 @@
     setTimeout(() => {
       const me = Math.floor(Math.random() * 3);
       const names = [L.rock, L.paper, L.scissors];
+      const moves = ["rock", "paper", "scissors"];
       const res = (me - you + 3) % 3; // 0 empate, 1 gana Eko, 2 ganas tú
       const tail = res === 0 ? pick(SAY.tie) : res === 1 ? pick(SAY.win) : pick(SAY.lose);
-      E.say(`${names[me]}… ${tail}`, 3000, true, res === 1 ? "wink" : res === 2 ? "sad" : "shrug");
+      const choiceIcon = (move, color) => svg(move).replace('<svg viewBox="0 0 24 24">', `<svg viewBox="0 0 24 24" style="width:66px;height:66px;stroke:${color};stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round">`);
+      card(`<div style="display:flex;justify-content:center;align-items:center;gap:28px;text-align:center"><div><b>${ES ? "Tú" : "You"}</b>${choiceIcon(moves[you], "#9a8478")}<div>${names[you]}</div></div><div style="font-size:22px;color:#9a8478">· · ·</div><div><b>Eko</b>${choiceIcon(moves[me], "#d9785a")}<div>${names[me]}</div></div></div><p style="margin:12px 0 0;text-align:center">${tail}</p>`, 3600);
+      E.express(res === 1 ? "emocionado" : res === 2 ? "contento" : "sereno", 2.2);
       if (res === 1) { E.hop(-380); E.fx("spark", 2); }
       if (res === 2 && window.EkoProgress) window.EkoProgress.event("rpsWin");
     }, 1500);
@@ -794,6 +803,7 @@
   }
 
   function startGame(game) {
+    if (E.S.sleeping || E.A.hidden) return;
     const Nd = window.EkoNeeds;
     if (Nd) { Nd.give("play"); if (Nd.on() && Nd.get().energy < 20) setTimeout(() => E.say(pick(Nd.L.tired), 2000, true), 900); }
     if (window.EkoGames && window.EkoGames.start(game)) return;
@@ -941,13 +951,13 @@
     });
   }
   function checkReminders() {
+    if (E.S.sleeping) return;
     const now = Date.now();
     const due = reminders.filter((r) => r.at <= now);
     if (!due.length) return;
     reminders = reminders.filter((r) => r.at > now);
     store.set("eko-reminders", reminders);
     const r = due[0];
-    if (E.S.sleeping) E.wakeUp(false);
     E.hop(-460);
     E.act("surprise");
     E.fx("bang", 2);

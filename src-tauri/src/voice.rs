@@ -1,4 +1,4 @@
-//! Escucha tu voz (solo si lo activas en Ajustes; apagado por defecto).
+//! Escucha tu voz (activo al iniciar Eko; se puede apagar en Ajustes).
 //! Usa el reconocimiento de voz de Windows, que funciona en el propio PC (sin internet) con una lista cerrada de frases.
 //! Solo reacciona a voz humana (no a ruidos, palmadas ni música sin voz) y no graba ni guarda nada.
 //! Eventos a la ventana principal: "voice" → { kind: "speech" | "end" | "cmd" | "error", text, conf }

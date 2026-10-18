@@ -172,12 +172,13 @@
     if (s.idle > longestIdle) longestIdle = s.idle;
     if (s.idle < 5 && autoSlept) {
       autoSlept = false;
-      E.wakeUp(false);
-      E.hop(-380);
       const gone = longestIdle;
       longestIdle = 0;
-      if (gone > 2 * 3600) E.missYou();
-      else setTimeout(() => E.say(E.pick(gone > 4 * 3600 ? greetingByHour() : T.back), 2800, true, "wave"), 400);
+      if (!E.S.sleeping) {
+        E.hop(-380);
+        if (gone > 2 * 3600) E.missYou();
+        else setTimeout(() => E.say(E.pick(gone > 4 * 3600 ? greetingByHour() : T.back), 2800, true, "wave"), 400);
+      }
       return;
     }
     if (s.idle < 5) longestIdle = 0;
@@ -301,7 +302,7 @@
   // Tarjeta de memoria o USB
   E.listen("drive", (ev) => {
     const d = ev.payload;
-    if (E.S.sleeping) E.wakeUp(false);
+    if (E.S.sleeping) return;
     E.hop(-520);
     E.act("surprise");
     E.fx("spark", 3);

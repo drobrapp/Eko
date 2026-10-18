@@ -551,8 +551,7 @@ window.EkoCorner = (() => {
 
   // Un viaje a casa: aparece la casa, entra, hace las tareas y sale (o se queda dormido)
   async function go(tasks, why) {
-    if (trip || R || !C.built) return false;
-    if (S.sleeping) E.wakeUp(false);
+    if (trip || R || !C.built || S.sleeping || E.A.hidden) return false;
     trip = { tasks };
     if (why) say(why, 2000);
     if (!(await openHome())) { trip = null; return false; }
@@ -636,9 +635,8 @@ window.EkoCorner = (() => {
     }, 2900);
   }
   async function build() {
-    if (trip || R || C.built || !invoke || !E.native) return;
+    if (trip || R || C.built || !invoke || !E.native || S.sleeping || E.A.hidden) return;
     trip = { tasks: [] };
-    if (S.sleeping) E.wakeUp(false);
     lay = layout(); if (!lay) { trip = null; return; }
     E.say("Llevo mucho tiempo practicando este hechizo…", 2400, true, "picaro");
     const doorX = sx(DOOR.x);

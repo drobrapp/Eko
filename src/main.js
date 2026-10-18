@@ -613,6 +613,7 @@
   const chattyLvl = () => { const c = cfgNow().chatty; return c == null ? 2 : c; };
   const discreet = () => { const l = window.Eko && window.Eko.lastSenses; return !!(l && (l.fullscreen || l.in_call)) || !!(window.Eko && window.Eko.quiet); };
   const busy = () => (A.chatLock && A.t < A.chatLock) || S.sleeping || S.sulking || S.dragging || S.fly || S.airborne || A.action || S.pendingHop || discreet();
+  const onboardingActive = () => !!(window.EkoOnboarding && window.EkoOnboarding.pending && window.EkoOnboarding.pending());
   function cool(key, secs) { if ((WIN.cd[key] || 0) > A.t) return false; WIN.cd[key] = A.t + secs; return true; }
   const chance = (base) => Math.random() < base * [0.35, 0.6, 0.85, 1][chattyLvl()];
   const talk = (list, p = 0.4) => { if (chattyLvl() > 0 && Math.random() < p) say(pick(list)); };
@@ -1137,17 +1138,18 @@
     if (talk) { act("yawn"); say(pick(TXT.sleep), 2400, true); }
     setTimeout(() => { S.sleeping = true; S.mode = "sit"; setMood("sleep"); }, talk ? 1200 : 0);
   }
-  function wakeUp(talk = true) {
-    if (!S.sleeping) return;
+  function wakeUp(talk = true, leftClick = false) {
+    if (!S.sleeping || !leftClick) return false;
     S.sleeping = false;
     setMood("normal");
     S.mode = "idle"; S.modeUntil = A.t + 3;
     bump(-2.5);
     act("stretch");
     if (talk) setTimeout(() => say(pick(TXT.wake), 2400, true), 900);
+    return true;
   }
   function missYou() {
-    if (S.sleeping) wakeUp(false);
+    if (S.sleeping) return;
     S.mode = "walk"; S.speed = 150; S.targetX = clamp(centerX(), minX() + 40, maxX() - 40);
     S.then = "hug"; S.modeUntil = A.t + 20;
     setTimeout(() => say(pick(TXT.missed), 3000, true), 300);
@@ -1336,10 +1338,10 @@
 
     const cx = S.x + W / 2, cy = S.y + H - 95;
     const dx = cursor.x - cx, dy = cursor.y - cy, dist = Math.hypot(dx, dy) || 1;
-    const recent = A.t - cursor.lastMove < 4 && (!window.EkoSettings || window.EkoSettings.get().follow);
+    const recent = !onboardingActive() && A.t - cursor.lastMove < 4 && (!window.EkoSettings || window.EkoSettings.get().follow);
     if (S.dragging) { A.eyeTX = 0; A.eyeTY = -2; }
     else if (S.mode === "peeking") { A.eyeTX = -S.peekSide * 5; A.eyeTY = 0; }
-    else if (dist < 1400 && recent) { A.eyeTX = (dx / dist) * 8; A.eyeTY = (dy / dist) * 9; }
+    else if (!S.sleeping && dist < 1400 && recent) { A.eyeTX = (dx / dist) * 8; A.eyeTY = (dy / dist) * 9; }
     else { A.eyeTX = S.mode === "walk" ? S.facing * 2 : 0; A.eyeTY = 0; }
     A.eyeX += (A.eyeTX - A.eyeX) * Math.min(1, dt * 10);
     A.eyeY += (A.eyeTY - A.eyeY) * Math.min(1, dt * 10);
@@ -1871,6 +1873,11 @@
   // En la app, coordenadas de pantalla; en el navegador (vista previa, móvil), las de la página
   const sxOf = (e) => (NATIVE ? e.screenX : e.clientX), syOf = (e) => (NATIVE ? e.screenY : e.clientY);
   hit.addEventListener("pointerdown", (e) => {
+    if (onboardingActive()) return;
+    if (S.sleeping) {
+      if (e.button === 0) { e.preventDefault(); wakeUp(true, true); }
+      return;
+    }
     if (e.button !== 0) return;
     hit.setPointerCapture(e.pointerId);
     S.pressed = true;
@@ -1891,7 +1898,6 @@
       if (S.fly) { S.fly = null; setTimeout(() => setFlyGear(null), 800); }
       hit.classList.add("dragging");
       invoke("set_dragging", { value: true });
-      if (S.sleeping) { S.sleeping = false; setMood("normal"); }
       touched();
       bump(-3);
       if (!A.gameMode) fx("bang");
@@ -1946,7 +1952,7 @@
 
   let downBtn = 0;
   function tap() {
-    if (A.hidden) return;              // durante el bautizo Eko aún no ha nacido
+    if (A.hidden || onboardingActive()) return; // durante el bautizo no reacciona ni se mueve
     // si estaba escondido (travesura) o hay una actualización pendiente, el clic sirve para eso
     if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) return;
     if (window.EkoMenu && window.EkoMenu.isOpen && window.EkoMenu.isOpen()) { window.EkoMenu.close(); return; }
@@ -1957,7 +1963,7 @@
   hit.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     if (A.hidden || S.dragging) return;
-    if (S.sleeping) { wakeUp(); return; }
+    if (S.sleeping) return;
     if (window.EkoMenu) window.EkoMenu.toggle();
   });
 
@@ -1966,7 +1972,7 @@
     A.idleBeforePoke = Date.now() - lastInteraction;
     touched();
     if (window.EkoNeeds) window.EkoNeeds.give("pet");
-    if (S.sleeping) { wakeUp(); return; }
+    if (S.sleeping) return;
     const now = performance.now();
     pokes.push(now);
     while (pokes.length && now - pokes[0] > 20000) pokes.shift();
@@ -2023,6 +2029,11 @@
   function onCursor(p) {
     const moved = Math.hypot(p.x - cursor.lastX, p.y - cursor.lastY);
     if (moved > 0.5) cursor.lastMove = A.t;
+    if (S.sleeping || onboardingActive()) {
+      cursor.x = p.x; cursor.y = p.y; cursor.over = p.over;
+      cursor.lastX = p.x; cursor.lastY = p.y; cursor.pet = 0;
+      return;
+    }
     const nowMs = performance.now(), dts = Math.max(0.016, (nowMs - (cursor.lastT || nowMs - 40)) / 1000);
     cursor.lastT = nowMs;
     // Si pasa el ratón disparado justo a su lado, se asusta (de vez en cuando)
@@ -2034,7 +2045,6 @@
       if (cursor.pet > 260 && A.mood !== "happy") {
         cursor.pet = 0;
         touched();
-        if (S.sleeping) { S.sleeping = false; setMood("normal"); }
         setMood("happy", 2.5);
         blush(2.8);
         fx("heart", 2);
@@ -2091,7 +2101,7 @@
     },
     world, W, H, cursor, floorY, minX, maxX, clamp,
     walkTo(x, speed = 46, then = null) { S.mode = "walk"; S.speed = speed; S.targetX = clamp(x - W / 2, minX(), maxX()); S.then = then; S.modeUntil = A.t + 60; },
-    hold(secs) { S.mode = "idle"; S.modeUntil = A.t + secs; },
+    hold(secs) { S.mode = "idle"; S.modeUntil = A.t + secs; S.targetX = null; S.then = null; S.resumeWalk = null; S.pendingHop = null; },
     curious() { S.mode = "walk"; S.speed = 60; S.targetX = clamp(cursor.x - W / 2 + rnd(-40, 40), minX() + 40, maxX() - 40); S.then = "curious"; S.modeUntil = A.t + 30; },
     lastInteraction: () => lastInteraction,
     native: NATIVE, listen,

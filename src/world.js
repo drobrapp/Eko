@@ -90,7 +90,7 @@
   const Z = { arch: 2260, x0: 2300, x1: 3760 };               // la zona del huerto
   // girasoles: una franja de fondo solo en el huerto
   const sun1 = document.createElement("div"); sun1.id = "sunflowers"; back.appendChild(sun1);
-  const arch = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: () => goTo(Z.arch + (E.x < Z.arch ? 120 : -120)) });
+  const arch = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: () => goTo(E.x < Z.arch ? Z.arch + 145 : Z.arch - 145) });
   const at = document.createElement("div"); at.className = "plaque"; at.textContent = "Huerto"; arch.el.appendChild(at);
   prop("h-shed.webp", 2520, 290, "back", "back", { ar: 900 / 820, click: () => goTo(2520, () => say(pick(["Aquí guardo las herramientas", "Huele a madera y a tierra", "Un día ordenaré este cobertizo… algún día", "Dentro hay más macetas que sitio"]))) });
   const BEDS = [{ ux: 2860 }, { ux: 3290 }], BED = { uh: 66, ar: 1000 / 202 };
@@ -128,6 +128,8 @@
     const bh = U(BED.uh), base = BACK() - bh + bh * 0.42;
     plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });
     for (const b of beds) b.el.style.zIndex = 6;
+    // Keep crops in front of the wooden bed rim so they read as planted in the soil.
+    for (const d of plants) d.style.zIndex = 7;
     Object.assign(sun1.style, { left: U(Z.x0) + "px", width: U(Z.x1 - Z.x0 + 200) + "px", top: groundTop() + G() * 0.14 - U(230) + "px", height: U(240) + "px", backgroundSize: "auto 100%" });
     Object.assign(at.style, { left: "32%", width: "36%", top: "19%", height: "10%", fontSize: U(20) + "px", lineHeight: U(34) + "px" });
   }
@@ -296,7 +298,11 @@
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
-    Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op, zIndex: 20 });
+    // The arch is a foreground prop; briefly bring Eko over it while crossing its opening.
+    const crossingArch = E.x > Z.arch - 95 && E.x < Z.arch + 95;
+    arch.el.style.zIndex = 30;
+    eko.style.zIndex = crossingArch ? 32 : 20;
+    Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op });
     Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
     Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });
     // cuerpo: patas, brazos, cabeza, parpadeo

@@ -16,9 +16,9 @@
   let W = innerWidth, H = innerHeight, k = H / 1080;
   const G = () => 300 * k;                                  // alto del suelo
   const groundTop = () => H - G();
-  const PATH = () => groundTop() + G() * 0.27;              // donde pisa Eko (el camino de tierra)
-  const BACK = () => groundTop() + G() * 0.14;              // base de lo que está detrás del camino
-  const FRONT = () => groundTop() + G() * 0.42;             // base de lo que está delante
+  const PATH = () => groundTop() + G() * 0.29;              // donde pisa Eko (el camino de tierra)
+  const BACK = () => groundTop() + G() * 0.215;             // base de lo que está detrás: pisa un poco el camino
+  const FRONT = () => groundTop() + G() * 0.37;             // base de lo que está delante: pisa el borde del camino
   const OPEN = { x0: 140, x1: 3760 };                       // zona abierta (en «unidades de 1080p»): el prado y el huerto
   const WORLD = 4200;
   const U = (u) => u * k;                                   // unidades → px
@@ -128,7 +128,7 @@
     const bh = U(BED.uh), base = BACK() - bh + bh * 0.42;
     plants.forEach((d, i) => { if (!d.dataset.uh) return; const h = U(+d.dataset.uh), w = h * +d.dataset.ar; Object.assign(d.style, { left: U(slotX(i)) - w / 2 + "px", top: base - h + "px", width: w + "px", height: h + "px" }); });
     for (const b of beds) b.el.style.zIndex = 6;
-    Object.assign(sun1.style, { left: U(Z.x0) + "px", width: U(Z.x1 - Z.x0 + 200) + "px", top: BACK() - U(230) + "px", height: U(240) + "px", backgroundSize: "auto 100%" });
+    Object.assign(sun1.style, { left: U(Z.x0) + "px", width: U(Z.x1 - Z.x0 + 200) + "px", top: groundTop() + G() * 0.14 - U(230) + "px", height: U(240) + "px", backgroundSize: "auto 100%" });
     Object.assign(at.style, { left: "32%", width: "36%", top: "19%", height: "10%", fontSize: U(20) + "px", lineHeight: U(34) + "px" });
   }
   function slotAt(j, e) { const r = beds[j].el.getBoundingClientRect(); const f = (e.clientX - r.left) / r.width; act(j * 3 + (f < 0.35 ? 0 : f < 0.65 ? 1 : 2)); }
@@ -211,6 +211,7 @@
     if (inGarden()) return r ? "¡Hay cosas listas para cosechar!" : n ? "Algunas plantas tienen sed" : GD.slots.every((s) => !s) ? "¿Plantamos algo?" : pick(["Me encanta este sitio", "Los girasoles siempre miran al sol", "Don Paja hace muy bien su trabajo"]);
     return r ? "¡Hay cosas listas en el huerto!" : n ? "Las plantas del huerto tienen sed" : "";
   }
+
   // niebla: lo que todavía no se puede visitar
   const fogR = document.createElement("div"); fogR.id = "fogR"; back.parentNode.appendChild(fogR);
   const fogL = document.createElement("div"); fogL.id = "fogL"; back.parentNode.appendChild(fogL);

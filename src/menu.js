@@ -453,14 +453,16 @@
   function fitPanel() {
     const p = menu.querySelector(".mpanel"); if (!p) return;
     const sr = stage.getBoundingClientRect(), top = anchorTop();
-    const gap = 16, margin = 6;
-    const bottomY = top - gap, room = Math.max(80, bottomY - margin);
+    const gap = 16, margin = 6, minRoom = 92;
+    // Si Eko está cerca del borde superior, reserva sitio para que la cabecera
+    // completa siga visible; el cuerpo se desplaza dentro del panel.
+    const bottomY = Math.min(sr.height - margin, Math.max(top - gap, margin + minRoom));
+    const room = Math.max(minRoom, bottomY - margin);
     p.style.bottom = Math.round(sr.height - bottomY) + "px";
     p.style.transformOrigin = "50% 100%";
-    p.style.maxHeight = "280px";
+    p.style.maxHeight = Math.min(280, Math.floor(room / 0.82)) + "px";
     const H = p.offsetHeight;                    // altura real (el transform no la cambia)
-    let fit = Math.min(1, room / H);
-    if (fit < 0.8) { fit = 0.8; p.style.maxHeight = Math.floor(room / fit) + "px"; }
+    const fit = Math.min(1, room / H);
     const f = fit.toFixed(3);
     if (p.style.getPropertyValue("--fit") !== f) p.style.setProperty("--fit", f);
   }

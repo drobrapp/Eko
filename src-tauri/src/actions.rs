@@ -278,7 +278,7 @@ fn normalize_app_name(name: &str) -> String {
     }).map(|c| if c.is_ascii_alphanumeric() { c } else { ' ' }).collect::<String>().split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Abre solo el acceso directo cuyo nombre exacto se confirmó en la interfaz.
+/// Abre solo un acceso directo cuyo nombre exacto se resolvió desde los resultados de búsqueda.
 #[tauri::command]
 pub fn open_app(name: String) -> Result<String, String> {
     let selected = name.trim();
@@ -366,9 +366,17 @@ pub fn find_running_apps(name: String) -> Result<Vec<String>, String> {
     {
         use windows::Win32::Foundation::LPARAM;
         use windows::Win32::UI::WindowsAndMessaging::EnumWindows;
+        let query_for_sort = query.clone();
         let mut state = OpenAppWindows { query, exact: false, windows: Vec::new() };
         unsafe { EnumWindows(Some(collect_open_app_windows), LPARAM(&mut state as *mut _ as isize)).map_err(|e| e.to_string())?; }
-        state.windows.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
+        let score = |app: &str| {
+            let app = normalize_app_name(app);
+            if app == query_for_sort { 0 }
+            else if app.starts_with(&query_for_sort) { 1 }
+            else if app.contains(&query_for_sort) { 2 }
+            else { 3 }
+        };
+        state.windows.sort_by(|a, b| score(&a.1).cmp(&score(&b.1)).then_with(|| a.1.to_lowercase().cmp(&b.1.to_lowercase())));
         let mut apps = Vec::new();
         for (_, app) in state.windows {
             if !apps.iter().any(|known: &String| known.eq_ignore_ascii_case(&app)) { apps.push(app); }

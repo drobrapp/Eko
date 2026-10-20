@@ -61,8 +61,8 @@
     captura: () => pc(() => invoke("screenshot")),
     busca: (a) => pc(() => invoke("web_search", { q: a })),
     web: (a) => pc(() => invoke("open_site", { url: siteUrl(a) })),
-    abre: () => {}, // se resuelve, se enseña el nombre encontrado y se confirma antes de abrir
-    cierra: () => {}, // se resuelve contra los programas abiertos y pide confirmación antes de enviar WM_CLOSE
+    abre: () => {}, // se resuelve por nombre y se abre directamente
+    cierra: () => {}, // se resuelve contra los programas abiertos y se envía WM_CLOSE directamente
     bloquea: () => pc(() => { E.act("bye"); return new Promise((r) => setTimeout(() => r(invoke("lock_pc")), 1200)); }),
     recordatorio: (arg) => {
       const m = String(arg || "").match(/^(\d{1,3}):(.+)$/);
@@ -269,7 +269,7 @@
       recordatorio: "crear un recordatorio (argumento: minutos y texto)", musica: "controlar la música (argumento: pausa, siguiente o anterior)",
       volumen: "cambiar el volumen (argumento: sube, baja o silencio)", carpeta: "abrir una carpeta (argumento: descargas, documentos, imágenes, escritorio, música o vídeos)",
       descarga: "mostrar y pedir permiso antes de abrir la última descarga", captura: "abrir Recortes para hacer una captura de pantalla", busca: "pedir permiso y buscar en Google (argumento: consulta)",
-      web: "abrir una web (argumento: sitio)", abre: "buscar y abrir un programa por su nombre habitual (puede ser parcial, por ejemplo Photoshop)", cierra: "buscar y cerrar con confirmación un programa abierto (nombre parcial, por ejemplo Photoshop)", bloquea: "bloquear el PC",
+      web: "abrir una web (argumento: sitio)", abre: "buscar y abrir directamente un programa por su nombre habitual (puede ser parcial, por ejemplo Photoshop)", cierra: "buscar y cerrar directamente un programa abierto (nombre parcial, por ejemplo Photoshop)", bloquea: "bloquear el PC",
     };
   function actionsText() { return allowedActions().map((name) => `${name}: ${ACTION_HINTS[name] || "acción disponible"}`).join("; "); }
   function memText() {
@@ -303,7 +303,7 @@
       "No hagas listas, ni des consejos largos, ni preguntes «¿en qué puedo ayudarte?». Eres una mascota, no un asistente. Si te piden algo serio o largo, contestas con cariño y brevemente.",
       "Reglas: responde SIEMPRE en 1 o 2 frases cortas (máximo 30 palabras). Sin emojis. Nunca digas que eres una IA, un modelo o un programa: eres " + name + ". Si no sabes algo, sales del paso con humor.",
       `La respuesta debe usar los campos JSON del formato obligatorio: text es lo que dices, mood una emoción de esta lista: ${MOODS.join(", ")}; actions son acciones estructuradas; memories son recuerdos breves. No pongas acciones ni etiquetas dentro del texto.`,
-      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Devuelve como máximo una acción por respuesta y solo si te la piden o viene muy a cuento. Cuando pidas una acción, habla en futuro; la aplicación confirmará después si se completó. No afirmes que ya la hiciste. Las acciones sensibles pedirán aprobación. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
+      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Devuelve como máximo una acción por respuesta y solo si te la piden o viene muy a cuento. Cuando pidas una acción, habla en futuro; la aplicación confirmará después si se completó. No afirmes que ya la hiciste. Las acciones sensibles pedirán aprobación. Abrir y cerrar programas no requieren una tarjeta de confirmación; cuando haya varias coincidencias se usará la primera, la más cercana. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
       "Si tu humano cuenta algo personal que pueda ser útil recordar (su nombre, trabajo, gustos, planes o gente importante), puedes proponerlo en memories como una frase breve. Nunca guardes contraseñas, datos de salud, dinero ni nada íntimo.",
       memText(),
       "Ejemplos del formato (NO son conversaciones reales con tu humano):\n" + EXAMPLES.filter(([, r]) => r.actions.every((a) => allowedActions().includes(a.name))).map(([u, r]) => `Humano: ${u}\n${name}: ${JSON.stringify(r)}`).join("\n"),
@@ -439,8 +439,11 @@
       invoke("find_apps", { name: plain(argument) }).then((matches) => {
         const list = Array.isArray(matches) ? matches : [];
         if (!list.length) { E.sayChat(`No encuentro «${argument}» en el menú Inicio.`, 3000); done(); return; }
-        if (list.length > 1) { E.sayChat(`He encontrado varias opciones: ${list.slice(0, 4).join(", ")}. Dime cuál quieres abrir.`, 5200); done(); return; }
-        approvalCard("¿Abro este programa?", list[0], () => invoke("open_app", { name: list[0] }), done, `He enviado la orden para abrir ${list[0]}.`);
+        const selected = list[0];
+        invoke("open_app", { name: selected }).then(() => {
+          const detail = list.length > 1 ? `He elegido la coincidencia más cercana, ${selected}, y he enviado la orden para abrirla.` : `He enviado la orden para abrir ${selected}.`;
+          actionOutcome(detail, 3600);
+        }).catch(() => actionOutcome(`No he podido abrir ${selected}.`, 2800)).finally(done);
       }).catch(() => { E.sayChat("No he podido buscar ese programa", 2600); done(); });
       return;
     }
@@ -448,8 +451,11 @@
       invoke("find_running_apps", { name: plain(argument) }).then((matches) => {
         const list = Array.isArray(matches) ? matches : [];
         if (!list.length) { E.sayChat(`No encuentro «${argument}» entre los programas abiertos.`, 3200); done(); return; }
-        if (list.length > 1) { E.sayChat(`Hay varias coincidencias abiertas: ${list.slice(0, 4).join(", ")}. Dime cuál quieres cerrar.`, 5200); done(); return; }
-        approvalCard("¿Cierro este programa?", `${list[0]} · Si hay cambios sin guardar, la aplicación puede pedirte que los guardes.`, () => invoke("close_app", { name: list[0] }), done, `He enviado la petición para cerrar ${list[0]}.`);
+        const selected = list[0];
+        invoke("close_app", { name: selected }).then(() => {
+          const detail = list.length > 1 ? `He elegido la coincidencia más cercana, ${selected}, y he enviado la petición para cerrarla. Si tiene cambios sin guardar, puede pedirte que los guardes.` : `He enviado la petición para cerrar ${selected}. Si tiene cambios sin guardar, puede pedirte que los guardes.`;
+          actionOutcome(detail, 4200);
+        }).catch(() => actionOutcome(`No he podido cerrar ${selected}.`, 2800)).finally(done);
       }).catch(() => { E.sayChat("No he podido consultar los programas abiertos", 2600); done(); });
       return;
     }

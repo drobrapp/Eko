@@ -527,7 +527,7 @@
     if (nbTab === "album") {
       const al = window.EkoLife ? window.EkoLife.album() : [];
       if (!al.length) return tabs + `<p class="nsub">${ES ? "Aún no hay fotos. Cuando pase algo importante, ¡sacaré mi cámara!" : "No photos yet."}</p>`;
-      return tabs + `<div class="nalbum">${al.map((f, i) => `<button type="button" class="pola" data-i="${i}" style="--r:${((i * 37) % 7) - 3}deg"><span><img src="${artSrc(f.img)}" alt=""></span><em>${f.cap}</em><small>${new Date(f.at).toLocaleDateString(ES ? "es-ES" : "en-GB", { day: "numeric", month: "short" })}</small></button>`).join("")}</div>`;
+      return tabs + `<div class="nalbum">${al.map((f, i) => `<button type="button" class="pola" data-i="${i}" style="--r:${((i * 37) % 7) - 3}deg"><span><img class="${f.img === "artAsk" ? "pola-ask" : ""}" src="${artSrc(f.img)}" alt=""></span><em>${f.cap}</em><small>${new Date(f.at).toLocaleDateString(ES ? "es-ES" : "en-GB", { day: "numeric", month: "short" })}</small></button>`).join("")}</div>`;
     }
     if (nbTab === "ach" && P) {
       const list = P.ACH.filter((a) => !a.when || a.when());

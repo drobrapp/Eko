@@ -664,8 +664,9 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .nalbum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 4px 2px 6px; }
 .pola { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; align-items: center; gap: 1px; min-width: 0; aspect-ratio: 1; padding: 4px; background: #fff; border-radius: 4px; box-shadow: 0 2px 6px rgba(60, 40, 30, .2); transform: rotate(var(--r, 0deg)); transition: transform .2s; }
 .pola:hover { transform: rotate(0) scale(1.06); }
-.pola span { width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; background: linear-gradient(#F6E7D8, #EAD3C2); border-radius: 2px; }
-.pola img { width: 74%; height: 74%; object-fit: contain; }
+.pola span { width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; overflow: hidden; background: linear-gradient(#F6E7D8, #EAD3C2); border-radius: 2px; }
+.pola img { width: 74%; height: 74%; max-width: 100%; max-height: 100%; object-fit: contain; }
+.pola img.pola-ask { width: 48%; height: 48%; }
 .pola em { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: italic 600 8.5px/1.15 "Segoe Print", "Comic Sans MS", cursive; color: #5A463D; text-align: center; }
 .pola small { font-size: 7.5px; color: #a08a7d; }
 /* Flash de la cámara */

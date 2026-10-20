@@ -8,37 +8,14 @@
   const T = window.__TAURI__, invoke = T ? T.core.invoke : null;
   const cfg = () => (window.EkoSettings ? window.EkoSettings.get() : {});
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
-  const M = () => window.EkoMenu || {};
   const name = () => (cfg().petName || "Eko").trim();
 
   // Órdenes: frases que entiende (con su nombre delante) → qué hace
   const CMDS = [
-    { p: ["baila", "a bailar", "ponte a bailar"], run: () => { E.say(pick(["¡Allá voy!", "¡Música, maestro!"]), 1800, true); E.setDance(true); setTimeout(() => E.setDance(false), 9000); } },
-    { p: ["a dormir", "duérmete", "vete a dormir", "buenas noches"], run: () => { E.setDance(false); E.goToSleep(); } },
-    { p: ["despierta", "arriba", "buenos días"], run: () => (E.S.sleeping ? E.wakeUp() : (E.act("wave"), E.say(pick(["¡Ya estoy despierto!", "¡Buenos días!"]), 2000, true))) },
-    { p: ["ven", "ven aquí", "acércate"], run: () => { E.say(pick(["¡Voy!", "¡Ahí voy!"]), 1400, true); E.walkTo(E.cursor.x, 170); } },
-    { p: ["salta", "da un salto"], run: () => E.hop(-560) },
-    { p: ["haz un truco", "un truco", "enséñame un truco"], run: () => { const T = window.EkoTricks, u = T ? T.unlocked() : []; if (u.length) T.run(u[Math.floor(Math.random() * u.length)].id); else { E.act("tada"); E.say("¡Aún estoy aprendiendo trucos!", 2000, true); } } },
-    { p: ["vuela", "a volar"], run: () => E.fly() },
-    { p: ["saluda", "di hola"], run: () => { E.act("wave"); E.say("¡Holi!", 1600, true); } },
     { p: ["qué hora es", "dime la hora"], run: () => { const d = new Date(); E.act("point", { dir: 1 }); E.say(`Son las ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`, 2800, true); } },
-    { p: ["escóndete", "al escondite", "jugamos al escondite"], run: () => M().startGame && M().startGame("hide") },
-    { p: ["juguemos", "vamos a jugar", "jugamos"], run: () => M().propose && M().propose(true) },
-    { p: ["abre el menú", "menú"], run: () => M().toggle && M().toggle() },
-    { p: ["silencio", "calla", "cállate"], run: () => M().muteHour && M().muteHour() },
-    { p: ["me quieres", "te quiero"], run: () => { E.act("hug"); E.blush(2.5); E.fx("heart", 3); E.say(pick(["¡Muchísimo!", "¡Más que a mi brote!"]), 2400, true); } },
-    { p: ["qué sabes hacer", "qué puedes hacer", "ayuda"], run: () => { E.act("point", { dir: 1 }); E.say(`Dime «${name()}» y luego: baila, salta, vuela, ven aquí, a dormir, ¿qué hora es?, recuérdame en diez minutos, juguemos, escóndete, cuéntame algo…`, 7000, true); } },
+    { p: ["qué sabes hacer", "qué puedes hacer", "ayuda"], run: () => { E.act("point", { dir: 1 }); const C = window.EkoChat; E.say(C && C.voiceHelp ? C.voiceHelp() : "Puedo hacer varias cosas; pregúntame desde el menú.", 7000, true); } },
     { p: ["cuéntame algo", "dime algo"], run: () => E.say(pick(["¿Sabías que los champiñones son primos de los humanos? Más que de las plantas", "Hoy he contado los píxeles de tu pantalla. Me perdí en el 3", "Si me riegas, crezco. Si no, me pongo mustio. Así de simple"]), 4200, true) },
-    { p: ["recuérdame en cinco minutos"], run: () => remind(5, "cinco minutos") },
-    { p: ["recuérdame en diez minutos"], run: () => remind(10, "diez minutos") },
-    { p: ["recuérdame en quince minutos"], run: () => remind(15, "quince minutos") },
-    { p: ["recuérdame en media hora"], run: () => remind(30, "media hora") },
-    { p: ["recuérdame en una hora"], run: () => remind(60, "una hora") },
   ];
-  function remind(min, label) {
-    M().remindIn && M().remindIn(min, "Lo que me pediste hace " + label);
-    E.act("nod"); E.say(`¡Vale! Te aviso en ${label}`, 2400, true);
-  }
   // Frases sueltas sin orden (también con su nombre)
   const EXTRA = [
     { p: (n) => [`gracias ${n}`, `muchas gracias ${n}`], run: () => { E.blush(2.5); E.express("timido", 2.5); E.say(pick(["¡De nada!", "Para eso estoy"]), 2000, true); } },
@@ -53,6 +30,11 @@
     const names = new Set([...variants(name().toLowerCase()), ...variants("eko")]);
     for (const n of names) {
       for (const c of CMDS) for (const p of c.p) { map.set(`${n} ${p}`, c.run); map.set(`oye ${n} ${p}`, c.run); }
+      const shared = window.EkoChat && window.EkoChat.voiceCommands ? window.EkoChat.voiceCommands() : [];
+      for (const item of shared) {
+        const run = () => { const C = window.EkoChat; if (C && C.runVoiceAction) C.runVoiceAction(item.name, item.argument); };
+        map.set(`${n} ${item.phrase}`, run); map.set(`oye ${n} ${item.phrase}`, run);
+      }
       for (const x of EXTRA) for (const p of x.p(n)) map.set(p, x.run);
     }
     return map;

@@ -10,48 +10,48 @@
   const stage = document.getElementById("stage");
   const MOODS = ["feliz", "curioso", "sorprendido", "triste", "emocionado", "picaro", "enamorado", "timido", "confundido", "orgulloso", "divertido", "cansado", "sereno", "esperanzado"];
   const TR = () => window.EkoTricks;
-  const trick = (id) => { const T = TR(); if (!T) return; const t = T.LIST.find((x) => x.id === id); if (t && T.has(t)) T.run(id); else E.say("¡Ese truco aún lo estoy aprendiendo!", 2200, true); };
+  const trick = (id) => { const T = TR(); if (!T) return false; const t = T.LIST.find((x) => x.id === id); if (t && T.has(t)) return T.run(id) !== false; E.say("¡Ese truco aún lo estoy aprendiendo!", 2200, true); return false; };
   const PC_ACTIONS = new Set(["musica", "volumen", "carpeta", "descarga", "captura", "busca", "web", "abre", "cierra", "bloquea"]);
   const TRICK_ACTIONS = { voltereta: "flip", pirueta: "pirouette", equilibrio: "balance", malabares: "juggle", magia: "magic" };
   const HATS = { bruja: "witch", calabaza: "pumpkin", vampiro: "vampire", fantasma: "ghost", "papá noel": "santa", papanoel: "santa", reno: "reindeer", elfo: "elf", bufanda: "scarf", fiesta: "party", corona: "crown" };
   // Lista cerrada de capacidades: el modelo solo puede proponerlas; Eko valida antes de ejecutarlas.
   const ACTS = {
-    volar: () => { if (E.fly) E.fly("cape"); },
-    baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"), ven: () => E.walkTo(E.cursor.x, 170),
-    abrazo: () => window.EkoMenu && window.EkoMenu.hug ? window.EkoMenu.hug() : E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep(),
-    come: () => window.EkoMenu && window.EkoMenu.snack && window.EkoMenu.snack(),
-    regar: () => window.EkoMenu && window.EkoMenu.startWater && window.EkoMenu.startWater(),
-    juega: () => window.EkoMenu && window.EkoMenu.propose && window.EkoMenu.propose(true),
-    truco: () => { const T = TR(), u = T ? T.unlocked().filter((x) => x.id !== "bellyFull") : []; if (u.length) T.run(u[Math.floor(Math.random() * u.length)].id); else { E.act("tada"); } },
+    volar: () => E.fly ? E.fly("cape") : false,
+    baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); return true; }, salta: () => E.hop(-520), saluda: () => { E.act("wave"); return true; }, ven: () => { E.walkTo(E.cursor.x, 170); return true; },
+    abrazo: () => window.EkoMenu && window.EkoMenu.hug ? window.EkoMenu.hug() : (E.act("hug"), true), piensa: () => { E.act("think"); return true; }, duerme: () => { if (E.S.sleeping) return { message: "Ya estaba dormido; solo me despierta un clic izquierdo." }; E.goToSleep(); return true; },
+    come: () => window.EkoMenu && window.EkoMenu.snack ? window.EkoMenu.snack() : false,
+    regar: () => window.EkoMenu && window.EkoMenu.startWater ? window.EkoMenu.startWater() : false,
+    juega: () => window.EkoMenu && window.EkoMenu.propose ? window.EkoMenu.propose(true) : false,
+    truco: () => { const T = TR(), u = T ? T.unlocked().filter((x) => x.id !== "bellyFull") : []; if (u.length) return T.run(u[Math.floor(Math.random() * u.length)].id) !== false; E.act("tada"); return true; },
     voltereta: () => trick("flip"), pirueta: () => trick("pirouette"), equilibrio: () => trick("balance"), malabares: () => trick("juggle"), magia: () => trick("magic"),
     gorro: (arg) => {
       const id = HATS[(arg || "").trim()] || (arg || "").trim();
-      if (!id || id === "none" || id === "nada" || id === "ninguno") { E.setHat("none"); return; }
+      if (!id || id === "none" || id === "nada" || id === "ninguno") { E.setHat("none"); return true; }
       const P = window.EkoProgress;
-      if (P && !P.has("acc:" + id)) { E.say("Ese todavía no lo tengo en el armario…", 2200, true); return; }
-      E.setHat(id);
+      if (P && !P.has("acc:" + id)) return { ok: false, message: "Ese todavía no lo tengo desbloqueado." };
+      E.setHat(id); return true;
     },
-    quitagorro: () => E.setHat("none"),
+    quitagorro: () => { E.setHat("none"); return true; },
     // Cosas sobre el propio Eko
-    casa: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") { E.sayChat(C && C.state() === "build" ? "¡Primero tengo que construirla! Mira en el menú: Mi casa" : "Aún no tengo casa… llega en el nivel 6", 2600); return; } C.go(C.pending().map((k) => "deliver:" + k).concat(["frame"])); },
-    valle: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") { E.sayChat("Primero necesito tener mi casa. Mira en el menú: Mi casa", 2500); return; } C.go(["valley"], "summon"); },
-    cama: () => { const C = window.EkoCorner; if (C && C.state() === "built" && C.go(["bed"])) return; E.goToSleep(); },
+    casa: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") return { ok: false, message: C && C.state() === "build" ? "Primero tengo que construirla. Mira en el menú: Mi casa." : "Aún no tengo casa; llega en el nivel 6." }; return C.go(C.pending().map((k) => "deliver:" + k).concat(["frame"])); },
+    valle: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") return { ok: false, message: "Primero necesito tener mi casa. Mira en el menú: Mi casa." }; return C.go(["valley"], "summon"); },
+    cama: () => { const C = window.EkoCorner; if (C && C.state() === "built" && C.go(["bed"])) return true; E.goToSleep(); return true; },
     jugar: (g) => { const P = window.EkoProgress;
-      if (["catch", "hand", "glow", "guess", "hide"].includes(g) && P && !P.has("game:" + g)) { E.sayChat("Ese juego aún no lo tengo desbloqueado", 2400); return; }
-      if (g === "catch" && !E.native) { E.sayChat("Ese juego solo funciona en la aplicación de escritorio", 2400); return; }
-      if (window.EkoMenu) window.EkoMenu.startGame(g); },
-    ponte: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (!n) return; const P = window.EkoProgress; if (P && !P.has("acc:" + n)) { E.sayChat("Eso todavía no lo tengo en el armario", 2200); return; } E.setWear(n, true); },
-    quita: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (n) E.setWear(n, false); },
-    actualiza: () => invoke && invoke("check_update_now").then((r) => E.sayChat(r ? `¡Hay versión nueva (${r})! Me actualizo enseguida` : "Ya estoy en la última versión", 2800)).catch(() => E.sayChat("No he podido mirar si hay actualizaciones", 2400)),
-    libreta: () => window.EkoMenu && window.EkoMenu.openAt("notebook"),
-    menu: () => window.EkoMenu && window.EkoMenu.openAt("home"),
-    utilidades: () => window.EkoMenu && window.EkoMenu.openAt("util"),
-    pomodoro: (a) => window.EkoMenu && window.EkoMenu.pomodoro && window.EkoMenu.pomodoro(a),
+      if (["catch", "hand", "glow", "guess", "hide"].includes(g) && P && !P.has("game:" + g)) return { ok: false, message: "Ese juego aún no lo tengo desbloqueado." };
+      if (g === "catch" && !E.native) return { ok: false, message: "Ese juego solo funciona en la aplicación de escritorio." };
+      if (!window.EkoMenu) return false; window.EkoMenu.startGame(g); return true; },
+    ponte: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (!n) return false; const P = window.EkoProgress; if (P && !P.has("acc:" + n)) return { ok: false, message: "Ese accesorio aún no lo tengo desbloqueado." }; E.setWear(n, true); return true; },
+    quita: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (!n) return false; E.setWear(n, false); return true; },
+    actualiza: () => invoke ? invoke("check_update_now").then((r) => ({ message: r ? `He encontrado la versión ${r}; ya se está descargando para instalarse.` : "He comprobado que ya estoy en la última versión." })) : false,
+    libreta: () => { if (!window.EkoMenu) return false; window.EkoMenu.openAt("notebook"); return true; },
+    menu: () => { if (!window.EkoMenu) return false; window.EkoMenu.openAt("home"); return true; },
+    utilidades: () => { if (!window.EkoMenu) return false; window.EkoMenu.openAt("util"); return true; },
+    pomodoro: (a) => { const M = window.EkoMenu; if (!M || !M.pomodoro) return false; const ok = M.pomodoro(a); return ok ? { message: a === "iniciar" ? "He iniciado el Pomodoro de 25 minutos." : "He parado el Pomodoro." } : { ok: false, message: "No había un Pomodoro activo que parar." }; },
     nota: () => window.EkoMenu && window.EkoMenu.askNote && window.EkoMenu.askNote(),
     tareas: () => window.EkoMenu && window.EkoMenu.showTasks && window.EkoMenu.showTasks(),
-    silencio: () => window.EkoMenu && window.EkoMenu.muteHour && window.EkoMenu.muteHour(),
-    discrecion: (a) => window.EkoMenu && window.EkoMenu.setDiscreet && window.EkoMenu.setDiscreet(a === "activar"),
-    pelota: () => { const M = window.EkoMenu; if (M) M.ball ? M.stowBall() : M.startGame("ball"); },
+    silencio: () => window.EkoMenu && window.EkoMenu.muteHour && window.EkoMenu.muteHour(true),
+    discrecion: (a) => { const M = window.EkoMenu, on = a === "activar"; if (!M || !M.setDiscreet) return false; if (E.quiet === on) return { message: on ? "El modo discreto ya estaba activado." : "El modo discreto ya estaba desactivado." }; return M.setDiscreet(on, true); },
+    pelota: () => { const M = window.EkoMenu; if (!M) return false; return M.ball ? M.stowBall() : M.startGame("ball"); },
     ajustes: () => invoke && invoke("open_settings"),
     // ---- en tu PC (lista cerrada; se puede apagar en Ajustes) ----
     musica: (a) => pc(() => invoke(a === "siguiente" ? "media_next" : a === "anterior" ? "media_prev" : "media_play_pause"), "musica"),
@@ -69,8 +69,46 @@
       if (!m || !window.EkoMenu || !window.EkoMenu.remindIn) return;
       window.EkoMenu.remindIn(+m[1], m[2].trim().slice(0, 80));
       E.fx("spark", 1);
+      return true;
     },
   };
+  // Catálogo único: la IA publica todas las acciones y la voz usa las mismas
+  // claves y funciones; las frases de voz son solo accesos directos a ese catálogo.
+  const VOICE_ACTIONS = {
+    baila: ["baila", "a bailar", "ponte a bailar"], duerme: ["a dormir", "duérmete", "vete a dormir", "buenas noches"],
+    ven: ["ven", "ven aquí", "acércate"], salta: ["salta", "da un salto"], truco: ["haz un truco", "un truco", "enséñame un truco"],
+    volar: ["vuela", "a volar"], saluda: ["saluda", "di hola"], jugar: { phrases: ["escóndete", "al escondite", "jugamos al escondite"], argument: "escondite" },
+    juega: ["juguemos", "vamos a jugar", "jugamos"], menu: ["abre el menú", "menú"], silencio: ["silencio", "calla", "cállate"],
+    abrazo: ["me quieres", "te quiero"],
+    recordatorio: [
+      { phrase: "recuérdame en cinco minutos", argument: "5:Lo que me pediste hace cinco minutos" },
+      { phrase: "recuérdame en diez minutos", argument: "10:Lo que me pediste hace diez minutos" },
+      { phrase: "recuérdame en quince minutos", argument: "15:Lo que me pediste hace quince minutos" },
+      { phrase: "recuérdame en media hora", argument: "30:Lo que me pediste hace media hora" },
+      { phrase: "recuérdame en una hora", argument: "60:Lo que me pediste hace una hora" },
+    ],
+  };
+  const ACTION_RESULTS = {
+    volar: "¡He empezado a volar!", baila: "¡Ya estoy bailando!", salta: "¡Ahí va ese salto!", saluda: "¡Holi!", ven: "Voy hacia donde está el cursor.",
+    abrazo: "¡Te mando un abrazo!", piensa: "Me he puesto a pensar.", duerme: "Me voy a dormir.", come: "¡Me he comido una galleta!",
+    regar: "He sacado la regadera; arrástrala hasta mi brote para regarme.", juega: "¡Te propongo un juego!", truco: "¡Ahí va mi truco!",
+    voltereta: "¡Voltereta hecha!", pirueta: "¡Pirueta hecha!", equilibrio: "¡Lo he intentado!", malabares: "¡Ahí van mis malabares!", magia: "¡Magia!",
+    gorro: "Ya me he cambiado el gorro.", quitagorro: "Ya me he quitado el gorro.", casa: "He empezado a entrar en casa.", valle: "He abierto el valle.",
+    cama: "Voy a mi cama.", jugar: "He abierto el juego.", ponte: "Ya llevo ese accesorio.", quita: "Ya me lo he quitado.", libreta: "He abierto la libreta.",
+    menu: "He abierto el menú.", utilidades: "He abierto las utilidades.", ajustes: "He abierto los ajustes.", pomodoro: "He actualizado el Pomodoro.",
+    nota: "Vamos a apuntarlo.", tareas: "Aquí tienes tus tareas.",
+    silencio: "He silenciado mis sonidos durante una hora.", discrecion: "He cambiado el modo discreto.", pelota: "He empezado a sacar o guardar la pelota.", musica: "He enviado la orden a la música.", volumen: "He cambiado el volumen.", carpeta: "He abierto esa carpeta.",
+    captura: "He abierto la herramienta de captura.", busca: "He abierto la búsqueda.", web: "He abierto la página.", bloquea: "He enviado la orden de bloqueo.",
+    recordatorio: "He guardado el recordatorio.",
+  };
+  function voiceCommands() {
+    const allowed = new Set(allowedActions());
+    return Object.entries(VOICE_ACTIONS).filter(([name]) => allowed.has(name)).flatMap(([name, spec]) => {
+      if (Array.isArray(spec) && spec.every((entry) => typeof entry === "object")) return spec.map((item) => ({ phrase: item.phrase, name, argument: item.argument || "" }));
+      const item = Array.isArray(spec) ? { phrases: spec, argument: "" } : spec;
+      return item.phrases.map((phrase) => ({ phrase, name, argument: item.argument || "" }));
+    });
+  }
   const plain = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const pcOn = () => !!invoke && cfg().pcActions !== false;
   function allowedActions() {
@@ -167,10 +205,10 @@
   }
   // Ejecuta acciones permitidas en el PC; las sensibles requieren aprobación en una tarjeta de Eko.
   function pc(fn, kind) {
-    if (!invoke) { E.sayChat("(Vista previa) En tu PC lo haría de verdad", 2200); return; }
-    if (!pcOn()) { E.sayChat("Eso no me dejas hacerlo (está apagado en mis ajustes)", 2600); return; }
+    if (!invoke) return Promise.reject(new Error("Esta acción solo está disponible en la aplicación de escritorio."));
+    if (!pcOn()) return Promise.reject(new Error("Las acciones del PC están desactivadas en Ajustes."));
     if (kind === "musica") E.fx("note", 1); else if (kind !== "volumen") E.act("point", { dir: 1 });
-    try { const r = fn(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+    return fn();
   }
   const SITES = { youtube: "https://www.youtube.com", gmail: "https://mail.google.com", correo: "https://mail.google.com", instagram: "https://www.instagram.com", whatsapp: "https://web.whatsapp.com", netflix: "https://www.netflix.com", spotify: "https://open.spotify.com", maps: "https://maps.google.com", mapas: "https://maps.google.com", wikipedia: "https://es.wikipedia.org", twitter: "https://x.com", x: "https://x.com", amazon: "https://www.amazon.es", tiktok: "https://www.tiktok.com", calendario: "https://calendar.google.com", drive: "https://drive.google.com", traductor: "https://translate.google.com", pinterest: "https://www.pinterest.com", behance: "https://www.behance.net", github: "https://github.com", chatgpt: "https://chatgpt.com", claude: "https://claude.ai" };
   function siteUrl(a) {
@@ -194,6 +232,13 @@
   }
   let lastChat = 0;
   let history = [], thinking = 0;
+  function actionOutcome(text, ms = 2600, record = true, speak = true) {
+    if (record) {
+      history.push({ role: "assistant", content: JSON.stringify({ text, mood: "sereno", actions: [], memories: [] }) });
+      history = history.slice(-12);
+    }
+    if (speak) E.sayChat(text, ms);
+  }
   // Ejemplos del mismo formato estructurado que Eko valida y ejecuta.
   const EXAMPLES = [
     ["hola", { text: "¡Holi! Ya te echaba de menos, ¿qué me cuentas?", mood: "feliz", actions: [], memories: [] }],
@@ -213,8 +258,7 @@
   ];
 
 
-  function actionsText() {
-    const hints = {
+  const ACTION_HINTS = {
       baila: "bailar", volar: "volar con la capa", salta: "dar un salto", saluda: "saludar", ven: "caminar hasta el cursor", abrazo: "dar un abrazo y aumentar el cariño", piensa: "hacer como que piensa", duerme: "dormirse",
       come: "comer una galleta", regar: "sacar la regadera para que el usuario riegue el brote", juega: "proponer un juego", truco: "hacer un truco al azar", voltereta: "hacer una voltereta", pirueta: "hacer una pirueta",
       equilibrio: "hacer equilibrio", malabares: "hacer malabares", magia: "hacer magia", gorro: "ponerse un gorro (argumento: nombre)", quitagorro: "quitarse el gorro",
@@ -227,8 +271,7 @@
       descarga: "mostrar y pedir permiso antes de abrir la última descarga", captura: "abrir Recortes para hacer una captura de pantalla", busca: "pedir permiso y buscar en Google (argumento: consulta)",
       web: "abrir una web (argumento: sitio)", abre: "buscar y abrir un programa por su nombre habitual (puede ser parcial, por ejemplo Photoshop)", cierra: "buscar y cerrar con confirmación un programa abierto (nombre parcial, por ejemplo Photoshop)", bloquea: "bloquear el PC",
     };
-    return allowedActions().map((name) => `${name}: ${hints[name] || "acción disponible"}`).join("; ");
-  }
+  function actionsText() { return allowedActions().map((name) => `${name}: ${ACTION_HINTS[name] || "acción disponible"}`).join("; "); }
   function memText() {
     const m = memGet().slice(-20);
     return m.length ? "Lo que recuerdas de tu humano (úsalo con naturalidad cuando venga a cuento, sin recitarlo):\n" + m.map((x) => "- " + x.t).join("\n") : "Aún no sabes mucho de tu humano: pregúntale cosas de vez en cuando.";
@@ -260,7 +303,7 @@
       "No hagas listas, ni des consejos largos, ni preguntes «¿en qué puedo ayudarte?». Eres una mascota, no un asistente. Si te piden algo serio o largo, contestas con cariño y brevemente.",
       "Reglas: responde SIEMPRE en 1 o 2 frases cortas (máximo 30 palabras). Sin emojis. Nunca digas que eres una IA, un modelo o un programa: eres " + name + ". Si no sabes algo, sales del paso con humor.",
       `La respuesta debe usar los campos JSON del formato obligatorio: text es lo que dices, mood una emoción de esta lista: ${MOODS.join(", ")}; actions son acciones estructuradas; memories son recuerdos breves. No pongas acciones ni etiquetas dentro del texto.`,
-      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Devuelve como máximo una acción por respuesta y solo si te la piden o viene muy a cuento. Las acciones sensibles pedirán aprobación: habla de lo que vas a hacer, no digas que ya lo hiciste. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
+      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Devuelve como máximo una acción por respuesta y solo si te la piden o viene muy a cuento. Cuando pidas una acción, habla en futuro; la aplicación confirmará después si se completó. No afirmes que ya la hiciste. Las acciones sensibles pedirán aprobación. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
       "Si tu humano cuenta algo personal que pueda ser útil recordar (su nombre, trabajo, gustos, planes o gente importante), puedes proponerlo en memories como una frase breve. Nunca guardes contraseñas, datos de salud, dinero ni nada íntimo.",
       memText(),
       "Ejemplos del formato (NO son conversaciones reales con tu humano):\n" + EXAMPLES.filter(([, r]) => r.actions.every((a) => allowedActions().includes(a.name))).map(([u, r]) => `Humano: ${u}\n${name}: ${JSON.stringify(r)}`).join("\n"),
@@ -313,8 +356,9 @@
 
   function show(raw) {
     const response = normalizeResponse(raw);
-    let t = (response.actionError || response.text).replace(/<think>[\s\S]*?<\/think>/g, "").replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
     const mood = response.mood, actions = response.actionError ? [] : response.actions, facts = response.actionError ? [] : response.memories;
+    // El texto del modelo no puede afirmar que una acción ya se completó antes de ejecutarla.
+    let t = (response.actionError || (actions[0] ? "Voy a intentarlo." : facts[0] ? "Te pregunto antes de guardarlo." : response.text)).replace(/<think>[\s\S]*?<\/think>/g, "").replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
     if (!t) t = pick(["Mmm…", "¡Jeje!", "Me he quedado en blanco"]);
     if (t.length > 220) t = t.slice(0, 217).replace(/\s+\S*$/, "") + "…";
     history.push({ role: "assistant", content: JSON.stringify({ text: t, mood, actions, memories: [] }) });
@@ -330,17 +374,21 @@
     lastChat = Date.now();
   }
 
-  function approvalCard(title, detail, onYes, done) {
+  function approvalCard(title, detail, onYes, done, successText) {
     const M = window.EkoMenu;
     if (!M || !M.confirmAction || E.A.hidden) {
       E.sayChat("No he hecho nada ni he guardado el recuerdo: necesito que Eko esté visible para pedirte permiso.", 4200);
       done && done();
       return;
     }
-    M.confirmAction(title, detail, () => {
-      try { onYes(); } catch (_) { E.sayChat("Uy, no he podido hacerlo", 2400); }
+    M.confirmAction(title, detail, async () => {
+      try {
+        const result = await onYes();
+        if (result !== false && successText) actionOutcome(typeof result === "object" && result.message ? result.message : successText);
+        else if (result === false) actionOutcome("No he podido completar esa acción.");
+      } catch (_) { actionOutcome("No he podido completar esa acción; la operación ha fallado.", 2800); }
       done && done();
-    }, () => done && done());
+    }, () => { actionOutcome("Vale, no lo he hecho.", 1800); done && done(); });
   }
 
   function approveMemory(fact, done) {
@@ -350,23 +398,41 @@
     }, done);
   }
 
+  async function performAction(name, argument = "", fromVoice = false) {
+    if (!allowedActions().includes(name) || !ACTS[name]) return false;
+    if (fromVoice && PC_ACTIONS.has(name)) return false;
+    if (PC_ACTIONS.has(name) && !pcOn()) return false;
+    const checked = validateAction({ name, argument });
+    if (checked.error) { E.sayChat(checked.error, 3600); return false; }
+    try {
+      const result = await ACTS[name](checked.action.argument);
+      if (result === false) { actionOutcome("Ahora mismo no he podido hacerlo.", 2400, !fromVoice); return false; }
+      if (result && result.ok === false) { actionOutcome(result.message || "Ahora mismo no puedo hacerlo.", 2800, !fromVoice); return false; }
+      const message = result && typeof result === "object" && result.message ? result.message : ACTION_RESULTS[name];
+      if (message) actionOutcome(message, 2600, !fromVoice, name !== "duerme");
+      return true;
+    } catch (_) {
+      actionOutcome("No he podido completar esa acción; la operación ha fallado.", 2800, !fromVoice);
+      return false;
+    }
+  }
+
   function runAction(proposed, done) {
     const valid = validateAction(proposed);
     if (valid.error) { E.sayChat(valid.error, 4200); done(); return; }
     const { name, argument } = valid.action;
     if (PC_ACTIONS.has(name) && !pcOn()) { E.sayChat("Tengo desactivadas las acciones del PC", 2500); done(); return; }
-    const execute = (fn) => { try { const result = fn(); if (result && result.catch) result.catch(() => E.sayChat("Uy, no he podido hacerlo", 2400)); } catch (_) { E.sayChat("Uy, no he podido hacerlo", 2400); } };
     if (name === "busca") {
-      approvalCard("¿Busco esto en Google?", argument, () => execute(() => ACTS.busca(argument)), done);
+      approvalCard("¿Busco esto en Google?", argument, () => ACTS.busca(argument), done, "He abierto la búsqueda.");
       return;
     }
     if (name === "web") {
       const url = siteUrl(argument);
-      approvalCard("¿Abro esta página?", url, () => execute(() => invoke("open_site", { url })), done);
+      approvalCard("¿Abro esta página?", url, () => invoke("open_site", { url }), done, "He abierto la página.");
       return;
     }
     if (name === "bloquea") {
-      approvalCard("¿Bloqueo ahora el PC?", "Se bloqueará tu sesión de Windows.", () => execute(() => ACTS.bloquea()), done);
+      approvalCard("¿Bloqueo ahora el PC?", "Se bloqueará tu sesión de Windows.", () => ACTS.bloquea(), done, "He enviado la orden de bloqueo.");
       return;
     }
     if (name === "abre") {
@@ -374,7 +440,7 @@
         const list = Array.isArray(matches) ? matches : [];
         if (!list.length) { E.sayChat(`No encuentro «${argument}» en el menú Inicio.`, 3000); done(); return; }
         if (list.length > 1) { E.sayChat(`He encontrado varias opciones: ${list.slice(0, 4).join(", ")}. Dime cuál quieres abrir.`, 5200); done(); return; }
-        approvalCard("¿Abro este programa?", list[0], () => invoke("open_app", { name: list[0] }).catch(() => E.sayChat("No he podido abrir ese programa", 2400)), done);
+        approvalCard("¿Abro este programa?", list[0], () => invoke("open_app", { name: list[0] }), done, `He enviado la orden para abrir ${list[0]}.`);
       }).catch(() => { E.sayChat("No he podido buscar ese programa", 2600); done(); });
       return;
     }
@@ -383,19 +449,18 @@
         const list = Array.isArray(matches) ? matches : [];
         if (!list.length) { E.sayChat(`No encuentro «${argument}» entre los programas abiertos.`, 3200); done(); return; }
         if (list.length > 1) { E.sayChat(`Hay varias coincidencias abiertas: ${list.slice(0, 4).join(", ")}. Dime cuál quieres cerrar.`, 5200); done(); return; }
-        approvalCard("¿Cierro este programa?", `${list[0]} · Si hay cambios sin guardar, la aplicación puede pedirte que los guardes.`, () => invoke("close_app", { name: list[0] }).then(() => E.sayChat(`He pedido cerrar ${list[0]}`, 2200)).catch(() => E.sayChat("No he podido cerrar ese programa", 2400)), done);
+        approvalCard("¿Cierro este programa?", `${list[0]} · Si hay cambios sin guardar, la aplicación puede pedirte que los guardes.`, () => invoke("close_app", { name: list[0] }), done, `He enviado la petición para cerrar ${list[0]}.`);
       }).catch(() => { E.sayChat("No he podido consultar los programas abiertos", 2600); done(); });
       return;
     }
     if (name === "descarga") {
       invoke("latest_download").then((filename) => {
         if (!filename) { E.sayChat("No encuentro archivos en Descargas", 2400); done(); return; }
-        approvalCard("¿Abro este archivo?", filename, () => invoke("open_download_named", { name: filename }).catch(() => E.sayChat("No he podido abrir esa descarga", 2400)), done);
+        approvalCard("¿Abro este archivo?", filename, () => invoke("open_download_named", { name: filename }), done, `He enviado la orden para abrir ${filename}.`);
       }).catch(() => { E.sayChat("No he podido mirar tus Descargas", 2600); done(); });
       return;
     }
-    execute(() => ACTS[name](argument));
-    done();
+    performAction(name, argument).finally(() => done());
   }
 
   // Tarjeta para escribirle (se queda abierta para seguir hablando; Esc o × para cerrar)
@@ -462,5 +527,17 @@
     if (v.trim()) ask(v.trim());
   });
 
-  window.EkoChat = { open, close, ask, show, memory: memGet, remember, system: () => system(), enabled: () => !!cfg().ai, reset: () => { history = []; } };
+  function voiceHelp() {
+    const samples = new Map();
+    for (const item of voiceCommands()) if (!samples.has(item.name)) samples.set(item.name, item.phrase);
+    const phrases = [...samples.values()];
+    const prefix = cfg().petName || "Eko";
+    return phrases.length ? `Dime «${prefix}» y luego: ${phrases.join(", ")}. Si estoy dormido, solo me despierta un clic izquierdo.` : "Ahora mismo no tengo órdenes de voz disponibles.";
+  }
+  window.EkoChat = {
+    open, close, ask, show, memory: memGet, remember, system: () => system(), enabled: () => !!cfg().ai,
+    capabilities: () => allowedActions().map((name) => ({ name, description: ACTION_HINTS[name] || "Acción disponible" })),
+    voiceCommands, voiceHelp, runVoiceAction: (name, argument) => performAction(name, argument, true),
+    reset: () => { history = []; },
+  };
 })();

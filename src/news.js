@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.29.17": { important: true, lines: ["La voz y la IA reutilizan las mismas acciones cuando ambas las permiten", "Primero te digo que voy a intentarlo; después confirmo si la acción funcionó", "Si me duermo, solo me despierta un clic izquierdo, también cuando la voz está activada"] },
     "0.29.16": { important: true, lines: ["Ahora puedo regar mi brote y visitar el valle cuando me lo pidas", "También puedo iniciar un Pomodoro, guardar notas, enseñarte tus tareas y cambiar el modo discreto", "He ampliado lo que entiendo del menú: puedo proponerte juegos, darte un abrazo o ayudarte con música y carpetas"] },
     "0.29.15": { important: true, lines: ["Ahora puedo buscar un programa por un nombre corto, como Photoshop, y preguntarte antes de abrirlo", "También puedo cerrar un programa cuando me lo pidas; su aplicación puede preguntarte qué hacer con los cambios sin guardar", "Y si me dices «vuela», ¡despego con mi capa!"] },
     "0.29.14": { important: true, lines: ["Ahora te pregunto antes de abrir programas, páginas o descargas, y antes de guardar lo que me cuentas", "Solo hago una cosa cada vez y, si no entiendo bien una orden, te pregunto en vez de improvisar"] },

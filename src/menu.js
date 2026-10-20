@@ -345,7 +345,7 @@
     return [];
   }
   const hatNow = () => (E.hat ? E.hat() : "auto");
-  function hug() { E.act("hug"); window.EkoNeeds && window.EkoNeeds.give("hug"); E.fx("heart", 2); E.say(pick(ES ? ["¡Achuchón!", "Qué gustito…", "¡Te quiero!"] : ["Squeeze!", "So nice…", "Love you!"]), 2200, true); }
+  function hug() { E.act("hug"); window.EkoNeeds && window.EkoNeeds.give("hug"); E.fx("heart", 2); E.say(pick(ES ? ["¡Achuchón!", "Qué gustito…", "¡Te quiero!"] : ["Squeeze!", "So nice…", "Love you!"]), 2200, true); return true; }
 
   // Lo que dice Eko arriba del panel en cada categoría
   let capText = "", greetNext = false;
@@ -675,10 +675,11 @@
     const Nd = window.EkoNeeds;
     const PGm = window.EkoProgress && window.EkoProgress.missions();
     const forMission = !!(PGm && PGm.running && PGm.list[PGm.i] && PGm.list[PGm.i].ev === "feed");   // en la misión se deja comer aunque esté lleno
-    if (Nd && Nd.full() && !forMission) { E.act("shake"); E.express("contento", 2); E.say(pick(Nd.L.full), 2200, true); return; }
+    if (Nd && Nd.full() && !forMission) { E.act("shake"); E.express("contento", 2); E.say(pick(Nd.L.full), 2200, true); return false; }
     E.act("eat");
     if (Nd) Nd.give("feed");
     setTimeout(() => E.say(pick(SAY.snack), 2400, true), 2900);
+    return true;
   }
   function trick() {
     const T = window.EkoTricks, u = T ? T.unlocked() : [];
@@ -787,7 +788,7 @@
   }
 
   function propose(force = false, reason = "") {
-    if (!force && !canPropose()) return;
+    if (!force && !canPropose()) return false;
     if (force && (open || ball || hideGame)) close();
     const games = GAMES.filter((g) => g === "ball" || g === "rps" || !window.EkoProgress || window.EkoProgress.has("game:" + g)).filter((g) => g !== "catch" || E.native);
     const game = games[Math.floor(Math.random() * games.length)];
@@ -812,16 +813,18 @@
       });
       proposeTimer = setTimeout(() => { if (proposing) { finish(); E.say(pick(P_TX.timeout), 2000, true, "shrug"); } }, 20000);
     });
+    return true;
   }
 
   function startGame(game) {
-    if (E.S.sleeping || E.A.hidden) return;
+    if (E.S.sleeping || E.A.hidden) return false;
     const Nd = window.EkoNeeds;
     if (Nd) { Nd.give("play"); if (Nd.on() && Nd.get().energy < 20) setTimeout(() => E.say(pick(Nd.L.tired), 2000, true), 900); }
-    if (window.EkoGames && window.EkoGames.start(game)) return;
+    if (window.EkoGames && window.EkoGames.start(game)) return true;
     if (game === "ball") startBall();
     else if (game === "hide") startHide();
     else { openAt("rps"); E.say(pick(P_TX.rpsGo), 1800, true); }
+    return true;
   }
 
   // Comprueba cada medio minuto si es buen momento para proponer algo
@@ -861,12 +864,13 @@
   }
   // Guardarla: Eko va a por ella, la coge y desaparece en un «pop»
   function stowBall() {
-    if (!ball || ball.stowing) return;
+    if (!ball || ball.stowing) return false;
     ball.stowing = true; ball.grabbed = false; drag = null;
     E.say(pick(SAY.stow), 2000, true);
     const fin = () => { if (!ball) return; E.act("nod"); E.express && E.express("contento", 2); endBall(); };
     if (Math.abs(ball.x - (E.S.x + E.W / 2)) < 120 || E.S.airborne) setTimeout(fin, 500);
     else ball.stowAt = performance.now();
+    return true;
   }
   let drag = null;
   function ballDown(sx, sy) {
@@ -984,8 +988,9 @@
     pomo = { phase: "focus", end: Date.now() + 25 * 60000 };
     E.say(pick(SAY.pomoStart), 2600, true, "nod");
     badge.classList.add("in");
+    return true;
   }
-  function stopPomo() { pomo = null; badge.classList.remove("in"); }
+  function stopPomo() { const wasActive = !!pomo; pomo = null; badge.classList.remove("in"); return wasActive; }
   function tickPomo() {
     if (!pomo) return;
     const left = Math.max(0, pomo.end - Date.now());
@@ -1013,10 +1018,11 @@
       store.set("eko-tasks", tasks);
       E.say(pick(SAY.noted), 2200, true, "nod");
     });
+    return true;
   }
   function showTasks() {
     const pending = tasks.filter((t) => !t.done);
-    if (!pending.length) { E.say(pick(SAY.empty), 2400, true, "shrug"); return; }
+    if (!pending.length) { E.say(pick(SAY.empty), 2400, true, "shrug"); return true; }
     const c = card(`<ul>${pending.map((t, i) => `<li data-i="${tasks.indexOf(t)}"><i></i>${t.text.replace(/</g, "&lt;")}</li>`).join("")}</ul>`);
     c.querySelectorAll("li").forEach((li) => li.addEventListener("click", () => {
       const t = tasks[+li.dataset.i]; if (!t) return;
@@ -1026,20 +1032,23 @@
       setTimeout(() => { if (!tasks.some((x) => !x.done)) closeCard(); }, 900);
     }));
     setTimeout(() => document.addEventListener("click", function off(e) { if (!e.target.closest(".card")) { closeCard(); document.removeEventListener("click", off); } }), 50);
+    return true;
   }
 
   // ---------- Descanso ----------
-  function muteHour() {
+  function muteHour(silent = false) {
     const restoreVoice = !!E.Voice.on;
-    E.say(pick(SAY.muted), 2400, true, "nod");
+    if (!silent) E.say(pick(SAY.muted), 2400, true, "nod");
     setTimeout(() => {
       E.Voice.setOn(false);
       setTimeout(() => { if (restoreVoice) E.Voice.setOn(true); }, 3600000);
     }, 2600);
+    return true;
   }
-  function toggleDiscreet() {
+  function toggleDiscreet(silent = false) {
     E.quiet = !E.quiet;
-    E.say(pick(E.quiet ? SAY.discreetOn : SAY.discreetOff), 2000, true);
+    if (!silent) E.say(pick(E.quiet ? SAY.discreetOn : SAY.discreetOff), 2000, true);
+    return true;
   }
 
   function openSettings() {
@@ -1075,7 +1084,7 @@
     return { x: mo.left + mo.width / 2 - sb.left, y: Math.min(r.top + r.height * 0.5, mo.top + 8) - sb.top };
   }
   function startWater() {
-    if (can) return;
+    if (can) return false;
     if (open) close();
     const t = waterTarget();
     can = { x: t.x - 150, y: Math.max(8, t.y - 120), tilt: 0, poured: 0, drag: null, dropT: 0, drops: [], until: performance.now() + 30000, done: false };
@@ -1084,6 +1093,7 @@
     E.hold && E.hold(30);
     E.say(L.waterTip, 2600, true);
     E.express && E.express("esperanzado", 2.5);
+    return true;
   }
   function endWater() {
     can = null;
@@ -1186,9 +1196,9 @@
       if (!open && updPending()) { openAt("update"); return true; }
       return false;
     },
-    announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), snack: () => giveSnack(), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
-    hug: () => hug(), pomodoro: (mode) => mode === "iniciar" ? startPomo() : stopPomo(), askNote: () => askNote(), showTasks: () => showTasks(), muteHour: () => muteHour(),
-    setDiscreet: (on) => { if (E.quiet !== !!on) toggleDiscreet(); },
+    announceUpdate, muteHour: (silent = false) => muteHour(silent), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), snack: () => giveSnack(), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    hug: () => hug(), pomodoro: (mode) => mode === "iniciar" ? startPomo() : stopPomo(), askNote: () => askNote(), showTasks: () => showTasks(),
+    setDiscreet: (on, silent = false) => { if (E.quiet === !!on) return true; return toggleDiscreet(silent); },
     isOpen: () => open,
   };
 })();

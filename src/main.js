@@ -1135,10 +1135,11 @@
 
   // Salto con anticipación: primero se aplasta un instante y luego sale estirado
   function hop(v = -420, vx = 0, wind = 0.1) {
-    if (S.dragging || S.sleeping || S.pendingHop) return;
-    if (S.airborne) { S.vy = Math.min(S.vy, v * 0.6); return; }
+    if (S.dragging || S.sleeping || S.pendingHop) return false;
+    if (S.airborne) { S.vy = Math.min(S.vy, v * 0.6); return true; }
     S.pendingHop = { v, vx, at: A.t + wind };
     bump(Math.min(5, -v / 110));
+    return true;
   }
 
   function goToSleep(talk = true) {

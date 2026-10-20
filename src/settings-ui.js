@@ -217,9 +217,12 @@
         st.textContent = `✅ Ollama funciona y tienes «${want}». Probando a hablar… (la primera vez puede tardar hasta un minuto)`;
         const t0 = Date.now();
         try {
-          const body = { model: want, stream: false, messages: [{ role: "user", content: "Di solo: hola" }], options: Object.assign({ num_predict: 12 }, S.get().aiCpu ? { num_gpu: 0 } : {}) };
+          const format = { type: "object", properties: { text: { type: "string" }, mood: { type: "string" }, actions: { type: "array", items: { type: "object", properties: { name: { type: "string" }, argument: { type: "string" } }, required: ["name", "argument"], additionalProperties: false } }, memories: { type: "array", items: { type: "string" } } }, required: ["text", "mood", "actions", "memories"], additionalProperties: false };
+          const body = { model: want, stream: false, format, messages: [{ role: "user", content: 'Responde con el formato JSON solicitado. En text escribe solo "hola" y deja actions y memories vacíos.' }], options: Object.assign({ num_predict: 40 }, S.get().aiCpu ? { num_gpu: 0 } : {}) };
           const r = JSON.parse(await invoke("ai_chat", { body: JSON.stringify(body) }));
-          const txt = ((r.message || {}).content || "").trim();
+          const parsed = JSON.parse(((r.message || {}).content || "").trim());
+          const txt = String(parsed.text || "").trim();
+          if (!txt || !Array.isArray(parsed.actions) || !Array.isArray(parsed.memories)) throw new Error("respuesta estructurada incompleta");
           st.textContent = `✅ Todo listo. Ha respondido «${txt.slice(0, 40)}» en ${((Date.now() - t0) / 1000).toFixed(1)} s`;
           says("¡Tengo cerebro! Háblame desde mi menú");
         } catch (e2) { st.textContent = `⚠ Ollama está, pero al hablar ha fallado: ${String(e2).slice(0, 120)}`; }

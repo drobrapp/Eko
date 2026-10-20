@@ -5,6 +5,9 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.29.16": { important: true, lines: ["Ahora puedo regar mi brote y visitar el valle cuando me lo pidas", "También puedo iniciar un Pomodoro, guardar notas, enseñarte tus tareas y cambiar el modo discreto", "He ampliado lo que entiendo del menú: puedo proponerte juegos, darte un abrazo o ayudarte con música y carpetas"] },
+    "0.29.15": { important: true, lines: ["Ahora puedo buscar un programa por un nombre corto, como Photoshop, y preguntarte antes de abrirlo", "También puedo cerrar un programa cuando me lo pidas; su aplicación puede preguntarte qué hacer con los cambios sin guardar", "Y si me dices «vuela», ¡despego con mi capa!"] },
+    "0.29.14": { important: true, lines: ["Ahora te pregunto antes de abrir programas, páginas o descargas, y antes de guardar lo que me cuentas", "Solo hago una cosa cada vez y, si no entiendo bien una orden, te pregunto en vez de improvisar"] },
     "0.29.13": { important: true, lines: ["¡Ahora entiendo mejor lo que me pides! Puedo responder y hacer mis acciones en un formato ordenado"] },
     "0.29.12": { important: true, lines: ["¡Piedra, papel o tijera tiene imágenes nuevas! Y ahora enseño en la mano lo que he elegido"] },
     "0.29.10": { important: true, lines: ["He ordenado mi habitación: los muebles y recuerdos se ven en su sitio, sin marcos duplicados", "Ahora mis plantas asoman desde la tierra y puedo pasar bajo el arco", "Por la ventana cambian el cielo, el sol y las hojas o la nieve según la hora y la estación"] },

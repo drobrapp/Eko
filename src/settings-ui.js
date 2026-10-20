@@ -217,7 +217,7 @@
         st.textContent = `✅ Ollama funciona y tienes «${want}». Probando a hablar… (la primera vez puede tardar hasta un minuto)`;
         const t0 = Date.now();
         try {
-          const format = { type: "object", properties: { text: { type: "string" }, mood: { type: "string" }, actions: { type: "array", items: { type: "object", properties: { name: { type: "string" }, argument: { type: "string" } }, required: ["name", "argument"], additionalProperties: false } }, memories: { type: "array", items: { type: "string" } } }, required: ["text", "mood", "actions", "memories"], additionalProperties: false };
+          const format = { type: "object", properties: { text: { type: "string" }, mood: { type: "string" }, actions: { type: "array", maxItems: 1, items: { type: "object", properties: { name: { type: "string" }, argument: { type: "string" } }, required: ["name", "argument"], additionalProperties: false } }, memories: { type: "array", maxItems: 1, items: { type: "string" } } }, required: ["text", "mood", "actions", "memories"], additionalProperties: false };
           const body = { model: want, stream: false, format, messages: [{ role: "user", content: 'Responde con el formato JSON solicitado. En text escribe solo "hola" y deja actions y memories vacíos.' }], options: Object.assign({ num_predict: 40 }, S.get().aiCpu ? { num_gpu: 0 } : {}) };
           const r = JSON.parse(await invoke("ai_chat", { body: JSON.stringify(body) }));
           const parsed = JSON.parse(((r.message || {}).content || "").trim());

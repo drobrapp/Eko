@@ -11,20 +11,22 @@
   const MOODS = ["feliz", "curioso", "sorprendido", "triste", "emocionado", "picaro", "enamorado", "timido", "confundido", "orgulloso", "divertido", "cansado", "sereno", "esperanzado"];
   const TR = () => window.EkoTricks;
   const trick = (id) => { const T = TR(); if (!T) return; const t = T.LIST.find((x) => x.id === id); if (t && T.has(t)) T.run(id); else E.say("¡Ese truco aún lo estoy aprendiendo!", 2200, true); };
-  const PC_ACTIONS = new Set(["musica", "volumen", "carpeta", "descarga", "captura", "busca", "web", "abre", "bloquea"]);
+  const PC_ACTIONS = new Set(["musica", "volumen", "carpeta", "descarga", "captura", "busca", "web", "abre", "cierra", "bloquea"]);
   const TRICK_ACTIONS = { voltereta: "flip", pirueta: "pirouette", equilibrio: "balance", malabares: "juggle", magia: "magic" };
   const HATS = { bruja: "witch", calabaza: "pumpkin", vampiro: "vampire", fantasma: "ghost", "papá noel": "santa", papanoel: "santa", reno: "reindeer", elfo: "elf", bufanda: "scarf", fiesta: "party", corona: "crown" };
   // Lista cerrada de capacidades: el modelo solo puede proponerlas; Eko valida antes de ejecutarlas.
   const ACTS = {
-    baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"),
-    abrazo: () => E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep(),
+    volar: () => { if (E.fly) E.fly("cape"); },
+    baila: () => { E.setDance(true); setTimeout(() => E.setDance(false), 7000); }, salta: () => E.hop(-520), saluda: () => E.act("wave"), ven: () => E.walkTo(E.cursor.x, 170),
+    abrazo: () => window.EkoMenu && window.EkoMenu.hug ? window.EkoMenu.hug() : E.act("hug"), piensa: () => E.act("think"), duerme: () => E.goToSleep(),
     come: () => window.EkoMenu && window.EkoMenu.snack && window.EkoMenu.snack(),
+    regar: () => window.EkoMenu && window.EkoMenu.startWater && window.EkoMenu.startWater(),
     juega: () => window.EkoMenu && window.EkoMenu.propose && window.EkoMenu.propose(true),
     truco: () => { const T = TR(), u = T ? T.unlocked().filter((x) => x.id !== "bellyFull") : []; if (u.length) T.run(u[Math.floor(Math.random() * u.length)].id); else { E.act("tada"); } },
     voltereta: () => trick("flip"), pirueta: () => trick("pirouette"), equilibrio: () => trick("balance"), malabares: () => trick("juggle"), magia: () => trick("magic"),
     gorro: (arg) => {
       const id = HATS[(arg || "").trim()] || (arg || "").trim();
-      if (!id || id === "nada" || id === "ninguno") { E.setHat("none"); return; }
+      if (!id || id === "none" || id === "nada" || id === "ninguno") { E.setHat("none"); return; }
       const P = window.EkoProgress;
       if (P && !P.has("acc:" + id)) { E.say("Ese todavía no lo tengo en el armario…", 2200, true); return; }
       E.setHat(id);
@@ -32,30 +34,40 @@
     quitagorro: () => E.setHat("none"),
     // Cosas sobre el propio Eko
     casa: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") { E.sayChat(C && C.state() === "build" ? "¡Primero tengo que construirla! Mira en el menú: Mi casa" : "Aún no tengo casa… llega en el nivel 6", 2600); return; } C.go(C.pending().map((k) => "deliver:" + k).concat(["frame"])); },
+    valle: () => { const C = window.EkoCorner; if (!C || C.state() !== "built") { E.sayChat("Primero necesito tener mi casa. Mira en el menú: Mi casa", 2500); return; } C.go(["valley"], "summon"); },
     cama: () => { const C = window.EkoCorner; if (C && C.state() === "built" && C.go(["bed"])) return; E.goToSleep(); },
-    jugar: (a) => { const g = /galleta|atrapa|cesta/.test(a) ? "catch" : /mano/.test(a) ? "hand" : /brill|toca|reflej/.test(a) ? "glow" : /adivin|piens/.test(a) ? "guess" : /piedra|papel|tijera/.test(a) ? "rps" : /escond/.test(a) ? "hide" : /pelota/.test(a) ? "ball" : null;
-      const P = window.EkoProgress; if (g && P && ["catch", "hand", "glow", "guess", "hide"].includes(g) && !P.has("game:" + g)) { E.sayChat("Ese juego aún no lo tengo desbloqueado", 2400); return; }
-      if (g && window.EkoMenu) window.EkoMenu.startGame(g); else ACTS.juega(); },
+    jugar: (g) => { const P = window.EkoProgress;
+      if (["catch", "hand", "glow", "guess", "hide"].includes(g) && P && !P.has("game:" + g)) { E.sayChat("Ese juego aún no lo tengo desbloqueado", 2400); return; }
+      if (g === "catch" && !E.native) { E.sayChat("Ese juego solo funciona en la aplicación de escritorio", 2400); return; }
+      if (window.EkoMenu) window.EkoMenu.startGame(g); },
     ponte: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (!n) return; const P = window.EkoProgress; if (P && !P.has("acc:" + n)) { E.sayChat("Eso todavía no lo tengo en el armario", 2200); return; } E.setWear(n, true); },
     quita: (a) => { const n = /gafa/.test(a) ? "readglasses" : /pajarita/.test(a) ? "bowtie" : /auricular|cascos/.test(a) ? "headphones" : null; if (n) E.setWear(n, false); },
     actualiza: () => invoke && invoke("check_update_now").then((r) => E.sayChat(r ? `¡Hay versión nueva (${r})! Me actualizo enseguida` : "Ya estoy en la última versión", 2800)).catch(() => E.sayChat("No he podido mirar si hay actualizaciones", 2400)),
     libreta: () => window.EkoMenu && window.EkoMenu.openAt("notebook"),
     menu: () => window.EkoMenu && window.EkoMenu.openAt("home"),
+    utilidades: () => window.EkoMenu && window.EkoMenu.openAt("util"),
+    pomodoro: (a) => window.EkoMenu && window.EkoMenu.pomodoro && window.EkoMenu.pomodoro(a),
+    nota: () => window.EkoMenu && window.EkoMenu.askNote && window.EkoMenu.askNote(),
+    tareas: () => window.EkoMenu && window.EkoMenu.showTasks && window.EkoMenu.showTasks(),
+    silencio: () => window.EkoMenu && window.EkoMenu.muteHour && window.EkoMenu.muteHour(),
+    discrecion: (a) => window.EkoMenu && window.EkoMenu.setDiscreet && window.EkoMenu.setDiscreet(a === "activar"),
+    pelota: () => { const M = window.EkoMenu; if (M) M.ball ? M.stowBall() : M.startGame("ball"); },
     ajustes: () => invoke && invoke("open_settings"),
     // ---- en tu PC (lista cerrada; se puede apagar en Ajustes) ----
-    musica: (a) => pc(() => invoke(/sig|next|pasa/.test(a) ? "media_next" : /ant|prev|atr/.test(a) ? "media_prev" : "media_play_pause"), "musica"),
-    volumen: (a) => pc(() => invoke("volume", { dir: /sub|up|mas|alto/.test(a) ? "up" : /baj|down|menos/.test(a) ? "down" : "mute" }), "volumen"),
-    carpeta: (a) => pc(() => invoke("open_folder", { which: ({ documentos: "documentos", imagenes: "imagenes", fotos: "imagenes", escritorio: "escritorio", musica: "musica", videos: "videos" })[plain(a)] || "descargas" })),
-    descarga: () => pc(() => invoke("open_last_download")),
+    musica: (a) => pc(() => invoke(a === "siguiente" ? "media_next" : a === "anterior" ? "media_prev" : "media_play_pause"), "musica"),
+    volumen: (a) => pc(() => invoke("volume", { dir: ({ sube: "up", baja: "down", silencio: "mute" })[a] })),
+    carpeta: (a) => pc(() => invoke("open_folder", { which: a })),
+    descarga: () => {}, // requiere aprobación tras mostrar primero el nombre del archivo
     captura: () => pc(() => invoke("screenshot")),
-    busca: (a) => pc(() => a && invoke("web_search", { q: a })),
-    web: (a) => pc(() => { const u = siteUrl(a); return u ? invoke("open_site", { url: u }) : invoke("web_search", { q: a }); }),
-    abre: (a) => pc(() => invoke("open_app", { name: plain(a) }).catch(() => { E.sayChat(`Uy, no encuentro «${a}» en tu PC…`, 2600); })),
+    busca: (a) => pc(() => invoke("web_search", { q: a })),
+    web: (a) => pc(() => invoke("open_site", { url: siteUrl(a) })),
+    abre: () => {}, // se resuelve, se enseña el nombre encontrado y se confirma antes de abrir
+    cierra: () => {}, // se resuelve contra los programas abiertos y pide confirmación antes de enviar WM_CLOSE
     bloquea: () => pc(() => { E.act("bye"); return new Promise((r) => setTimeout(() => r(invoke("lock_pc")), 1200)); }),
     recordatorio: (arg) => {
-      const m = String(arg || "").match(/^(\d{1,3})\s*:?\s*(.*)$/);
+      const m = String(arg || "").match(/^(\d{1,3}):(.+)$/);
       if (!m || !window.EkoMenu || !window.EkoMenu.remindIn) return;
-      window.EkoMenu.remindIn(Math.max(1, Math.min(600, +m[1])), (m[2] || "¡Lo que me pediste!").slice(0, 80));
+      window.EkoMenu.remindIn(+m[1], m[2].trim().slice(0, 80));
       E.fx("spark", 1);
     },
   };
@@ -74,10 +86,10 @@
       properties: {
         text: { type: "string" },
         mood: { type: "string", enum: MOODS },
-        actions: { type: "array", items: { type: "object", properties: {
+        actions: { type: "array", maxItems: 1, items: { type: "object", properties: {
           name: { type: "string", enum: allowedActions() }, argument: { type: "string" },
         }, required: ["name", "argument"], additionalProperties: false } },
-        memories: { type: "array", items: { type: "string" } },
+        memories: { type: "array", maxItems: 1, items: { type: "string" } },
       },
       required: ["text", "mood", "actions", "memories"],
       additionalProperties: false,
@@ -90,13 +102,70 @@
       data = JSON.parse(clean);
     }
     if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.text !== "string") throw new Error("respuesta estructurada inválida");
-    const names = new Set(allowedActions());
-    const actions = (Array.isArray(data.actions) ? data.actions : []).filter((a) => a && names.has(a.name))
-      .slice(0, 3).map((a) => ({ name: a.name, argument: String(a.argument || "").trim().slice(0, 160) }));
-    const memories = (Array.isArray(data.memories) ? data.memories : []).map((f) => String(f || "").trim().slice(0, 120)).filter((f) => f.length >= 4).slice(0, 3);
-    return { text: data.text.trim(), mood: MOODS.includes(String(data.mood || "").toLowerCase()) ? String(data.mood).toLowerCase() : "feliz", actions, memories };
+    const names = new Set(allowedActions()), proposed = Array.isArray(data.actions) ? data.actions : [];
+    const memoryItems = Array.isArray(data.memories) ? data.memories : [];
+    let actionError = proposed.length > 1 ? "Solo puedo hacer una cosa cada vez. Dime cuál prefieres." : "";
+    const candidate = proposed.length === 1 ? proposed[0] : null;
+    if (!actionError && candidate && !names.has(candidate.name)) actionError = "No tengo esa acción disponible ahora mismo.";
+    if (!actionError && memoryItems.length > 1) actionError = "Solo puedo guardar un recuerdo cada vez. Dime cuál quieres que recuerde.";
+    const actions = candidate && names.has(candidate.name) ? [{ name: candidate.name, argument: String(candidate.argument || "").trim().slice(0, 160) }] : [];
+    const memories = memoryItems.length > 1 ? [] : memoryItems.map((f) => String(f || "").trim().slice(0, 120)).filter((f) => f.length >= 4).slice(0, 1);
+    return { text: data.text.trim(), mood: MOODS.includes(String(data.mood || "").toLowerCase()) ? String(data.mood).toLowerCase() : "feliz", actions, memories, actionError };
   }
-  // Hace algo en el PC con un gestito de Eko (sin confirmaciones: lista cerrada y siempre inofensivo)
+  function validateAction(action) {
+    const name = action.name, raw = String(action.argument || "").trim(), value = plain(raw).replace(/\s+/g, " ");
+    const fail = (message) => ({ error: message });
+    if (["musica", "volumen", "carpeta", "ponte", "quita", "gorro", "jugar", "recordatorio", "busca", "web", "abre", "cierra", "pomodoro", "discrecion"].includes(name) && !raw) return fail("Dime un poco más para hacerlo.");
+    if (name === "musica") {
+      const map = { pausa: "pausa", pausar: "pausa", reproducir: "pausa", play: "pausa", pause: "pausa", siguiente: "siguiente", next: "siguiente", anterior: "anterior", previous: "anterior", prev: "anterior" };
+      if (!map[value]) return fail("Para la música dime «pausa», «siguiente» o «anterior».");
+      action.argument = map[value];
+    } else if (name === "volumen") {
+      const map = { sube: "sube", subir: "sube", baja: "baja", bajar: "baja", silencio: "silencio", silenciar: "silencio", mute: "silencio" };
+      if (!map[value]) return fail("Para el volumen dime «sube», «baja» o «silencio».");
+      action.argument = map[value];
+    } else if (name === "carpeta") {
+      const map = { descargas: "descargas", descarga: "descargas", downloads: "descargas", documentos: "documentos", documents: "documentos", imagenes: "imagenes", imagen: "imagenes", fotos: "imagenes", pictures: "imagenes", escritorio: "escritorio", desktop: "escritorio", musica: "musica", audio: "musica", videos: "videos", video: "videos" };
+      if (!map[value]) return fail("No reconozco esa carpeta. Puedo abrir Descargas, Documentos, Imágenes, Escritorio, Música o Vídeos.");
+      action.argument = map[value];
+    } else if (name === "jugar") {
+      const games = [["rps", /piedra|papel|tijera|rps/], ["catch", /galleta|atrapa|cesta/], ["hand", /que mano|una mano|adivina.*mano|mano escondida/], ["glow", /donde brille|donde brilla|tocar el brillo|toca el brillo|reflej/], ["guess", /adivin|que pienso/], ["hide", /escond/], ["ball", /pelota|bola/]];
+      const game = games.find(([, rx]) => rx.test(value));
+      if (!game) return fail("No reconozco ese juego. Dime pelota, piedra papel tijera, escondite, qué mano, atrapa galletas, tócame donde brille o adivina qué pienso.");
+      action.argument = game[0];
+    } else if (name === "pomodoro") {
+      const map = { iniciar: "iniciar", empieza: "iniciar", empezar: "iniciar", comenzar: "iniciar", parar: "parar", detener: "parar", cancelar: "parar" };
+      if (!map[value]) return fail("Dime si quieres iniciar o parar el Pomodoro.");
+      action.argument = map[value];
+    } else if (name === "discrecion") {
+      const map = { activar: "activar", activa: "activar", discreto: "activar", desactivar: "desactivar", desactiva: "desactivar", normal: "desactivar" };
+      if (!map[value]) return fail("Dime si quieres activar o desactivar el modo discreto.");
+      action.argument = map[value];
+    } else if (name === "gorro") {
+      const id = HATS[value] || HATS[value.replace(/\s/g, "")] || (Object.values(HATS).includes(value) ? value : null);
+      if (!id && !["none", "nada", "ninguno"].includes(value)) return fail("No reconozco ese gorro. Dime cuál quieres y compruebo si lo tienes desbloqueado.");
+      action.argument = id || "none";
+    } else if (name === "ponte" || name === "quita") {
+      const map = { gafas: "gafas", "gafas de lectura": "gafas", pajarita: "pajarita", auriculares: "auriculares", cascos: "auriculares" };
+      if (!map[value]) return fail("Solo puedo cambiarme las gafas, la pajarita o los auriculares.");
+      action.argument = map[value];
+    } else if (name === "recordatorio") {
+      const m = raw.match(/^(\d{1,3}):\s*(.{1,80})$/);
+      if (!m || +m[1] < 1 || +m[1] > 600 || !m[2].trim()) return fail("Dime cuántos minutos y qué debo recordarte; puedo programarlo entre 1 y 600 minutos.");
+      action.argument = `${+m[1]}:${m[2].trim()}`;
+    } else if (name === "busca") {
+      if (raw.length > 200) return fail("La búsqueda es demasiado larga; resúmela un poquito.");
+      action.argument = raw;
+    } else if (name === "web") {
+      if (!siteUrl(raw)) return fail("No reconozco esa web. Dime el nombre de una página o una dirección HTTPS.");
+      action.argument = raw;
+    } else if (name === "abre" || name === "cierra") {
+      if (raw.length < 2 || raw.length > 40) return fail("Dime el nombre del programa, entre 2 y 40 caracteres.");
+      action.argument = raw;
+    }
+    return { action };
+  }
+  // Ejecuta acciones permitidas en el PC; las sensibles requieren aprobación en una tarjeta de Eko.
   function pc(fn, kind) {
     if (!invoke) { E.sayChat("(Vista previa) En tu PC lo haría de verdad", 2200); return; }
     if (!pcOn()) { E.sayChat("Eso no me dejas hacerlo (está apagado en mis ajustes)", 2600); return; }
@@ -128,13 +197,17 @@
   // Ejemplos del mismo formato estructurado que Eko valida y ejecuta.
   const EXAMPLES = [
     ["hola", { text: "¡Holi! Ya te echaba de menos, ¿qué me cuentas?", mood: "feliz", actions: [], memories: [] }],
+    ["vuela un poco", { text: "¡Despegando!", mood: "emocionado", actions: [{ name: "volar", argument: "" }], memories: [] }],
+    ["riega tu brote", { text: "¿Me ayudas con la regadera?", mood: "esperanzado", actions: [{ name: "regar", argument: "" }], memories: [] }],
+    ["inicia un pomodoro", { text: "¡Vamos a concentrarnos 25 minutos!", mood: "orgulloso", actions: [{ name: "pomodoro", argument: "iniciar" }], memories: [] }],
     ["estoy cansado", { text: "Jo… ¿y si paras cinco minutos? Yo te guardo el sitio.", mood: "triste", actions: [{ name: "abrazo", argument: "" }], memories: [] }],
     ["cuéntame un chiste", { text: "¿Qué hace un champiñón en una fiesta? ¡Ser un fungi!", mood: "divertido", actions: [{ name: "salta", argument: "" }], memories: [] }],
     ["¿me haces un truco?", { text: "¡Claro! Mira esto…", mood: "picaro", actions: [{ name: "truco", argument: "" }], memories: [] }],
     ["recuérdame en 10 minutos sacar la ropa", { text: "¡Hecho! En diez minutos te aviso de la ropa.", mood: "orgulloso", actions: [{ name: "recordatorio", argument: "10:Sacar la ropa" }], memories: [] }],
     ["ponte la corona", { text: "Su majestad está lista.", mood: "orgulloso", actions: [{ name: "gorro", argument: "corona" }], memories: [] }],
     ["pon la siguiente canción", { text: "¡Marchando la siguiente!", mood: "divertido", actions: [{ name: "musica", argument: "siguiente" }], memories: [] }],
-    ["ábreme photoshop y pon música", { text: "¡A crear!", mood: "emocionado", actions: [{ name: "abre", argument: "photoshop" }, { name: "musica", argument: "pausa" }], memories: [] }],
+    ["ábreme photoshop", { text: "Voy a buscar Photoshop en tus programas.", mood: "emocionado", actions: [{ name: "abre", argument: "photoshop" }], memories: [] }],
+    ["cierra photoshop", { text: "Voy a buscar Photoshop entre los programas abiertos.", mood: "sereno", actions: [{ name: "cierra", argument: "photoshop" }], memories: [] }],
     ["busca recetas de lentejas", { text: "¡Mmm, lentejas! Te las busco.", mood: "curioso", actions: [{ name: "busca", argument: "recetas de lentejas" }], memories: [] }],
     ["mañana tengo una entrevista de trabajo", { text: "¡Qué nervios! Seguro que lo bordas.", mood: "esperanzado", actions: [], memories: ["Tiene una entrevista de trabajo mañana"] }],
   ];
@@ -142,15 +215,17 @@
 
   function actionsText() {
     const hints = {
-      baila: "bailar", salta: "dar un salto", saluda: "saludar", abrazo: "dar un abrazo", piensa: "hacer como que piensa", duerme: "dormirse",
-      come: "comer una galleta", juega: "proponer un juego", truco: "hacer un truco al azar", voltereta: "hacer una voltereta", pirueta: "hacer una pirueta",
+      baila: "bailar", volar: "volar con la capa", salta: "dar un salto", saluda: "saludar", ven: "caminar hasta el cursor", abrazo: "dar un abrazo y aumentar el cariño", piensa: "hacer como que piensa", duerme: "dormirse",
+      come: "comer una galleta", regar: "sacar la regadera para que el usuario riegue el brote", juega: "proponer un juego", truco: "hacer un truco al azar", voltereta: "hacer una voltereta", pirueta: "hacer una pirueta",
       equilibrio: "hacer equilibrio", malabares: "hacer malabares", magia: "hacer magia", gorro: "ponerse un gorro (argumento: nombre)", quitagorro: "quitarse el gorro",
-      casa: "ir a su casa", cama: "ir a su cama", jugar: "abrir un juego (argumento: nombre)", ponte: "ponerse gafas, pajarita o auriculares (argumento: accesorio)",
-      quita: "quitarse gafas, pajarita o auriculares (argumento: accesorio)", actualiza: "buscar e instalar su actualización", libreta: "abrir la libreta", menu: "abrir el menú", ajustes: "abrir los ajustes",
+      casa: "ir a su casa", valle: "salir a visitar el valle", cama: "ir a su cama", jugar: "abrir un juego (argumento: nombre)", pelota: "sacar o guardar la pelota", ponte: "ponerse gafas, pajarita o auriculares (argumento: accesorio)",
+      quita: "quitarse gafas, pajarita o auriculares (argumento: accesorio)", actualiza: "buscar e instalar su actualización", libreta: "abrir la libreta", menu: "abrir el menú", utilidades: "abrir las herramientas y utilidades", ajustes: "abrir los ajustes",
+      pomodoro: "iniciar o parar un temporizador de concentración de 25 minutos (argumento: iniciar o parar)", nota: "pedir una nota y guardarla en la lista de tareas", tareas: "mostrar y completar tareas guardadas", discrecion: "activar o desactivar el modo discreto (argumento: activar o desactivar)",
+      silencio: "silenciar los sonidos durante una hora y restaurarlos después si estaban activos",
       recordatorio: "crear un recordatorio (argumento: minutos y texto)", musica: "controlar la música (argumento: pausa, siguiente o anterior)",
       volumen: "cambiar el volumen (argumento: sube, baja o silencio)", carpeta: "abrir una carpeta (argumento: descargas, documentos, imágenes, escritorio, música o vídeos)",
-      descarga: "abrir la última descarga", captura: "hacer una captura de pantalla", busca: "buscar en internet (argumento: consulta)",
-      web: "abrir una web (argumento: sitio)", abre: "abrir un programa (argumento: nombre)", bloquea: "bloquear el PC",
+      descarga: "mostrar y pedir permiso antes de abrir la última descarga", captura: "abrir Recortes para hacer una captura de pantalla", busca: "pedir permiso y buscar en Google (argumento: consulta)",
+      web: "abrir una web (argumento: sitio)", abre: "buscar y abrir un programa por su nombre habitual (puede ser parcial, por ejemplo Photoshop)", cierra: "buscar y cerrar con confirmación un programa abierto (nombre parcial, por ejemplo Photoshop)", bloquea: "bloquear el PC",
     };
     return allowedActions().map((name) => `${name}: ${hints[name] || "acción disponible"}`).join("; ");
   }
@@ -185,7 +260,7 @@
       "No hagas listas, ni des consejos largos, ni preguntes «¿en qué puedo ayudarte?». Eres una mascota, no un asistente. Si te piden algo serio o largo, contestas con cariño y brevemente.",
       "Reglas: responde SIEMPRE en 1 o 2 frases cortas (máximo 30 palabras). Sin emojis. Nunca digas que eres una IA, un modelo o un programa: eres " + name + ". Si no sabes algo, sales del paso con humor.",
       `La respuesta debe usar los campos JSON del formato obligatorio: text es lo que dices, mood una emoción de esta lista: ${MOODS.join(", ")}; actions son acciones estructuradas; memories son recuerdos breves. No pongas acciones ni etiquetas dentro del texto.`,
-      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Máximo tres acciones, solo si las piden o vienen muy a cuento. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
+      "Capacidades activas ahora: " + actionsText() + ". Elige solo nombres de acción de esta lista. Pon su nombre en actions[].name y el dato en actions[].argument; si no hace falta ejecutar nada, devuelve actions vacío. Devuelve como máximo una acción por respuesta y solo si te la piden o viene muy a cuento. Las acciones sensibles pedirán aprobación: habla de lo que vas a hacer, no digas que ya lo hiciste. Si no puedes hacerlo, explícalo en text y no inventes una acción.",
       "Si tu humano cuenta algo personal que pueda ser útil recordar (su nombre, trabajo, gustos, planes o gente importante), puedes proponerlo en memories como una frase breve. Nunca guardes contraseñas, datos de salud, dinero ni nada íntimo.",
       memText(),
       "Ejemplos del formato (NO son conversaciones reales con tu humano):\n" + EXAMPLES.filter(([, r]) => r.actions.every((a) => allowedActions().includes(a.name))).map(([u, r]) => `Humano: ${u}\n${name}: ${JSON.stringify(r)}`).join("\n"),
@@ -238,8 +313,8 @@
 
   function show(raw) {
     const response = normalizeResponse(raw);
-    let t = response.text.replace(/<think>[\s\S]*?<\/think>/g, "").replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
-    const mood = response.mood, actions = response.actions, facts = response.memories;
+    let t = (response.actionError || response.text).replace(/<think>[\s\S]*?<\/think>/g, "").replace(/[\[\]{}]/g, "").replace(/\s+/g, " ").trim();
+    const mood = response.mood, actions = response.actionError ? [] : response.actions, facts = response.actionError ? [] : response.memories;
     if (!t) t = pick(["Mmm…", "¡Jeje!", "Me he quedado en blanco"]);
     if (t.length > 220) t = t.slice(0, 217).replace(/\s+\S*$/, "") + "…";
     history.push({ role: "assistant", content: JSON.stringify({ text: t, mood, actions, memories: [] }) });
@@ -247,13 +322,80 @@
     const ms = Math.min(12000, 2600 + t.length * 55);
     E.sayChat(t, ms);
     E.hold(ms / 1000 + 4);
-    actions.forEach(({ name, argument }, n) => {
-      const arg = ["recordatorio", "busca", "abre"].includes(name) ? argument : argument.toLowerCase();
-      setTimeout(() => ACTS[name](arg), 600 + n * 900);
-    });
-    let learned = 0; for (const f of facts) if (remember(f)) learned++;
-    if (learned) setTimeout(() => { E.fx("spark", 1); }, 900);         // «apuntado»: chispita discreta
+    const queue = [];
+    if (actions[0]) queue.push((next) => runAction(actions[0], next));
+    if (facts[0]) queue.push((next) => approveMemory(facts[0], next));
+    const next = () => { const task = queue.shift(); if (task) task(next); };
+    if (queue.length) setTimeout(next, 600);
     lastChat = Date.now();
+  }
+
+  function approvalCard(title, detail, onYes, done) {
+    const M = window.EkoMenu;
+    if (!M || !M.confirmAction || E.A.hidden) {
+      E.sayChat("No he hecho nada ni he guardado el recuerdo: necesito que Eko esté visible para pedirte permiso.", 4200);
+      done && done();
+      return;
+    }
+    M.confirmAction(title, detail, () => {
+      try { onYes(); } catch (_) { E.sayChat("Uy, no he podido hacerlo", 2400); }
+      done && done();
+    }, () => done && done());
+  }
+
+  function approveMemory(fact, done) {
+    approvalCard("¿Quieres que recuerde esto?", fact, () => {
+      if (remember(fact)) { E.fx("spark", 1); E.sayChat("Vale, me lo apunto", 1800); }
+      else E.sayChat("Eso ya lo tenía apuntado", 1800);
+    }, done);
+  }
+
+  function runAction(proposed, done) {
+    const valid = validateAction(proposed);
+    if (valid.error) { E.sayChat(valid.error, 4200); done(); return; }
+    const { name, argument } = valid.action;
+    if (PC_ACTIONS.has(name) && !pcOn()) { E.sayChat("Tengo desactivadas las acciones del PC", 2500); done(); return; }
+    const execute = (fn) => { try { const result = fn(); if (result && result.catch) result.catch(() => E.sayChat("Uy, no he podido hacerlo", 2400)); } catch (_) { E.sayChat("Uy, no he podido hacerlo", 2400); } };
+    if (name === "busca") {
+      approvalCard("¿Busco esto en Google?", argument, () => execute(() => ACTS.busca(argument)), done);
+      return;
+    }
+    if (name === "web") {
+      const url = siteUrl(argument);
+      approvalCard("¿Abro esta página?", url, () => execute(() => invoke("open_site", { url })), done);
+      return;
+    }
+    if (name === "bloquea") {
+      approvalCard("¿Bloqueo ahora el PC?", "Se bloqueará tu sesión de Windows.", () => execute(() => ACTS.bloquea()), done);
+      return;
+    }
+    if (name === "abre") {
+      invoke("find_apps", { name: plain(argument) }).then((matches) => {
+        const list = Array.isArray(matches) ? matches : [];
+        if (!list.length) { E.sayChat(`No encuentro «${argument}» en el menú Inicio.`, 3000); done(); return; }
+        if (list.length > 1) { E.sayChat(`He encontrado varias opciones: ${list.slice(0, 4).join(", ")}. Dime cuál quieres abrir.`, 5200); done(); return; }
+        approvalCard("¿Abro este programa?", list[0], () => invoke("open_app", { name: list[0] }).catch(() => E.sayChat("No he podido abrir ese programa", 2400)), done);
+      }).catch(() => { E.sayChat("No he podido buscar ese programa", 2600); done(); });
+      return;
+    }
+    if (name === "cierra") {
+      invoke("find_running_apps", { name: plain(argument) }).then((matches) => {
+        const list = Array.isArray(matches) ? matches : [];
+        if (!list.length) { E.sayChat(`No encuentro «${argument}» entre los programas abiertos.`, 3200); done(); return; }
+        if (list.length > 1) { E.sayChat(`Hay varias coincidencias abiertas: ${list.slice(0, 4).join(", ")}. Dime cuál quieres cerrar.`, 5200); done(); return; }
+        approvalCard("¿Cierro este programa?", `${list[0]} · Si hay cambios sin guardar, la aplicación puede pedirte que los guardes.`, () => invoke("close_app", { name: list[0] }).then(() => E.sayChat(`He pedido cerrar ${list[0]}`, 2200)).catch(() => E.sayChat("No he podido cerrar ese programa", 2400)), done);
+      }).catch(() => { E.sayChat("No he podido consultar los programas abiertos", 2600); done(); });
+      return;
+    }
+    if (name === "descarga") {
+      invoke("latest_download").then((filename) => {
+        if (!filename) { E.sayChat("No encuentro archivos en Descargas", 2400); done(); return; }
+        approvalCard("¿Abro este archivo?", filename, () => invoke("open_download_named", { name: filename }).catch(() => E.sayChat("No he podido abrir esa descarga", 2400)), done);
+      }).catch(() => { E.sayChat("No he podido mirar tus Descargas", 2600); done(); });
+      return;
+    }
+    execute(() => ACTS[name](argument));
+    done();
   }
 
   // Tarjeta para escribirle (se queda abierta para seguir hablando; Esc o × para cerrar)

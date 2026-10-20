@@ -648,6 +648,14 @@
     if (c) c.classList.remove("in");
     if (!open && !ball && !hideGame) E.setHitFull(false);
   }
+  function confirmAction(title, detail, onYes, onNo) {
+    const c = card(`<p class="ai-confirm-title"></p><p class="ai-confirm-detail"></p><div class="chips"><button type="button" class="chip main ai-confirm-yes">${ES ? "Sí, adelante" : "Yes, go ahead"}</button><button type="button" class="chip ai-confirm-no">${ES ? "No" : "No"}</button></div>`);
+    c.querySelector(".ai-confirm-title").textContent = String(title || "");
+    c.querySelector(".ai-confirm-detail").textContent = String(detail || "");
+    c.querySelector(".ai-confirm-yes").addEventListener("click", (e) => { e.stopPropagation(); closeCard(); onYes && onYes(); });
+    c.querySelector(".ai-confirm-no").addEventListener("click", (e) => { e.stopPropagation(); closeCard(); onNo && onNo(); });
+    return c;
+  }
   function ask(question, onOk) {
     const c = card(`<p>${question}</p><form><input maxlength="80" autocomplete="off" /><button>${L.ok}</button></form>`);
     const inp = c.querySelector("input");
@@ -1022,10 +1030,11 @@
 
   // ---------- Descanso ----------
   function muteHour() {
+    const restoreVoice = !!E.Voice.on;
     E.say(pick(SAY.muted), 2400, true, "nod");
     setTimeout(() => {
       E.Voice.setOn(false);
-      setTimeout(() => E.Voice.setOn(true), 3600000);
+      setTimeout(() => { if (restoreVoice) E.Voice.setOn(true); }, 3600000);
     }, 2600);
   }
   function toggleDiscreet() {
@@ -1161,7 +1170,7 @@
   menu.addEventListener("pointerdown", () => { lastUse = performance.now(); });
 
   window.EkoMenu = {
-    card: (h, a) => card(h, a), closeCard: () => closeCard(), openAt: (l) => openAt(l),
+    card: (h, a) => card(h, a), closeCard: () => closeCard(), confirmAction, openAt: (l) => openAt(l),
     toggle() {
       if (window.EkoAntics && window.EkoAntics.tap && window.EkoAntics.tap()) { hideGame = false; return; }   // estaba escondido y lo has pillado
       if (!open && updPending() && !hideGame) { openAt("update"); return; }                                   // actualización pendiente: un clic y listo
@@ -1178,6 +1187,8 @@
       return false;
     },
     announceUpdate, muteHour: () => muteHour(), remindIn: (min, text) => { reminders.push({ at: Date.now() + min * 60000, text }); store.set("eko-reminders", reminders); }, startGame: (g) => startGame(g), snack: () => giveSnack(), startWater: () => startWater(), stowBall: () => stowBall(), get ball() { return ball; },
+    hug: () => hug(), pomodoro: (mode) => mode === "iniciar" ? startPomo() : stopPomo(), askNote: () => askNote(), showTasks: () => showTasks(), muteHour: () => muteHour(),
+    setDiscreet: (on) => { if (E.quiet !== !!on) toggleDiscreet(); },
     isOpen: () => open,
   };
 })();

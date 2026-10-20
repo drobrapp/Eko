@@ -415,6 +415,8 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .mic { height: 30px; display: grid; place-items: center; }
 .mic svg { width: 22px; height: 22px; }
 .mic img { max-width: 32px; max-height: 30px; filter: drop-shadow(0 1px 2px rgba(60, 40, 30, .16)); object-fit: contain; transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+.mtile.rps-choice .mic { height: 38px; }
+.mtile.rps-choice .mic img { max-width: 40px; max-height: 38px; }
 .mtile:hover .mic img { transform: rotate(-8deg) scale(1.12); }
 .mlb { font-size: 11px; font-weight: 600; line-height: 1.15; text-align: center; color: #4a3a32; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mtile i { position: absolute; top: 4px; right: 4px; display: flex; align-items: center; gap: 2px; font-style: normal; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 99px; background: #f1e6dd; color: #9a8478; }
@@ -510,6 +512,13 @@ img.fx-bang, img.fx-ask, img.fx-note, img.fx-drop { width: auto; }
 .card li i { flex: 0 0 14px; height: 14px; border-radius: 50%; border: 2px solid #c9a48f; }
 .card li.done { opacity: .45; text-decoration: line-through; }
 .card li.done i { background: #8fc79a; border-color: #8fc79a; }
+.rps-result { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; text-align: center; }
+.rps-pick { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; color: #8a7468; }
+.rps-pick b { color: #5A463D; font-size: 12px; }
+.rps-pick img { display: block; width: 66px; height: 66px; max-width: 100%; object-fit: contain; }
+.rps-pick.eko b { color: #D0795A; }
+.rps-versus { color: #9a8478; font-size: 16px; }
+.card .rps-tail { margin: 8px 0 0; text-align: center; }
 
 /* ---------- Pelota ---------- */
 /* ---------- Regadera ---------- */

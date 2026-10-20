@@ -117,9 +117,9 @@
       { id: "water", react: "esperanzado", img: "artCan", label: L.water, run: () => startWater() },
     ],
     rps: [
-      { icon: "rock", label: L.rock, run: () => playRps(0) },
-      { icon: "paper", label: L.paper, run: () => playRps(1) },
-      { icon: "scissors", label: L.scissors, run: () => playRps(2) },
+      { id: "rps-rock", img: "artRpsRock", rpsChoice: true, label: L.rock, run: () => playRps(0) },
+      { id: "rps-paper", img: "artRpsPaper", rpsChoice: true, label: L.paper, run: () => playRps(1) },
+      { id: "rps-scissors", img: "artRpsScissors", rpsChoice: true, label: L.scissors, run: () => playRps(2) },
     ],
     util: [
       { id: "remind", react: "curioso", img: "artIcBell", label: L.remind, go: "remind" },
@@ -495,7 +495,7 @@
       b.className = "mchip";
       b.innerHTML = `<b>${it.text}</b>`;
     } else {
-      b.className = "mtile" + (locked ? " locked" : "") + (soon ? " soon" : "") + (it.on && it.on() ? " on" : "");
+      b.className = "mtile" + (it.rpsChoice ? " rps-choice" : "") + (locked ? " locked" : "") + (soon ? " soon" : "") + (it.on && it.on() ? " on" : "");
       const im = it.dimg ? it.dimg() : it.img;
       const ic = im ? `<img src="${artSrc(im)}" alt="">` : svg(it.icon, it.color);
       const badge = locked ? `<i>${svg("lock")}${it.lockText ? (it.lockText.startsWith("Logro") || it.lockText.startsWith("Achiev") ? (ES ? "Logro" : "Award") : it.lockText.replace(/^(Nivel|Level) /, ES ? "Nv " : "Lv ")) : (ES ? "Nv " : "Lv ") + lvl}</i>` : soon ? `<i>${ES ? "Muy pronto" : "Soon"}</i>` : "";
@@ -691,8 +691,10 @@
       const moves = ["rock", "paper", "scissors"];
       const res = (me - you + 3) % 3; // 0 empate, 1 gana Eko, 2 ganas tú
       const tail = res === 0 ? pick(SAY.tie) : res === 1 ? pick(SAY.win) : pick(SAY.lose);
-      const choiceIcon = (move, color) => svg(move).replace('<svg viewBox="0 0 24 24">', `<svg viewBox="0 0 24 24" style="width:66px;height:66px;stroke:${color};stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round">`);
-      card(`<div style="display:flex;justify-content:center;align-items:center;gap:28px;text-align:center"><div><b>${ES ? "Tú" : "You"}</b>${choiceIcon(moves[you], "#9a8478")}<div>${names[you]}</div></div><div style="font-size:22px;color:#9a8478">· · ·</div><div><b>Eko</b>${choiceIcon(moves[me], "#d9785a")}<div>${names[me]}</div></div></div><p style="margin:12px 0 0;text-align:center">${tail}</p>`, 3600);
+      const imgs = ["artRpsRock", "artRpsPaper", "artRpsScissors"];
+      const pickView = (who, i, eko = false) => `<div class="rps-pick${eko ? " eko" : ""}"><b>${who}</b><img src="${artSrc(imgs[i])}" alt="${names[i]}" draggable="false"><span>${names[i]}</span></div>`;
+      card(`<div class="rps-result">${pickView(ES ? "Tú" : "You", you)}<div class="rps-versus">· · ·</div>${pickView("Eko", me, true)}</div><p class="rps-tail">${tail}</p>`, 3600);
+      E.showRpsChoice && E.showRpsChoice(moves[me], 3.6);
       E.express(res === 1 ? "emocionado" : res === 2 ? "contento" : "sereno", 2.2);
       if (res === 1) { E.hop(-380); E.fx("spark", 2); }
       if (res === 2 && window.EkoProgress) window.EkoProgress.event("rpsWin");

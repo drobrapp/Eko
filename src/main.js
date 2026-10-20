@@ -24,7 +24,7 @@
     ghostSheet: $("#ghostSheet"), carves: [$("#carveL"), $("#carveR")], carveMouth: $("#carveMouth"),
     opens: [...document.querySelectorAll(".eye .open")],
     eyeEls: [...document.querySelectorAll(".eye")],
-    mouthShapes: $("#mouthShapes"), antic: $("#antic"), propHand: $("#propHand"), propFront: $("#propFront"), props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"), sprout: $("#sprout"), freckles: $("#freckles"),
+    mouthShapes: $("#mouthShapes"), antic: $("#antic"), propHand: $("#propHand"), rpsHeldImage: $("#rpsHeldImage"), propFront: $("#propFront"), props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"), sprout: $("#sprout"), freckles: $("#freckles"),
     paint: $("#paint"), paintDots: [...document.querySelectorAll("#paint > g")], paintHead: $("#paintHead"),
   };
 
@@ -192,6 +192,14 @@
 
   // ---------- Símbolos flotantes (imágenes de Aitor, cada uno con su animación) ----------
   const artSrc = (id) => { const n = document.getElementById(id); return n ? n.getAttribute("href") : ""; };
+  function showRpsChoice(move, seconds = 3.6) {
+    const ids = { rock: "artRpsRock", paper: "artRpsPaper", scissors: "artRpsScissors" };
+    const image = el.rpsHeldImage, href = ids[move] && artSrc(ids[move]);
+    if (!image || !href) return false;
+    A.rpsHeld = move; A.rpsHeldUntil = A.t + clamp(seconds, 0.5, 8);
+    image.setAttribute("href", href); image.style.display = "inline";
+    return true;
+  }
   const FX = { heart: ["♥", "#ef6b86"], bang: ["!", "#f2a33a"], ask: ["?", "#8a7cc9"], note: ["♪", "#5fa8d8"], spark: ["✦", "#f2c14e"], drop: ["…", "#9d8a7f"] };
   // img · tamaño (px; w = ancho, h = alto) · duración · posición base en la caja de Eko
   { const sw = document.getElementById("sweat"); if (sw) sw.innerHTML = `<img src="${artSrc("artSweat")}" alt="">`; }
@@ -1486,6 +1494,8 @@
       if (def.eyes && !P.eyes) P.eyes = def.eyes;
       if (def.brows && P.brows === "none") P.brows = def.brows;
     }
+    if (A.rpsHeld && A.t >= A.rpsHeldUntil) { A.rpsHeld = null; el.rpsHeldImage.style.display = "none"; }
+    if (A.rpsHeld) { P.aR = -112; P.front = true; }
 
     // Expresión activa: completa lo que el gesto actual no haya decidido
     if (A.expr && A.t < A.expr.until && !S.sleeping) {
@@ -1642,6 +1652,10 @@
           if (shot > 0.9 && !PROP.flashed) { PROP.flashed = true; bump(-1.5); } else if (shot === 0) PROP.flashed = false;
         }
       }
+    }
+    if (A.rpsHeld) {
+      const r = A.pose.aR * Math.PI / 180, hx = dxR + 50 + 15 * Math.cos(r) - 60 * Math.sin(r), hy = sitDrop + 58 + 15 * Math.sin(r) + 60 * Math.cos(r);
+      el.propHand.setAttribute("transform", `translate(${hx.toFixed(1)} ${hy.toFixed(1)})`);
     }
     el.body.setAttribute("transform", `translate(${(3 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`);
     el.bodyHl.setAttribute("transform", `translate(${(4 * t).toFixed(2)} 0)`);
@@ -2065,7 +2079,7 @@
   window.Eko = {
     S, A, LANG, TXT, say, pick, rnd, setMood, bump, goToSleep, wakeUp, act, fx, blush, hop,
     missYou, sulk, addBox, Voice, forcePeek: startPeek,
-    setDance(v) { A.dance = !!v; },
+    setDance(v) { A.dance = !!v; }, showRpsChoice,
     lockTalk: (secs) => { A.chatLock = secs > 0 ? A.t + secs : 0; },
     sayChat: (text, ms = 4000) => { A.chatLock = Math.max(A.chatLock || 0, A.t + ms / 1000 + 5); A.chatBypass = true; try { say(text, ms, true); } finally { A.chatBypass = false; } },
     talk: (text) => { const syl = clamp(Math.round(String(text).replace(/[^\p{L}\p{N}]/gu, "").length / 2.4), 1, 12); A.talkUntil = A.t + syl * 0.15; A.nextSyl = A.t; }, setEvo, evo: EVO, celebrateStage, water, careCheck, careState: CARE, careStage, sprout: () => el.sprout, express, useProp, dropProp, dressUp, prop: PROP,

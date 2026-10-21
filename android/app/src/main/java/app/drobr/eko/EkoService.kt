@@ -133,8 +133,8 @@ class EkoService : Service() {
     private fun addOverlay() {
         wm = getSystemService(WindowManager::class.java)
         dens = resources.displayMetrics.density
-        winW = (130 * dens).toInt()
-        winH = (160 * dens).toInt()
+        winW = (160 * dens).toInt()
+        winH = (200 * dens).toInt()
         val w = WebView(this)
         w.setBackgroundColor(Color.TRANSPARENT)
         w.settings.javaScriptEnabled = true
@@ -211,7 +211,7 @@ class EkoService : Service() {
         v.measure(View.MeasureSpec.makeMeasureSpec(screenW(), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(screenH(), View.MeasureSpec.AT_MOST))
         val w = v.measuredWidth; val h = v.measuredHeight
         p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(0, (screenW() - w).coerceAtLeast(0))
-        p.y = (y + winH * 0.12f - h).toInt().coerceAtLeast(0)
+        p.y = (y + winH - 150 * dens - h).toInt().coerceAtLeast(0)
         try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
     }
 
@@ -411,7 +411,7 @@ class EkoService : Service() {
     // ---------- Travesuras: de vez en cuando hace algo por su cuenta ----------
     private var nextAntic = 0L
     private fun antic() {
-        when (Random.nextInt(3)) {
+        when (Random.nextInt(4)) {
             0 -> { // se asoma por un borde de la pantalla
                 val left = x < maxX() / 2
                 dir = if (left) -1 else 1
@@ -422,7 +422,8 @@ class EkoService : Service() {
                 st = St.FALL; vy = -1500 * dens; js("set('fall', $dir)")
                 talk("jump")
             }
-            else -> { js("dance()"); idle(5000); talk("dance") }
+            2 -> { js("dance(6)"); idle(6000); talk("dance") }
+            else -> { js("spin()"); talk("play") }
         }
     }
 
@@ -430,8 +431,18 @@ class EkoService : Service() {
     private fun talk(ev: String, chance: Double = 1.0) = js("talk('$ev', $chance)")
     inner class Bridge {
         @JavascriptInterface fun say(text: String, ms: Int) { handler.post { this@EkoService.say(text, ms.toLong()) } }
+        // Saltos de los trucos (ta-chán, voltereta): la ventana sube y cae de verdad
+        @JavascriptInterface fun hop(v: Double) { handler.post {
+            if (st == St.IDLE || st == St.WALK) { st = St.FALL; hopping = true; vy = -(v.toFloat() * dens).coerceAtMost(900 * dens); js("set('fall', $dir)") }
+        } }
+        // Que no se ponga a andar en mitad de un gesto
+        @JavascriptInterface fun hold(ms: Int) { handler.post { if (st == St.IDLE || st == St.WALK) idle(ms.toLong()) } }
     }
     private var nextChat = 0L
+    private var hopping = false
+    private var dragVx = 0f
+    private var dragVy = 0f
+    private var lastMoveAt = 0L
     private var dragStart = 0L
     private var heldSaid = false
 
@@ -477,7 +488,8 @@ class EkoService : Service() {
                 St.FALL -> {
                     vy += 2400 * dens * dt
                     y += vy * dt
-                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); talk("drop", 0.6) }
+                    js("v(0, ${(vy / dens).toInt()})")
+                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
                 }
                 St.DRAG -> {}
                 St.PEEK -> {
@@ -522,13 +534,21 @@ class EkoService : Service() {
                 val dy = e.rawY - downY
                 if (!dragging && hypot(dx, dy) > 12 * dens) {
                     dragging = true; handler.removeCallbacks(longPress)
-                    st = St.DRAG; js("set('drag', $dir)"); closeMenu()
+                    st = St.DRAG; js("set('drag', $dir)"); closeMenu(); hopping = false
+                    dragVx = 0f; dragVy = 0f; lastMoveAt = SystemClock.uptimeMillis()
                     dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5)
                 }
                 if (dragging) {
                     if (abs(dx) > 2) dir = if (startX + dx > x) 1 else -1
-                    x = (startX + dx).coerceIn(0f, maxX())
-                    y = (startY + dy).coerceIn(0f, ground())
+                    val nx = (startX + dx).coerceIn(0f, maxX())
+                    val ny = (startY + dy).coerceIn(0f, ground())
+                    val now = SystemClock.uptimeMillis()
+                    val dts = ((now - lastMoveAt).coerceIn(8, 100)) / 1000f
+                    dragVx = dragVx * 0.5f + (nx - x) / dts / dens * 0.5f
+                    dragVy = dragVy * 0.5f + (ny - y) / dts / dens * 0.5f
+                    lastMoveAt = now
+                    x = nx; y = ny
+                    js("v(${dragVx.toInt()}, ${dragVy.toInt()})")
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {

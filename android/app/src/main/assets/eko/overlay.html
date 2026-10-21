@@ -4,15 +4,15 @@
 <style>
 html,body{margin:0;width:100%;height:100%;background:transparent!important;overflow:hidden}
 #eko{position:absolute;left:0;right:0;bottom:0;top:0;pointer-events:none}
-#eko #mochi{position:absolute;left:50%;bottom:4%;height:88%;width:auto;transform:translateX(-50%);overflow:visible;transform-origin:50% 100%}
-#z{position:absolute;right:14%;top:8%;font:700 22px "Segoe Print","Comic Sans MS",cursive;color:#7f6bb8;opacity:0;transition:opacity .5s}
-#cookie{position:absolute;left:58%;top:46%;width:26%;opacity:0;transition:opacity .2s;z-index:3}
-#cookie.on{opacity:1;animation:nib .3s steps(2) infinite}
-@keyframes nib{50%{transform:scale(.9) rotate(-8deg)}}
+#eko #mochi{position:absolute;left:50%;bottom:4px;height:141px;width:auto;transform:translateX(-50%);overflow:visible}
+#fx{position:absolute;inset:0;pointer-events:none}
+#fx .fx{position:absolute;font:700 20px system-ui,sans-serif;transform:translate(-50%,-50%);animation:fxup 1.3s ease-out forwards;text-shadow:0 1px 2px rgba(255,255,255,.8)}
+@keyframes fxup{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.1)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-260%) scale(.9)}}
+#z{position:absolute;right:16%;top:30%;font:700 22px "Segoe Print","Comic Sans MS",cursive;color:#7f6bb8;opacity:0;transition:opacity .5s}
 #eko[data-state="sleep"] #z{opacity:1;animation:zz 2.4s ease-in-out infinite}
 @keyframes zz{50%{transform:translate(4px,-8px)}}
 </style></head><body>
-<div id="eko" data-eyes="open" data-brows="none" data-mood="normal" data-state="idle"><span id="z">z z</span><img id="cookie" src="art/cookie.webp" alt="">
+<div id="eko" data-eyes="open" data-brows="none" data-mood="normal" data-state="idle"><span id="z">z z</span><div id="fx"></div>
 <svg id="mochi" viewBox="-120 -125 240 310" aria-label="Eko">
       <defs>
         <radialGradient id="flashGlow"><stop offset="0" stop-color="#fff" stop-opacity="1" /><stop offset=".35" stop-color="#fffbe6" stop-opacity=".85" /><stop offset="1" stop-color="#fff6c8" stop-opacity="0" /></radialGradient>
@@ -272,69 +272,5 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
     </svg>
 </div>
 <script src="talk.js"></script>
-<script>
-(() => {
-  "use strict";
-  const eko = document.getElementById("eko"), svg = document.getElementById("mochi");
-  const el = { pet: svg.querySelector("#pet"), legL: svg.querySelector("#legL"), legR: svg.querySelector("#legR"), armL: svg.querySelector("#armL"), armR: svg.querySelector("#armR"), head: svg.querySelector("#head") };
-  const E = { st: "idle", dir: 1, t: 0, ph: 0, blinkAt: 2, happyUntil: 0, hop: 0, squash: 0 };
-  const rot = (n, a, x, y) => n && n.setAttribute("transform", `rotate(${a.toFixed(1)} ${x} ${y})`);
-  window.eko = {
-    set(st, dir) { E.st = st; if (dir) E.dir = dir; eko.dataset.state = st; if (st === "sleep") eko.dataset.eyes = "closed"; else if (eko.dataset.eyes === "closed") eko.dataset.eyes = "open"; },
-    tap() { E.happyUntil = E.t + 1.2; E.hop = E.t; },
-    happy() { E.happyUntil = E.t + 1.5; },
-    land() { E.squash = E.t; E.happyUntil = E.t + 0.8; },
-    talk(ev, chance) { if (window.ekoTalk) ekoTalk.talk(ev, chance); },
-    chatter() { if (window.ekoTalk) ekoTalk.chatter(); },
-    brows(b) { eko.dataset.brows = b; },
-    dance() { E.danceUntil = E.t + 4.5; E.happyUntil = E.t + 4.5; },
-    dizzy() { E.dizzyUntil = E.t + 2.8; eko.dataset.eyes = "spiral"; },
-    eat() { const c = document.getElementById("cookie"); c.classList.add("on"); E.happyUntil = E.t + 2.2; setTimeout(() => c.classList.remove("on"), 1700); },
-    spin() { E.spin = E.t; E.hop = E.t; E.happyUntil = E.t + 1.6; },
-    wake() { E.st = "idle"; eko.dataset.state = "idle"; eko.dataset.eyes = "happy"; E.happyUntil = E.t + 1.4; E.hop = E.t; },
-  };
-  let last = performance.now();
-  function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now; E.t += dt;
-    const walking = E.st === "walk", drag = E.st === "drag" || E.st === "fall", sleeping = E.st === "sleep";
-    if (walking) E.ph += dt * 12;   // pasos al ritmo de la nueva velocidad
-    const s = Math.sin(E.ph);
-    if (drag) {
-      const w = Math.sin(E.t * 9);
-      rot(el.legL, 10 + w * 14, -21, 122); rot(el.legR, -10 - w * 14, 21, 122);
-      rot(el.armL, 95 + w * 12, -50, 58); rot(el.armR, -95 - w * 12, 50, 58);
-    } else {
-      rot(el.legL, walking ? s * 22 : 0, -21, 122); rot(el.legR, walking ? -s * 22 : 0, 21, 122);
-      rot(el.armL, walking ? -s * 18 : sleeping ? 8 : 4 + Math.sin(E.t * 2) * 2, -50, 58);
-      rot(el.armR, walking ? -s * 18 : sleeping ? -8 : -4 - Math.sin(E.t * 2) * 2, 50, 58);
-    }
-    if (el.head) el.head.setAttribute("transform", `translate(${(E.dir * (walking ? 4 : 0)).toFixed(1)} 0) rotate(${(walking ? E.dir * 3 : sleeping ? 6 : drag ? Math.sin(E.t * 7) * 6 : Math.sin(E.t * 0.7) * 2).toFixed(1)} 0 40)`);
-    if (el.pet) el.pet.setAttribute("transform", `rotate(${(walking ? E.dir * 4 : 0).toFixed(1)} 0 176)`);
-    // saltito al tocarlo, aplastado al aterrizar, respiración al dormir
-    const hq = E.t - E.hop, sq = E.t - E.squash;
-    const jump = hq < 0.5 ? Math.sin(hq / 0.5 * Math.PI) * 14 : 0;
-    const bob = walking ? Math.abs(s) * 3 : 0;
-    const sy = sq < 0.35 ? 1 - Math.sin(sq / 0.35 * Math.PI) * 0.16 : sleeping ? 1 + Math.sin(E.t * 2) * 0.025 : 1;
-    const spq = E.t - (E.spin || -9), spinDeg = spq < 0.8 ? 360 * (1 - Math.pow(1 - spq / 0.8, 2)) : 0, spinJump = spq < 0.8 ? Math.sin(spq / 0.8 * Math.PI) * 5 : 0, spinS = spq < 0.8 ? 1 - Math.sin(spq / 0.8 * Math.PI) * 0.22 : 1;
-    svg.style.transformOrigin = spq < 0.8 ? "50% 58%" : "50% 100%";
-    svg.style.transform = `translateX(-50%) translateY(${-(jump + bob + spinJump)}%) rotate(${spinDeg.toFixed(1)}deg) scale(${((2 - sy) * spinS).toFixed(3)}, ${(sy * spinS).toFixed(3)})`;
-    if (E.t < (E.danceUntil || 0) && !walking && !drag) {
-      const d = Math.sin(E.t * 8);
-      rot(el.armL, 60 + d * 45, -50, 58); rot(el.armR, -60 + d * 45, 50, 58);
-      rot(el.legL, Math.max(0, d) * 18, -21, 122); rot(el.legR, Math.min(0, d) * 18, 21, 122);
-      if (el.pet) el.pet.setAttribute("transform", `rotate(${(d * 8).toFixed(1)} 0 176)`);
-    }
-    const dizzy = E.t < (E.dizzyUntil || 0);
-    if (dizzy) { eko.dataset.eyes = "spiral"; if (el.head) el.head.setAttribute("transform", `rotate(${(Math.sin(E.t * 11) * 9).toFixed(1)} 0 40)`); if (el.pet) el.pet.setAttribute("transform", `rotate(${(Math.sin(E.t * 6) * 7).toFixed(1)} 0 176)`); }
-    else if (eko.dataset.eyes === "spiral") eko.dataset.eyes = "open";
-    if (!sleeping && !dizzy) {
-      if (E.t < E.happyUntil) eko.dataset.eyes = "happy";
-      else if (E.t > E.blinkAt) { eko.dataset.eyes = "closed"; if (E.t > E.blinkAt + 0.13) { eko.dataset.eyes = "open"; E.blinkAt = E.t + 2 + Math.random() * 4; } }
-      else if (eko.dataset.eyes === "happy") eko.dataset.eyes = "open";
-    }
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
-</script>
+<script src="anim.js"></script>
 </body></html>

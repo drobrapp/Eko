@@ -72,6 +72,41 @@ class EkoService : Service() {
     private var last = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // ---------- Ahorro ----------
+    // Ventana pequeña normalmente (tapa poco de la app de debajo) y grande solo para trucos, saltos y bailes
+    private val SMALL_W = 130
+    private val SMALL_H = 160
+    private val BIG_W = 160
+    private val BIG_H = 200
+    private fun resize(big: Boolean) {
+        val w = web ?: return
+        val nw = ((if (big) BIG_W else SMALL_W) * dens).toInt()
+        val nh = ((if (big) BIG_H else SMALL_H) * dens).toInt()
+        if (nw == winW && nh == winH) return
+        // los pies se quedan donde están: abajo y en el centro
+        val dx = (winW - nw) / 2f; val dy = (winH - nh).toFloat()
+        x += dx; y += dy; startX += dx; startY += dy; targetX += dx
+        winW = nw; winH = nh
+        lp.width = nw; lp.height = nh; lp.x = x.toInt(); lp.y = y.toInt()
+        try { wm.updateViewLayout(w, lp) } catch (_: Exception) {}
+    }
+    private fun buzz(strong: Boolean = false) {
+        try {
+            val v = getSystemService(android.os.Vibrator::class.java)
+            v.vibrate(if (Build.VERSION.SDK_INT >= 29) android.os.VibrationEffect.createPredefined(if (strong) android.os.VibrationEffect.EFFECT_HEAVY_CLICK else android.os.VibrationEffect.EFFECT_TICK)
+                else android.os.VibrationEffect.createOneShot(if (strong) 25 else 12, if (strong) 160 else 70))
+        } catch (_: Exception) {}
+    }
+    // Pantalla apagada: se congela todo (dibujo y bucle) para no gastar batería
+    private var paused = false
+    private fun pause(on: Boolean) {
+        if (on == paused) return
+        paused = on
+        if (on) { web?.onPause() }
+        else { web?.onResume(); last = SystemClock.uptimeMillis(); Choreographer.getInstance().postFrameCallback(tick) }
+    }
+    private fun powerSave() = getSystemService(android.os.PowerManager::class.java).isPowerSaveMode
     private fun prefs() = getSharedPreferences("eko", MODE_PRIVATE)
 
     // Cada 6 horas mira si hay versión nueva (la primera vez, al minuto de salir)
@@ -133,8 +168,8 @@ class EkoService : Service() {
     private fun addOverlay() {
         wm = getSystemService(WindowManager::class.java)
         dens = resources.displayMetrics.density
-        winW = (160 * dens).toInt()
-        winH = (200 * dens).toInt()
+        winW = (SMALL_W * dens).toInt()
+        winH = (SMALL_H * dens).toInt()
         val w = WebView(this)
         w.setBackgroundColor(Color.TRANSPARENT)
         w.settings.javaScriptEnabled = true
@@ -157,6 +192,7 @@ class EkoService : Service() {
         web = w
         w.setOnTouchListener { _, e -> touch(e); true }
         handler.postDelayed({ calibrate(); y = ground() }, 400)
+        handler.postDelayed({ js("lowPower(${powerSave()})") }, 1500)
         handler.postDelayed({ calibrate() }, 3000)
         last = SystemClock.uptimeMillis()
         idle(2000)
@@ -168,6 +204,7 @@ class EkoService : Service() {
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_SCREEN_ON); addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
         }
         ContextCompat.registerReceiver(this, sysReceiver, f, ContextCompat.RECEIVER_NOT_EXPORTED)
         startSensors()
@@ -296,8 +333,12 @@ class EkoService : Service() {
                 Intent.ACTION_SCREEN_OFF -> {
                     screenOffAt = now; closeMenu(); stopSensors()
                     if (st != St.DRAG && st != St.FALL) { st = St.SLEEP; until = Long.MAX_VALUE; js("set('sleep', $dir)") }
+                    handler.postDelayed({ if (!getSystemService(android.os.PowerManager::class.java).isInteractive) pause(true) }, 300)
                 }
+                Intent.ACTION_SCREEN_ON -> pause(false)
+                android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> js("lowPower(${powerSave()})")
                 Intent.ACTION_USER_PRESENT -> {
+                    pause(false)
                     startSensors()
                     if (st == St.SLEEP) { js("wake()"); idle(2000) }
                     if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) talk("missed")
@@ -435,6 +476,8 @@ class EkoService : Service() {
         @JavascriptInterface fun hop(v: Double) { handler.post {
             if (st == St.IDLE || st == St.WALK) { st = St.FALL; hopping = true; vy = -(v.toFloat() * dens).coerceAtMost(900 * dens); js("set('fall', $dir)") }
         } }
+        // Ventana grande solo mientras hace algo que la necesita
+        @JavascriptInterface fun big(on: Boolean) { handler.post { resize(on) } }
         // Que no se ponga a andar en mitad de un gesto
         @JavascriptInterface fun hold(ms: Int) { handler.post { if (st == St.IDLE || st == St.WALK) idle(ms.toLong()) } }
     }
@@ -462,7 +505,7 @@ class EkoService : Service() {
     private val tick = object : Choreographer.FrameCallback, Runnable {
         override fun run() { Choreographer.getInstance().postFrameCallback(this) }
         override fun doFrame(frameTimeNanos: Long) {
-            if (!alive) return
+            if (!alive || paused) return
             val now = SystemClock.uptimeMillis()
             val dt = ((now - last).coerceAtMost(100)) / 1000f
             needsTick(now)
@@ -470,7 +513,7 @@ class EkoService : Service() {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
-            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
+            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000) * (if (powerSave()) 3 else 1); antic() }
             last = now
             when (st) {
                 St.WALK -> {
@@ -489,7 +532,7 @@ class EkoService : Service() {
                     vy += 2400 * dens * dt
                     y += vy * dt
                     js("v(0, ${(vy / dens).toInt()})")
-                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
+                    if (y >= ground()) { if (vy > 1200 * dens) buzz(true); y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
                 }
                 St.DRAG -> {}
                 St.PEEK -> {
@@ -519,6 +562,7 @@ class EkoService : Service() {
     private var longDone = false
     private val longPress = Runnable {
         longDone = true
+        buzz()
         openMenu()
     }
 
@@ -536,7 +580,7 @@ class EkoService : Service() {
                     dragging = true; handler.removeCallbacks(longPress)
                     st = St.DRAG; js("set('drag', $dir)"); closeMenu(); hopping = false
                     dragVx = 0f; dragVy = 0f; lastMoveAt = SystemClock.uptimeMillis()
-                    dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5)
+                    dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5); buzz()
                 }
                 if (dragging) {
                     if (abs(dx) > 2) dir = if (startX + dx > x) 1 else -1
@@ -556,7 +600,7 @@ class EkoService : Service() {
                 if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
                 else if (!longDone) {
                     if (st == St.SLEEP) { js("wake()"); idle(2500); talk("wake") }
-                    else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7) }
+                    else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7); buzz() }
                 }
             }
         }

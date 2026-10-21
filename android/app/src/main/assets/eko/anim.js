@@ -371,10 +371,6 @@
     if (farLeft !== A.farLeft || farRight !== A.farRight) {
       A.farLeft = farLeft; A.farRight = farRight;
       if (farLeft) el.legs.appendChild(el.legR); else el.legs.appendChild(el.legL);
-      el.legL.style.filter = farLeft ? "brightness(.9)" : "";
-      el.legR.style.filter = farRight ? "brightness(.9)" : "";
-      el.armL.style.filter = farLeft ? "brightness(.9)" : "";
-      el.armR.style.filter = farRight ? "brightness(.9)" : "";
     }
     el.upper.setAttribute("transform", `translate(0 ${sitDrop.toFixed(2)})`);
     const armKey = P.front ? "front" : farLeft ? "R" : farRight ? "L" : "back";
@@ -441,11 +437,20 @@
     act(n, n === "curious" ? { dir: Math.random() < 0.5 ? -1 : 1 } : {});
   }
 
-  let last = performance.now();
+  // ---------- Ahorro: fotogramas según lo que haga y ventana grande solo cuando hace falta ----------
+  // Andando, en el aire, cogido o haciendo un gesto: 60 fps. Quieto: 30. Dormido: 15. Con ahorro de batería, la mitad.
+  let last = performance.now(), lowPower = false, big = false, bigUntil = 0;
+  function busy() { return !!A.action || S.walking || S.dragging || S.airborne || A.dance || A.t < A.danceUntil || Math.abs(A.squashV) > 2; }
+  function wantBig() { return !!A.action || S.dragging || S.airborne || A.dance || A.t < A.danceUntil; }
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    update(dt); render();
     requestAnimationFrame(frame);
+    const fps = (busy() ? 60 : S.sleeping ? 15 : 30) / (lowPower ? 2 : 1);
+    if (now - last < 1000 / fps - 3) return;
+    const dt = Math.min(0.07, (now - last) / 1000); last = now;
+    update(dt); render();
+    const w = wantBig();
+    if (w) bigUntil = A.t + 0.8;
+    if (w !== big && (w || A.t > bigUntil)) { big = w; if (AND && AND.big) AND.big(big); }
   }
   requestAnimationFrame(frame);
 
@@ -472,6 +477,7 @@
     dizzy() { act("dizzy", { dur: 2.8 }); A.woozyUntil = A.t + 4.5; },
     eat() { act("eat"); },
     spin() { act(TRICKS[Math.floor(Math.random() * TRICKS.length)]); },
+    lowPower(v) { lowPower = !!v; },
     act, fx, blush,
     talk(ev, chance) { if (window.ekoTalk) ekoTalk.talk(ev, chance); },
     chatter() { if (window.ekoTalk) ekoTalk.chatter(); },

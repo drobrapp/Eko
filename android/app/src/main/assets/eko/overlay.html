@@ -271,6 +271,7 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
       </g>
     </svg>
 </div>
+<script src="talk.js"></script>
 <script>
 (() => {
   "use strict";
@@ -283,6 +284,10 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
     tap() { E.happyUntil = E.t + 1.2; E.hop = E.t; },
     happy() { E.happyUntil = E.t + 1.5; },
     land() { E.squash = E.t; E.happyUntil = E.t + 0.8; },
+    talk(ev, chance) { if (window.ekoTalk) ekoTalk.talk(ev, chance); },
+    chatter() { if (window.ekoTalk) ekoTalk.chatter(); },
+    brows(b) { eko.dataset.brows = b; },
+    dance() { E.danceUntil = E.t + 4.5; E.happyUntil = E.t + 4.5; },
     dizzy() { E.dizzyUntil = E.t + 2.8; eko.dataset.eyes = "spiral"; },
     eat() { const c = document.getElementById("cookie"); c.classList.add("on"); E.happyUntil = E.t + 2.2; setTimeout(() => c.classList.remove("on"), 1700); },
     spin() { E.spin = E.t; E.hop = E.t; E.happyUntil = E.t + 1.6; },
@@ -313,6 +318,12 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
     const spq = E.t - (E.spin || -9), spinDeg = spq < 0.8 ? 360 * (1 - Math.pow(1 - spq / 0.8, 2)) : 0, spinJump = spq < 0.8 ? Math.sin(spq / 0.8 * Math.PI) * 5 : 0, spinS = spq < 0.8 ? 1 - Math.sin(spq / 0.8 * Math.PI) * 0.22 : 1;
     svg.style.transformOrigin = spq < 0.8 ? "50% 58%" : "50% 100%";
     svg.style.transform = `translateX(-50%) translateY(${-(jump + bob + spinJump)}%) rotate(${spinDeg.toFixed(1)}deg) scale(${((2 - sy) * spinS).toFixed(3)}, ${(sy * spinS).toFixed(3)})`;
+    if (E.t < (E.danceUntil || 0) && !walking && !drag) {
+      const d = Math.sin(E.t * 8);
+      rot(el.armL, 60 + d * 45, -50, 58); rot(el.armR, -60 + d * 45, 50, 58);
+      rot(el.legL, Math.max(0, d) * 18, -21, 122); rot(el.legR, Math.min(0, d) * 18, 21, 122);
+      if (el.pet) el.pet.setAttribute("transform", `rotate(${(d * 8).toFixed(1)} 0 176)`);
+    }
     const dizzy = E.t < (E.dizzyUntil || 0);
     if (dizzy) { eko.dataset.eyes = "spiral"; if (el.head) el.head.setAttribute("transform", `rotate(${(Math.sin(E.t * 11) * 9).toFixed(1)} 0 40)`); if (el.pet) el.pet.setAttribute("transform", `rotate(${(Math.sin(E.t * 6) * 7).toFixed(1)} 0 176)`); }
     else if (eko.dataset.eyes === "spiral") eko.dataset.eyes = "open";

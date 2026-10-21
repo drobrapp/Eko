@@ -40,6 +40,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -51,7 +52,7 @@ class EkoService : Service() {
 
     companion object { var running = false }
 
-    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL }
+    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK }
 
     private lateinit var wm: WindowManager
     private lateinit var lp: WindowManager.LayoutParams
@@ -140,6 +141,7 @@ class EkoService : Service() {
         w.settings.allowFileAccess = true
         w.isVerticalScrollBarEnabled = false
         w.isHorizontalScrollBarEnabled = false
+        w.addJavascriptInterface(Bridge(), "Android")
         w.loadUrl("file:///android_asset/eko/overlay.html")
         lp = WindowManager.LayoutParams(
             winW, winH,
@@ -158,7 +160,10 @@ class EkoService : Service() {
         handler.postDelayed({ calibrate() }, 3000)
         last = SystemClock.uptimeMillis()
         idle(2000)
-        handler.postDelayed({ say(pick(listOf("¡Hola! Ya estoy aquí", "¡Qué grande es tu pantalla!", "¡Allá voy!"))) }, 900)
+        handler.postDelayed({ talk("hello") }, 900)
+        loadNeeds()
+        nextChat = SystemClock.uptimeMillis() + 90_000
+        nextAntic = SystemClock.uptimeMillis() + Random.nextLong(3 * 60_000, 6 * 60_000)
         handler.post(tick)
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_BATTERY_CHANGED)
@@ -241,7 +246,7 @@ class EkoService : Service() {
         }
         item(R.drawable.eko_cookie, "Galleta") { feed() }
         item(R.drawable.eko_ball, "Jugar") { play() }
-        item(R.drawable.eko_bed, "Dormir") { say("Buenas noches…", 1800); handler.postDelayed({ sleep() }, 1200) }
+        item(R.drawable.eko_bed, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) }
         item(R.drawable.ic_eko, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) }
         item(R.drawable.eko_bye, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() }
         menuLp = WindowManager.LayoutParams(
@@ -263,8 +268,8 @@ class EkoService : Service() {
         if (until == Long.MAX_VALUE) until = 0
     }
 
-    private fun feed() { js("eat()"); idle(3000); handler.postDelayed({ say(pick(listOf("¡Ñam! Gracias", "¡Qué rica!", "Mmm… ¡otra!"))) }, 900) }
-    private fun play() { js("spin()"); idle(2500); handler.postDelayed({ say(pick(listOf("¡Voltereta!", "¿Has visto eso?", "¡Otra vez, otra vez!"))) }, 700) }
+    private fun feed() { give(h = 35f, l = 3f); js("eat()"); idle(3000); handler.postDelayed({ talk("eat") }, 900) }
+    private fun play() { give(f = 30f, l = 4f, e = -3f); js("spin()"); idle(2500); handler.postDelayed({ talk("play") }, 700) }
 
     // ---------- Lo que Eko nota del móvil (sin permisos) ----------
     // Batería, pantalla apagada/desbloqueo, agitar el móvil, ponerlo boca abajo y auriculares.
@@ -278,14 +283,14 @@ class EkoService : Service() {
                 Intent.ACTION_POWER_CONNECTED -> {
                     if (st == St.SLEEP) js("wake()")
                     js("happy()"); idle(2500)
-                    say(pick(listOf("¡Comida eléctrica! Ñam", "¡Recargando! Qué gustito", "Gracias, ya me notaba flojito")))
+                    talk("charge")
                 }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val lvl = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
                     val pct = lvl * 100 / scale
                     val plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
-                    if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; say("Estoy cansadito… ¿me cargas el móvil?", 3500) }
+                    if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; talk("lowBattery") }
                     if (pct > 30 || plugged) lowSaid = false
                 }
                 Intent.ACTION_SCREEN_OFF -> {
@@ -295,7 +300,7 @@ class EkoService : Service() {
                 Intent.ACTION_USER_PRESENT -> {
                     startSensors()
                     if (st == St.SLEEP) { js("wake()"); idle(2000) }
-                    if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) say(pick(listOf("¡Has vuelto!", "Te estaba esperando", "¡Hola otra vez!")))
+                    if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) talk("missed")
                 }
             }
         }
@@ -332,10 +337,10 @@ class EkoService : Service() {
         if (st == St.DRAG || st == St.FALL) return
         if (st == St.SLEEP) js("wake()")
         js("dizzy()"); idle(3200)
-        say(pick(listOf("¡Me mareooo!", "¡Para, para, que todo da vueltas!", "Uy… veo tres pantallas")))
+        talk("shake"); handler.postDelayed({ talk("dizzy") }, 2600)
     }
     private fun faceDown() {
-        say("Qué oscurito… me echo una siesta", 2200)
+        talk("faceDown")
         handler.postDelayed({ st = St.SLEEP; until = SystemClock.uptimeMillis() + 5 * 60_000; js("set('sleep', $dir)") }, 1500)
     }
 
@@ -344,12 +349,91 @@ class EkoService : Service() {
         var ready = false
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) {
             if (!ready) { ready = true; return }          // la primera llamada son los que ya estaban conectados
-            if (added.any { it.isSink && it.type in HEADS }) { js("happy()"); say(pick(listOf("¡Cascos puestos! ¿Qué escuchamos?", "¡Música! Yo también me los pongo", "Pon algo que se pueda bailar"))) }
+            if (added.any { it.isSink && it.type in HEADS }) { js("happy()"); talk("music") }
         }
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) {
-            if (removed.any { it.isSink && it.type in HEADS }) say("¿Se acabó la música?")
+            if (removed.any { it.isSink && it.type in HEADS }) talk("musicOff")
         }
     }
+
+    // ---------- Necesidades: barriga, juego, mimos y energía (0–100, se guardan en el móvil) ----------
+    private var hunger = 75f
+    private var fun_ = 70f
+    private var love = 70f
+    private var energy = 85f
+    private var needsAt = 0L
+    private var nextHint = 0L
+    private fun loadNeeds() {
+        val p = prefs()
+        hunger = p.getFloat("hunger", 75f); fun_ = p.getFloat("fun", 70f); love = p.getFloat("love", 70f); energy = p.getFloat("energy", 85f)
+        // mientras no estaba fuera, baja poquito (como mucho 12 h y con suelo): al volver, como mucho tiene hambre y ganas de verte
+        val h = ((System.currentTimeMillis() - p.getLong("needsT", System.currentTimeMillis())) / 3_600_000f).coerceIn(0f, 12f)
+        hunger = maxOf(minOf(hunger, 30f), hunger - 6f * h / 2)
+        fun_ = maxOf(minOf(fun_, 35f), fun_ - 10f * h / 2)
+        love = maxOf(minOf(love, 30f), love - 8f * h / 2)
+        energy = (energy + 10f * h).coerceAtMost(100f)
+        needsAt = SystemClock.uptimeMillis()
+        saveNeeds()
+    }
+    private fun saveNeeds() {
+        prefs().edit().putFloat("hunger", hunger).putFloat("fun", fun_).putFloat("love", love).putFloat("energy", energy)
+            .putLong("needsT", System.currentTimeMillis()).apply()
+    }
+    private fun needsTick(now: Long) {
+        if (now - needsAt < 60_000) return
+        val h = (now - needsAt) / 3_600_000f
+        needsAt = now
+        val asleep = st == St.SLEEP
+        hunger = (hunger - 6f * h * (if (asleep) 0.4f else 1f)).coerceIn(0f, 100f)
+        fun_ = (fun_ - (if (asleep) 0f else 10f) * h).coerceIn(0f, 100f)
+        love = (love - (if (asleep) 2f else 8f) * h).coerceIn(0f, 100f)
+        energy = (energy + (if (asleep) 30f else -5f) * h).coerceIn(0f, 100f)
+        saveNeeds()
+        js("brows('${if (minOf(hunger, fun_, love) < 25f) "sad" else if (minOf(hunger, fun_, love) < 40f) "worried" else "none"}')")
+        // de vez en cuando te pide lo que más le falta (como mucho cada 20 min)
+        if (asleep || menu != null || now < nextHint) return
+        val low = listOf("hunger" to hunger, "fun" to fun_, "love" to love, "energy" to energy).minByOrNull { it.second } ?: return
+        if (low.second >= 30f) return
+        nextHint = now + 20 * 60_000L
+        when (low.first) {
+            "hunger" -> say(pick(listOf("Tengo hambre… ¿una galleta?", "Me suenan las tripas", "Mantenme pulsado y dame algo de comer")), 3200)
+            "fun" -> say(pick(listOf("Me aburro… ¿jugamos?", "¿Hacemos algo divertido?")), 3000)
+            "love" -> say(pick(listOf("¿Me haces un mimito?", "Hace mucho que no me tocas…")), 3000)
+            "energy" -> { say("Estoy agotado… voy a dormir un poco", 2600); handler.postDelayed({ sleep() }, 1800) }
+        }
+    }
+    private fun give(h: Float = 0f, f: Float = 0f, l: Float = 0f, e: Float = 0f) {
+        hunger = (hunger + h).coerceIn(0f, 100f); fun_ = (fun_ + f).coerceIn(0f, 100f)
+        love = (love + l).coerceIn(0f, 100f); energy = (energy + e).coerceIn(0f, 100f)
+        saveNeeds()
+    }
+
+    // ---------- Travesuras: de vez en cuando hace algo por su cuenta ----------
+    private var nextAntic = 0L
+    private fun antic() {
+        when (Random.nextInt(3)) {
+            0 -> { // se asoma por un borde de la pantalla
+                val left = x < maxX() / 2
+                dir = if (left) -1 else 1
+                targetX = if (left) -winW * 0.55f else maxX() + winW * 0.55f
+                st = St.PEEK; until = 0L; js("set('walk', $dir)"); talk("peek", 0.6)
+            }
+            1 -> { // salto bien alto
+                st = St.FALL; vy = -1500 * dens; js("set('fall', $dir)")
+                talk("jump")
+            }
+            else -> { js("dance()"); idle(5000); talk("dance") }
+        }
+    }
+
+    // Lo que dice lo elige talk.js (frases del Eko de escritorio + las del móvil, sin repetir); aquí solo se pinta el bocadillo
+    private fun talk(ev: String, chance: Double = 1.0) = js("talk('$ev', $chance)")
+    inner class Bridge {
+        @JavascriptInterface fun say(text: String, ms: Int) { handler.post { this@EkoService.say(text, ms.toLong()) } }
+    }
+    private var nextChat = 0L
+    private var dragStart = 0L
+    private var heldSaid = false
 
     private fun js(code: String) { web?.evaluateJavascript("window.eko && eko.$code", null) }
 
@@ -370,6 +454,12 @@ class EkoService : Service() {
             if (!alive) return
             val now = SystemClock.uptimeMillis()
             val dt = ((now - last).coerceAtMost(100)) / 1000f
+            needsTick(now)
+            if ((st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE && now > nextChat) {
+                nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
+            }
+            if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
+            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
             last = now
             when (st) {
                 St.WALK -> {
@@ -387,11 +477,18 @@ class EkoService : Service() {
                 St.FALL -> {
                     vy += 2400 * dens * dt
                     y += vy * dt
-                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); if (Random.nextFloat() < 0.5f) say(pick(listOf("¡Uy, qué vértigo!", "¡Otra vez!", "¡Aterrizaje perfecto!"))) }
+                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); talk("drop", 0.6) }
                 }
                 St.DRAG -> {}
+                St.PEEK -> {
+                    y = ground()
+                    if (until == 0L) {
+                        x += dir * 72 * dens * dt
+                        if ((dir < 0 && x <= targetX) || (dir > 0 && x >= targetX)) { x = targetX; until = now + 6000; js("set('idle', ${-dir})") }
+                    } else if (now > until) { x = x.coerceIn(0f, maxX()); walk(); talk("peekBack", 0.5) }
+                }
             }
-            x = x.coerceIn(0f, maxX())
+            if (st != St.PEEK) x = x.coerceIn(0f, maxX())
             if (lp.x != x.toInt() || lp.y != y.toInt()) {
                 lp.x = x.toInt(); lp.y = y.toInt()
                 web?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) {} }
@@ -426,6 +523,7 @@ class EkoService : Service() {
                 if (!dragging && hypot(dx, dy) > 12 * dens) {
                     dragging = true; handler.removeCallbacks(longPress)
                     st = St.DRAG; js("set('drag', $dir)"); closeMenu()
+                    dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5)
                 }
                 if (dragging) {
                     if (abs(dx) > 2) dir = if (startX + dx > x) 1 else -1
@@ -437,8 +535,8 @@ class EkoService : Service() {
                 handler.removeCallbacks(longPress)
                 if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
                 else if (!longDone) {
-                    if (st == St.SLEEP) { js("wake()"); idle(2500); say(pick(listOf("¡Ya estoy despierto!", "Mmm… ¿qué hora es?"))) }
-                    else { js("tap()"); idle(2500); if (Random.nextFloat() < 0.6f) say(pick(listOf("¡Hola!", "¡Jiji, cosquillas!", "¿Jugamos?", "¡Aquí estoy!", "Me gusta tu móvil"))) }
+                    if (st == St.SLEEP) { js("wake()"); idle(2500); talk("wake") }
+                    else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7) }
                 }
             }
         }

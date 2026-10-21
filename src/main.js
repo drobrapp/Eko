@@ -6,7 +6,6 @@
   // ---------- Puente con Tauri (con modo navegador para previsualizar) ----------
   const T = window.__TAURI__;
   const NATIVE = !!T;
-  const MOBILE = !!window.EKO_MOBILE;
   const win = NATIVE ? T.window.getCurrentWindow() : null;
   const invoke = NATIVE ? T.core.invoke : async () => {};
   const listen = NATIVE ? T.event.listen : async () => {};
@@ -530,9 +529,7 @@
   // ---------- Posición de la ventana ----------
   let lastPosKey = "";
   function place() {
-    // En el móvil, cuartos de píxel: Android lo coloca al píxel real de la pantalla y el paseo va suave
-    const q = MOBILE ? 4 : 1;
-    const px = Math.round(S.x * q) / q, py = Math.round(S.y * q) / q;
+    const px = Math.round(S.x), py = Math.round(S.y);
     const key = px + "," + py;
     if (key === lastPosKey) return;
     lastPosKey = key;
@@ -1945,19 +1942,13 @@
     }
   });
 
-  function release(ev) {
+  function release() {
     if (!S.pressed) return;
     S.pressed = false;
     if (S.dragging) {
       S.dragging = false;
       hit.classList.remove("dragging");
       invoke("set_dragging", { value: false });
-      if (MOBILE) {
-        // Con el dedo: si lo paraste antes de soltar (o Android canceló el toque) cae sin salir disparado,
-        // y los lanzamientos son más suaves (la pantalla es mucho más pequeña que la del PC)
-        if ((ev && ev.type === "pointercancel") || performance.now() - prevT > 90) { S.vx = 0; S.vy = 0; }
-        S.vx *= 0.55; S.vy *= 0.55;
-      }
       S.vx = clamp(S.vx, -1800, 1800);
       S.vy = clamp(S.vy, -1800, 1800);
       S.airborne = true; S.mode = "idle";

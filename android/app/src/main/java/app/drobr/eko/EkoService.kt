@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Handler
@@ -19,6 +20,10 @@ import android.os.SystemClock
 import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.webkit.WebView
@@ -139,9 +144,106 @@ class EkoService : Service() {
         handler.postDelayed({ calibrate() }, 3000)
         last = SystemClock.uptimeMillis()
         idle(2000)
+        handler.postDelayed({ say(pick(listOf("¡Hola! Ya estoy aquí", "¡Qué grande es tu pantalla!", "¡Allá voy!"))) }, 900)
         handler.post(tick)
         handler.postDelayed(updateCheck, 60_000)
     }
+
+    // ---------- Bocadillo (ventanita aparte que no captura toques) ----------
+    private var bubble: TextView? = null
+    private lateinit var bubbleLp: WindowManager.LayoutParams
+    private val hideBubble = Runnable { bubble?.visibility = View.GONE }
+    private val pick = { l: List<String> -> l[Random.nextInt(l.size)] }
+    private fun overlayType() = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    private fun card(color: String) = GradientDrawable().apply { cornerRadius = 18 * dens; setColor(Color.parseColor(color)); setStroke((1 * dens).toInt(), Color.parseColor("#E8D8C8")) }
+
+    private fun say(text: String, ms: Long = 2600) {
+        if (menu != null) return
+        val b = bubble ?: TextView(this).also { t ->
+            t.setTextColor(Color.parseColor("#3B2F2A"))
+            t.textSize = 14f
+            t.maxWidth = (220 * dens).toInt()
+            t.setPadding((13 * dens).toInt(), (8 * dens).toInt(), (13 * dens).toInt(), (8 * dens).toInt())
+            t.background = card("#FFFAF6")
+            bubbleLp = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+            ).apply { gravity = Gravity.TOP or Gravity.START }
+            wm.addView(t, bubbleLp)
+            bubble = t
+        }
+        b.text = text
+        b.visibility = View.VISIBLE
+        placeAbove(b, bubbleLp)
+        handler.removeCallbacks(hideBubble)
+        handler.postDelayed(hideBubble, ms)
+    }
+
+    // Coloca una ventanita (bocadillo o menú) encima de la cabeza de Eko, sin salirse de la pantalla
+    private fun placeAbove(v: View, p: WindowManager.LayoutParams) {
+        v.measure(View.MeasureSpec.makeMeasureSpec(screenW(), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(screenH(), View.MeasureSpec.AT_MOST))
+        val w = v.measuredWidth; val h = v.measuredHeight
+        p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(0, (screenW() - w).coerceAtLeast(0))
+        p.y = (y + winH * 0.12f - h).toInt().coerceAtLeast(0)
+        try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
+    }
+
+    // ---------- Menú (mantener pulsado) ----------
+    private var menu: LinearLayout? = null
+    private lateinit var menuLp: WindowManager.LayoutParams
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun openMenu() {
+        if (menu != null) return
+        handler.removeCallbacks(hideBubble); bubble?.visibility = View.GONE
+        st = St.IDLE; until = Long.MAX_VALUE; js("set('idle', $dir)"); js("happy()")
+        val m = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = card("#FFF4E8")
+            setPadding((8 * dens).toInt(), (8 * dens).toInt(), (8 * dens).toInt(), (6 * dens).toInt())
+        }
+        fun item(icon: Int, label: String, action: () -> Unit) {
+            val col = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding((6 * dens).toInt(), 0, (6 * dens).toInt(), 0)
+                setOnClickListener { closeMenu(); action() }
+            }
+            col.addView(ImageView(this).apply {
+                setImageResource(icon)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                layoutParams = LinearLayout.LayoutParams((44 * dens).toInt(), (44 * dens).toInt())
+            })
+            col.addView(TextView(this).apply { text = label; textSize = 11f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER })
+            m.addView(col)
+        }
+        item(R.drawable.eko_cookie, "Galleta") { feed() }
+        item(R.drawable.eko_ball, "Jugar") { play() }
+        item(R.drawable.eko_bed, "Dormir") { say("Buenas noches…", 1800); handler.postDelayed({ sleep() }, 1200) }
+        item(R.drawable.ic_eko, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) }
+        item(R.drawable.eko_bye, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() }
+        menuLp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply { gravity = Gravity.TOP or Gravity.START }
+        // tocar fuera del menú lo cierra
+        m.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) { closeMenu(); idle(1500) }; false }
+        wm.addView(m, menuLp)
+        menu = m
+        placeAbove(m, menuLp)
+    }
+
+    private fun closeMenu() {
+        val m = menu ?: return
+        menu = null
+        try { wm.removeView(m) } catch (_: Exception) {}
+        if (until == Long.MAX_VALUE) until = 0
+    }
+
+    private fun feed() { js("eat()"); idle(3000); handler.postDelayed({ say(pick(listOf("¡Ñam! Gracias", "¡Qué rica!", "Mmm… ¡otra!"))) }, 900) }
+    private fun play() { js("spin()"); idle(2500); handler.postDelayed({ say(pick(listOf("¡Voltereta!", "¿Has visto eso?", "¡Otra vez, otra vez!"))) }, 700) }
 
     private fun js(code: String) { web?.evaluateJavascript("window.eko && eko.$code", null) }
 
@@ -179,7 +281,7 @@ class EkoService : Service() {
                 St.FALL -> {
                     vy += 2400 * dens * dt
                     y += vy * dt
-                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800) }
+                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); if (Random.nextFloat() < 0.5f) say(pick(listOf("¡Uy, qué vértigo!", "¡Otra vez!", "¡Aterrizaje perfecto!"))) }
                 }
                 St.DRAG -> {}
             }
@@ -187,6 +289,7 @@ class EkoService : Service() {
             if (lp.x != x.toInt() || lp.y != y.toInt()) {
                 lp.x = x.toInt(); lp.y = y.toInt()
                 web?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) {} }
+                bubble?.let { if (it.visibility == View.VISIBLE) placeAbove(it, bubbleLp) }
             }
             Choreographer.getInstance().postFrameCallback(this)
         }
@@ -201,8 +304,7 @@ class EkoService : Service() {
     private var longDone = false
     private val longPress = Runnable {
         longDone = true
-        js("happy()")
-        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        openMenu()
     }
 
     private fun touch(e: MotionEvent) {
@@ -217,7 +319,7 @@ class EkoService : Service() {
                 val dy = e.rawY - downY
                 if (!dragging && hypot(dx, dy) > 12 * dens) {
                     dragging = true; handler.removeCallbacks(longPress)
-                    st = St.DRAG; js("set('drag', $dir)")
+                    st = St.DRAG; js("set('drag', $dir)"); closeMenu()
                 }
                 if (dragging) {
                     if (abs(dx) > 2) dir = if (startX + dx > x) 1 else -1
@@ -229,7 +331,8 @@ class EkoService : Service() {
                 handler.removeCallbacks(longPress)
                 if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
                 else if (!longDone) {
-                    if (st == St.SLEEP) { js("wake()"); idle(2500) } else { js("tap()"); idle(2500) }
+                    if (st == St.SLEEP) { js("wake()"); idle(2500); say(pick(listOf("¡Ya estoy despierto!", "Mmm… ¿qué hora es?"))) }
+                    else { js("tap()"); idle(2500); if (Random.nextFloat() < 0.6f) say(pick(listOf("¡Hola!", "¡Jiji, cosquillas!", "¿Jugamos?", "¡Aquí estoy!", "Me gusta tu móvil"))) }
                 }
             }
         }
@@ -239,6 +342,9 @@ class EkoService : Service() {
         running = false
         alive = false
         Choreographer.getInstance().removeFrameCallback(tick)
+        closeMenu()
+        bubble?.let { try { wm.removeView(it) } catch (_: Exception) {} }
+        bubble = null
         handler.removeCallbacksAndMessages(null)
         web?.let { try { wm.removeView(it) } catch (_: Exception) {}; it.destroy() }
         web = null

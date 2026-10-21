@@ -15,6 +15,9 @@ android {
         val run = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionCode = run
         versionName = "0.1.$run"
+        // La versión del Eko de escritorio (la que usa su código para las novedades y el saludo de «me he actualizado»)
+        val desk = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(rootProject.file("../src-tauri/tauri.conf.json").readText())?.groupValues?.get(1) ?: "0.0.0"
+        buildConfigField("String", "DESK_VERSION", "\"$desk\"")
     }
 
     // Firma fija (guardada en el repo) para que cada APK nuevo se instale encima del anterior sin desinstalar
@@ -37,7 +40,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    buildFeatures { buildConfig = true }
+    // El Eko de escritorio entero (src/) va dentro de la app: así cada mejora del PC llega también al móvil
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/ekoweb"))
 }
+
+val copyEkoWeb by tasks.registering(Sync::class) {
+    from(rootProject.file("../src"))
+    into(layout.buildDirectory.dir("generated/ekoweb/web"))
+}
+tasks.named("preBuild") { dependsOn(copyEkoWeb) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

@@ -71,7 +71,7 @@ class MainActivity : Activity() {
         super.onResume()
         status.text = when {
             !Settings.canDrawOverlays(this) -> "Para que Eko pueda pasear por tu móvil, activa «Mostrar sobre otras apps»."
-            EkoService.running -> "Eko está paseando por tu pantalla. Tócalo, arrástralo… y mantén pulsado para volver aquí."
+            EkoService.running -> "Eko está paseando por tu pantalla. Tócalo, arrástralo y mantenlo pulsado para abrir su menú."
             else -> "Eko está aquí dentro, esperando a salir."
         }
         upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"

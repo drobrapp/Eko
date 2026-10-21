@@ -8,7 +8,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.drawable.Icon
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -17,59 +22,36 @@ import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.BatteryManager
-import androidx.core.content.ContextCompat
-import java.util.Calendar
-import kotlin.math.sqrt
-import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.graphics.Color
-import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
-import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.view.WindowInsets
 import android.view.WindowManager
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.widget.FrameLayout
+import androidx.core.content.ContextCompat
 import kotlin.math.abs
-import kotlin.math.hypot
-import kotlin.random.Random
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
-// Eko paseando por encima de las demás apps: una ventanita del tamaño de Eko que se mueve por la pantalla.
-// Kotlin decide dónde está y qué hace (andar, quedarse quieto, dormir, caer); la página web solo lo dibuja y lo anima.
-class EkoService : Service() {
+// Eko paseando por encima de las demás apps. Es el Eko de escritorio de verdad (src/), dentro de una página web:
+// su «ventana» de 420×380 se mueve por la pantalla y Android solo muestra el trocito donde está Eko (y sus bocadillos o su menú),
+// para que el resto de la pantalla siga funcionando con normalidad.
+class EkoService : Service(), Host {
 
     companion object { var running = false }
-
-    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK }
 
     private lateinit var wm: WindowManager
     private lateinit var lp: WindowManager.LayoutParams
     private var web: WebView? = null
+    private var box: FrameLayout? = null
     private val handler = Handler(Looper.getMainLooper())
-
     private var dens = 1f
-    private var winW = 0
-    private var winH = 0
-    private var x = 0f
-    private var y = 0f
-    private var vy = 0f
-    private var dir = 1
-    private var targetX = 0f
-    private var st = St.IDLE
-    private var until = 0L
-    private var last = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
     private fun prefs() = getSharedPreferences("eko", MODE_PRIVATE)
@@ -106,65 +88,100 @@ class EkoService : Service() {
         else startForeground(1, n)
     }
 
-    // Tamaño de la pantalla y suelo (justo encima de la barra de navegación)
+    // ---------- Pantalla ----------
     private fun screenW(): Int = if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.width() else resources.displayMetrics.widthPixels
     private fun screenH(): Int = if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.height() else resources.displayMetrics.heightPixels
-    private fun navBar(): Int {
-        val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+    private fun inset(top: Boolean): Int {
+        if (Build.VERSION.SDK_INT >= 30) {
+            val i = wm.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+            return if (top) i.top else i.bottom
+        }
+        val id = resources.getIdentifier(if (top) "status_bar_height" else "navigation_bar_height", "dimen", "android")
         return if (id > 0) resources.getDimensionPixelSize(id) else 0
     }
-    // Barra de abajo (gestos o botones) según Android, y desfase real de la ventana: en algunos móviles
-    // la «y» de la ventana empieza debajo de la barra de estado, así que se mide dónde acaba de verdad.
+    // En algunos móviles la «y» de la ventana empieza debajo de la barra de estado: se mide dónde acaba de verdad
     private var yOffset = 0
-    private fun bottomInset(): Int =
-        if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.windowInsets
-            .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()).bottom
-        else navBar()
-    private fun ground(): Float = (screenH() - bottomInset() - winH - yOffset - (6 * dens).toInt()).toFloat()
     private fun calibrate() {
-        val w = web ?: return
+        val b = box ?: return
         val loc = IntArray(2)
-        w.getLocationOnScreen(loc)
+        b.getLocationOnScreen(loc)
         if (loc[1] != 0 || lp.y == 0) yOffset = loc[1] - lp.y
     }
-    private fun maxX(): Float = (screenW() - winW).toFloat()
+    // margen bajo los pies, para que no pise la barra de gestos
+    private val FOOT = 6
 
-    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
+    @Volatile private var sc = "{}"
+    private fun measure() {
+        sc = "{\"w\":${(screenW() / dens).roundToInt()},\"h\":${(screenH() / dens).roundToInt()},\"top\":${(inset(true) / dens).roundToInt()},\"bottom\":${(inset(false) / dens).roundToInt() + FOOT}}"
+    }
+
+    // ---------- Host: lo que pide la página ----------
+    @Volatile private var vx = 0.0
+    @Volatile private var vy = 0.0
+    @Volatile private var cl = 150.0
+    @Volatile private var ct = 220.0
+    @Volatile private var cw = 120.0
+    @Volatile private var ch = 160.0
+    @Volatile private var rawX = 0f
+    @Volatile private var rawY = 0f
+    @Volatile private var pending = false
+    private val apply = Runnable {
+        pending = false
+        val b = box ?: return@Runnable
+        val w = web ?: return@Runnable
+        lp.x = ((vx + cl) * dens).roundToInt()
+        lp.y = ((vy + ct) * dens).roundToInt() - yOffset
+        val nw = (cw * dens).roundToInt().coerceAtLeast(1)
+        val nh = (ch * dens).roundToInt().coerceAtLeast(1)
+        lp.width = nw; lp.height = nh
+        w.translationX = (-cl * dens).toFloat()
+        w.translationY = (-ct * dens).toFloat()
+        try { wm.updateViewLayout(b, lp) } catch (_: Exception) {}
+    }
+    private fun schedule() { if (!pending) { pending = true; handler.post(apply) } }
+    override fun pos(x: Double, y: Double) { vx = x; vy = y; schedule() }
+    override fun clip(l: Double, t: Double, w: Double, h: Double) { cl = l; ct = t; cw = w; ch = h; schedule() }
+    override fun screen(): String = sc
+    override fun raw(): String = "{\"x\":${rawX / dens},\"y\":${rawY / dens}}"
+    override fun show(on: Boolean) { box?.visibility = if (on) View.VISIBLE else View.GONE }
+    override fun focus(on: Boolean) {
+        val b = box ?: return
+        val f = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        lp.flags = if (on) lp.flags and f.inv() else lp.flags or f
+        try { wm.updateViewLayout(b, lp) } catch (_: Exception) {}
+        if (on) web?.requestFocus()
+    }
+    override fun close() { prefs().edit().putBoolean("out", false).apply(); stopSelf() }
+
+    @SuppressLint("ClickableViewAccessibility")
     private fun addOverlay() {
         wm = getSystemService(WindowManager::class.java)
         dens = resources.displayMetrics.density
-        winW = (130 * dens).toInt()
-        winH = (160 * dens).toInt()
+        measure()
         val w = WebView(this)
         w.setBackgroundColor(Color.TRANSPARENT)
-        w.settings.javaScriptEnabled = true
-        w.settings.allowFileAccess = true
-        w.isVerticalScrollBarEnabled = false
-        w.isHorizontalScrollBarEnabled = false
-        w.addJavascriptInterface(Bridge(), "Android")
-        w.loadUrl("file:///android_asset/eko/overlay.html")
+        // La página siempre mide 420×380 (como la ventana del PC); la ventana de Android es solo un recorte
+        w.layoutParams = FrameLayout.LayoutParams((420 * dens).roundToInt(), (380 * dens).roundToInt())
+        val b = object : FrameLayout(this) {
+            override fun dispatchTouchEvent(e: MotionEvent): Boolean { rawX = e.rawX; rawY = e.rawY; return super.dispatchTouchEvent(e) }
+        }
+        b.clipChildren = true
+        b.addView(w)
         lp = WindowManager.LayoutParams(
-            winW, winH,
+            (cw * dens).roundToInt(), (ch * dens).roundToInt(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         )
         lp.gravity = Gravity.TOP or Gravity.START
-        x = maxX() * 0.7f
-        y = ground()
-        lp.x = x.toInt(); lp.y = y.toInt()
-        wm.addView(w, lp)
-        web = w
-        w.setOnTouchListener { _, e -> touch(e); true }
-        handler.postDelayed({ calibrate(); y = ground() }, 400)
-        handler.postDelayed({ calibrate() }, 3000)
-        last = SystemClock.uptimeMillis()
-        idle(2000)
-        handler.postDelayed({ talk("hello") }, 900)
-        loadNeeds()
-        nextChat = SystemClock.uptimeMillis() + 90_000
-        nextAntic = SystemClock.uptimeMillis() + Random.nextLong(3 * 60_000, 6 * 60_000)
-        handler.post(tick)
+        vx = (screenW() / dens) * 0.6 - 210; vy = (screenH() / dens) - 380.0
+        web = w; box = b
+        apply.run()
+        wm.addView(b, lp)
+        Hub.setup(this, w, "overlay", this, "index.html")
+        handler.postDelayed({ calibrate(); schedule() }, 400)
+        handler.postDelayed({ calibrate(); schedule() }, 3000)
+        handler.postDelayed(remeasure, 2000)
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT)
@@ -174,102 +191,11 @@ class EkoService : Service() {
         getSystemService(AudioManager::class.java).registerAudioDeviceCallback(audioCb, handler)
         handler.postDelayed(updateCheck, 60_000)
     }
+    // Si giras el móvil o cambian las barras, el suelo se recoloca
+    private val remeasure = object : Runnable { override fun run() { measure(); handler.postDelayed(this, 2000) } }
 
-    // ---------- Bocadillo (ventanita aparte que no captura toques) ----------
-    private var bubble: TextView? = null
-    private lateinit var bubbleLp: WindowManager.LayoutParams
-    private val hideBubble = Runnable { bubble?.visibility = View.GONE }
-    private val pick = { l: List<String> -> l[Random.nextInt(l.size)] }
-    private fun overlayType() = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-    private fun card(color: String) = GradientDrawable().apply { cornerRadius = 18 * dens; setColor(Color.parseColor(color)); setStroke((1 * dens).toInt(), Color.parseColor("#E8D8C8")) }
-
-    private fun say(text: String, ms: Long = 2600) {
-        if (menu != null) return
-        val b = bubble ?: TextView(this).also { t ->
-            t.setTextColor(Color.parseColor("#3B2F2A"))
-            t.textSize = 14f
-            t.maxWidth = (220 * dens).toInt()
-            t.setPadding((13 * dens).toInt(), (8 * dens).toInt(), (13 * dens).toInt(), (8 * dens).toInt())
-            t.background = card("#FFFAF6")
-            bubbleLp = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                PixelFormat.TRANSLUCENT
-            ).apply { gravity = Gravity.TOP or Gravity.START }
-            wm.addView(t, bubbleLp)
-            bubble = t
-        }
-        b.text = text
-        b.visibility = View.VISIBLE
-        placeAbove(b, bubbleLp)
-        handler.removeCallbacks(hideBubble)
-        handler.postDelayed(hideBubble, ms)
-    }
-
-    // Coloca una ventanita (bocadillo o menú) encima de la cabeza de Eko, sin salirse de la pantalla
-    private fun placeAbove(v: View, p: WindowManager.LayoutParams) {
-        v.measure(View.MeasureSpec.makeMeasureSpec(screenW(), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(screenH(), View.MeasureSpec.AT_MOST))
-        val w = v.measuredWidth; val h = v.measuredHeight
-        p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(0, (screenW() - w).coerceAtLeast(0))
-        p.y = (y + winH * 0.12f - h).toInt().coerceAtLeast(0)
-        try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
-    }
-
-    // ---------- Menú (mantener pulsado) ----------
-    private var menu: LinearLayout? = null
-    private lateinit var menuLp: WindowManager.LayoutParams
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun openMenu() {
-        if (menu != null) return
-        handler.removeCallbacks(hideBubble); bubble?.visibility = View.GONE
-        st = St.IDLE; until = Long.MAX_VALUE; js("set('idle', $dir)"); js("happy()")
-        val m = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            background = card("#FFF4E8")
-            setPadding((8 * dens).toInt(), (8 * dens).toInt(), (8 * dens).toInt(), (6 * dens).toInt())
-        }
-        fun item(icon: Int, label: String, action: () -> Unit) {
-            val col = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                setPadding((6 * dens).toInt(), 0, (6 * dens).toInt(), 0)
-                setOnClickListener { closeMenu(); action() }
-            }
-            col.addView(ImageView(this).apply {
-                setImageResource(icon)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                layoutParams = LinearLayout.LayoutParams((44 * dens).toInt(), (44 * dens).toInt())
-            })
-            col.addView(TextView(this).apply { text = label; textSize = 11f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER })
-            m.addView(col)
-        }
-        item(R.drawable.eko_cookie, "Galleta") { feed() }
-        item(R.drawable.eko_ball, "Jugar") { play() }
-        item(R.drawable.eko_bed, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) }
-        item(R.drawable.ic_eko, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) }
-        item(R.drawable.eko_bye, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() }
-        menuLp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP or Gravity.START }
-        // tocar fuera del menú lo cierra
-        m.setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) { closeMenu(); idle(1500) }; false }
-        wm.addView(m, menuLp)
-        menu = m
-        placeAbove(m, menuLp)
-    }
-
-    private fun closeMenu() {
-        val m = menu ?: return
-        menu = null
-        try { wm.removeView(m) } catch (_: Exception) {}
-        if (until == Long.MAX_VALUE) until = 0
-    }
-
-    private fun feed() { give(h = 35f, l = 3f); js("eat()"); idle(3000); handler.postDelayed({ talk("eat") }, 900) }
-    private fun play() { give(f = 30f, l = 4f, e = -3f); js("spin()"); idle(2500); handler.postDelayed({ talk("play") }, 700) }
+    // Avisos del móvil para el Eko de escritorio (assets/mob/mobile.js decide qué hace y qué dice)
+    private fun mob(ev: String) { web?.evaluateJavascript("window.EkoMobile&&EkoMobile.on('$ev')", null) }
 
     // ---------- Lo que Eko nota del móvil (sin permisos) ----------
     // Batería, pantalla apagada/desbloqueo, agitar el móvil, ponerlo boca abajo y auriculares.
@@ -281,26 +207,22 @@ class EkoService : Service() {
             val now = SystemClock.uptimeMillis()
             when (i.action) {
                 Intent.ACTION_POWER_CONNECTED -> {
-                    if (st == St.SLEEP) js("wake()")
-                    js("happy()"); idle(2500)
-                    talk("charge")
+                    mob("charge")
                 }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val lvl = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
                     val pct = lvl * 100 / scale
                     val plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
-                    if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; talk("lowBattery") }
+                    if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; mob("lowBattery") }
                     if (pct > 30 || plugged) lowSaid = false
                 }
                 Intent.ACTION_SCREEN_OFF -> {
-                    screenOffAt = now; closeMenu(); stopSensors()
-                    if (st != St.DRAG && st != St.FALL) { st = St.SLEEP; until = Long.MAX_VALUE; js("set('sleep', $dir)") }
+                    screenOffAt = now; stopSensors()
                 }
                 Intent.ACTION_USER_PRESENT -> {
                     startSensors()
-                    if (st == St.SLEEP) { js("wake()"); idle(2000) }
-                    if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) talk("missed")
+                    if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) handler.postDelayed({ mob("missed") }, 1200)
                 }
             }
         }
@@ -319,12 +241,12 @@ class EkoService : Service() {
             if (g > 2.3f) {
                 if (now - firstPeak > 1200) { firstPeak = now; peaks = 0 }
                 peaks++
-                if (peaks >= 3 && now - lastDizzy > 4000) { lastDizzy = now; peaks = 0; dizzy() }
+                if (peaks >= 3 && now - lastDizzy > 4000) { lastDizzy = now; peaks = 0; mob("shake") }
             }
             // boca abajo un par de segundos: siesta
             if (az < -8.5f && abs(ax) < 2.5f && abs(ay) < 2.5f) {
                 if (downSince == 0L) downSince = now
-                else if (now - downSince > 2500 && st != St.SLEEP && st != St.DRAG) { downSince = now + 60_000; faceDown() }
+                else if (now - downSince > 2500) { downSince = now + 60_000; mob("faceDown") }
             } else if (downSince in 1..now) downSince = 0L
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -333,228 +255,28 @@ class EkoService : Service() {
         sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensors.registerListener(motion, it, SensorManager.SENSOR_DELAY_UI) }
     }
     private fun stopSensors() { sensors.unregisterListener(motion) }
-    private fun dizzy() {
-        if (st == St.DRAG || st == St.FALL) return
-        if (st == St.SLEEP) js("wake()")
-        js("dizzy()"); idle(3200)
-        talk("shake"); handler.postDelayed({ talk("dizzy") }, 2600)
-    }
-    private fun faceDown() {
-        talk("faceDown")
-        handler.postDelayed({ st = St.SLEEP; until = SystemClock.uptimeMillis() + 5 * 60_000; js("set('sleep', $dir)") }, 1500)
-    }
-
     private val HEADS = setOf(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BLE_HEADSET)
     private val audioCb = object : AudioDeviceCallback() {
         var ready = false
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) {
             if (!ready) { ready = true; return }          // la primera llamada son los que ya estaban conectados
-            if (added.any { it.isSink && it.type in HEADS }) { js("happy()"); talk("music") }
+            if (added.any { it.isSink && it.type in HEADS }) mob("music")
         }
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) {
-            if (removed.any { it.isSink && it.type in HEADS }) talk("musicOff")
-        }
-    }
-
-    // ---------- Necesidades: barriga, juego, mimos y energía (0–100, se guardan en el móvil) ----------
-    private var hunger = 75f
-    private var fun_ = 70f
-    private var love = 70f
-    private var energy = 85f
-    private var needsAt = 0L
-    private var nextHint = 0L
-    private fun loadNeeds() {
-        val p = prefs()
-        hunger = p.getFloat("hunger", 75f); fun_ = p.getFloat("fun", 70f); love = p.getFloat("love", 70f); energy = p.getFloat("energy", 85f)
-        // mientras no estaba fuera, baja poquito (como mucho 12 h y con suelo): al volver, como mucho tiene hambre y ganas de verte
-        val h = ((System.currentTimeMillis() - p.getLong("needsT", System.currentTimeMillis())) / 3_600_000f).coerceIn(0f, 12f)
-        hunger = maxOf(minOf(hunger, 30f), hunger - 6f * h / 2)
-        fun_ = maxOf(minOf(fun_, 35f), fun_ - 10f * h / 2)
-        love = maxOf(minOf(love, 30f), love - 8f * h / 2)
-        energy = (energy + 10f * h).coerceAtMost(100f)
-        needsAt = SystemClock.uptimeMillis()
-        saveNeeds()
-    }
-    private fun saveNeeds() {
-        prefs().edit().putFloat("hunger", hunger).putFloat("fun", fun_).putFloat("love", love).putFloat("energy", energy)
-            .putLong("needsT", System.currentTimeMillis()).apply()
-    }
-    private fun needsTick(now: Long) {
-        if (now - needsAt < 60_000) return
-        val h = (now - needsAt) / 3_600_000f
-        needsAt = now
-        val asleep = st == St.SLEEP
-        hunger = (hunger - 6f * h * (if (asleep) 0.4f else 1f)).coerceIn(0f, 100f)
-        fun_ = (fun_ - (if (asleep) 0f else 10f) * h).coerceIn(0f, 100f)
-        love = (love - (if (asleep) 2f else 8f) * h).coerceIn(0f, 100f)
-        energy = (energy + (if (asleep) 30f else -5f) * h).coerceIn(0f, 100f)
-        saveNeeds()
-        js("brows('${if (minOf(hunger, fun_, love) < 25f) "sad" else if (minOf(hunger, fun_, love) < 40f) "worried" else "none"}')")
-        // de vez en cuando te pide lo que más le falta (como mucho cada 20 min)
-        if (asleep || menu != null || now < nextHint) return
-        val low = listOf("hunger" to hunger, "fun" to fun_, "love" to love, "energy" to energy).minByOrNull { it.second } ?: return
-        if (low.second >= 30f) return
-        nextHint = now + 20 * 60_000L
-        when (low.first) {
-            "hunger" -> say(pick(listOf("Tengo hambre… ¿una galleta?", "Me suenan las tripas", "Mantenme pulsado y dame algo de comer")), 3200)
-            "fun" -> say(pick(listOf("Me aburro… ¿jugamos?", "¿Hacemos algo divertido?")), 3000)
-            "love" -> say(pick(listOf("¿Me haces un mimito?", "Hace mucho que no me tocas…")), 3000)
-            "energy" -> { say("Estoy agotado… voy a dormir un poco", 2600); handler.postDelayed({ sleep() }, 1800) }
-        }
-    }
-    private fun give(h: Float = 0f, f: Float = 0f, l: Float = 0f, e: Float = 0f) {
-        hunger = (hunger + h).coerceIn(0f, 100f); fun_ = (fun_ + f).coerceIn(0f, 100f)
-        love = (love + l).coerceIn(0f, 100f); energy = (energy + e).coerceIn(0f, 100f)
-        saveNeeds()
-    }
-
-    // ---------- Travesuras: de vez en cuando hace algo por su cuenta ----------
-    private var nextAntic = 0L
-    private fun antic() {
-        when (Random.nextInt(3)) {
-            0 -> { // se asoma por un borde de la pantalla
-                val left = x < maxX() / 2
-                dir = if (left) -1 else 1
-                targetX = if (left) -winW * 0.55f else maxX() + winW * 0.55f
-                st = St.PEEK; until = 0L; js("set('walk', $dir)"); talk("peek", 0.6)
-            }
-            1 -> { // salto bien alto
-                st = St.FALL; vy = -1500 * dens; js("set('fall', $dir)")
-                talk("jump")
-            }
-            else -> { js("dance()"); idle(5000); talk("dance") }
-        }
-    }
-
-    // Lo que dice lo elige talk.js (frases del Eko de escritorio + las del móvil, sin repetir); aquí solo se pinta el bocadillo
-    private fun talk(ev: String, chance: Double = 1.0) = js("talk('$ev', $chance)")
-    inner class Bridge {
-        @JavascriptInterface fun say(text: String, ms: Int) { handler.post { this@EkoService.say(text, ms.toLong()) } }
-    }
-    private var nextChat = 0L
-    private var dragStart = 0L
-    private var heldSaid = false
-
-    private fun js(code: String) { web?.evaluateJavascript("window.eko && eko.$code", null) }
-
-    private fun idle(ms: Long) { st = St.IDLE; until = SystemClock.uptimeMillis() + ms; js("set('idle', $dir)") }
-    private fun walk() {
-        targetX = Random.nextFloat() * maxX()
-        if (abs(targetX - x) < 60 * dens) targetX = if (x > maxX() / 2) x - 160 * dens else x + 160 * dens
-        targetX = targetX.coerceIn(0f, maxX())
-        dir = if (targetX > x) 1 else -1
-        st = St.WALK; js("set('walk', $dir)")
-    }
-    private fun sleep() { st = St.SLEEP; until = SystemClock.uptimeMillis() + Random.nextLong(40_000, 90_000); js("set('sleep', $dir)") }
-
-    private var alive = true
-    private val tick = object : Choreographer.FrameCallback, Runnable {
-        override fun run() { Choreographer.getInstance().postFrameCallback(this) }
-        override fun doFrame(frameTimeNanos: Long) {
-            if (!alive) return
-            val now = SystemClock.uptimeMillis()
-            val dt = ((now - last).coerceAtMost(100)) / 1000f
-            needsTick(now)
-            if ((st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE && now > nextChat) {
-                nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
-            }
-            if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
-            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
-            last = now
-            when (st) {
-                St.WALK -> {
-                    x += dir * 72 * dens * dt
-                    if ((dir > 0 && x >= targetX) || (dir < 0 && x <= targetX) || x <= 0f || x >= maxX()) {
-                        x = x.coerceIn(0f, maxX()); idle(Random.nextLong(1500, 6000))
-                    }
-                    y = ground()
-                }
-                St.IDLE -> {
-                    y = ground()
-                    if (now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
-                }
-                St.SLEEP -> { y = ground(); if (now > until) { js("wake()"); idle(1500) } }
-                St.FALL -> {
-                    vy += 2400 * dens * dt
-                    y += vy * dt
-                    if (y >= ground()) { y = ground(); vy = 0f; js("land()"); idle(1800); talk("drop", 0.6) }
-                }
-                St.DRAG -> {}
-                St.PEEK -> {
-                    y = ground()
-                    if (until == 0L) {
-                        x += dir * 72 * dens * dt
-                        if ((dir < 0 && x <= targetX) || (dir > 0 && x >= targetX)) { x = targetX; until = now + 6000; js("set('idle', ${-dir})") }
-                    } else if (now > until) { x = x.coerceIn(0f, maxX()); walk(); talk("peekBack", 0.5) }
-                }
-            }
-            if (st != St.PEEK) x = x.coerceIn(0f, maxX())
-            if (lp.x != x.toInt() || lp.y != y.toInt()) {
-                lp.x = x.toInt(); lp.y = y.toInt()
-                web?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) {} }
-                bubble?.let { if (it.visibility == View.VISIBLE) placeAbove(it, bubbleLp) }
-            }
-            Choreographer.getInstance().postFrameCallback(this)
-        }
-    }
-
-    // Tocar: reacciona · Arrastrar: lo coges y al soltarlo cae · Mantener pulsado: abre su casa (la app)
-    private var downX = 0f
-    private var downY = 0f
-    private var startX = 0f
-    private var startY = 0f
-    private var dragging = false
-    private var longDone = false
-    private val longPress = Runnable {
-        longDone = true
-        openMenu()
-    }
-
-    private fun touch(e: MotionEvent) {
-        when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                downX = e.rawX; downY = e.rawY; startX = x; startY = y
-                dragging = false; longDone = false
-                handler.postDelayed(longPress, 650)
-            }
-            MotionEvent.ACTION_MOVE -> {
-                val dx = e.rawX - downX
-                val dy = e.rawY - downY
-                if (!dragging && hypot(dx, dy) > 12 * dens) {
-                    dragging = true; handler.removeCallbacks(longPress)
-                    st = St.DRAG; js("set('drag', $dir)"); closeMenu()
-                    dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5)
-                }
-                if (dragging) {
-                    if (abs(dx) > 2) dir = if (startX + dx > x) 1 else -1
-                    x = (startX + dx).coerceIn(0f, maxX())
-                    y = (startY + dy).coerceIn(0f, ground())
-                }
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                handler.removeCallbacks(longPress)
-                if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
-                else if (!longDone) {
-                    if (st == St.SLEEP) { js("wake()"); idle(2500); talk("wake") }
-                    else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7) }
-                }
-            }
+            if (removed.any { it.isSink && it.type in HEADS }) mob("musicOff")
         }
     }
 
     override fun onDestroy() {
         running = false
-        alive = false
-        Choreographer.getInstance().removeFrameCallback(tick)
-        closeMenu()
         try { unregisterReceiver(sysReceiver) } catch (_: Exception) {}
         stopSensors()
         try { getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(audioCb) } catch (_: Exception) {}
-        bubble?.let { try { wm.removeView(it) } catch (_: Exception) {} }
-        bubble = null
         handler.removeCallbacksAndMessages(null)
-        web?.let { try { wm.removeView(it) } catch (_: Exception) {}; it.destroy() }
-        web = null
+        web?.let { Hub.webs.remove(it) }
+        box?.let { try { wm.removeView(it) } catch (_: Exception) {} }
+        web?.destroy()
+        web = null; box = null
         super.onDestroy()
     }
 }

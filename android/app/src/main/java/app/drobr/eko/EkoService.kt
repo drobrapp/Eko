@@ -6,6 +6,20 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
+import android.os.BatteryManager
+import androidx.core.content.ContextCompat
+import java.util.Calendar
+import kotlin.math.sqrt
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
@@ -146,6 +160,13 @@ class EkoService : Service() {
         idle(2000)
         handler.postDelayed({ say(pick(listOf("¡Hola! Ya estoy aquí", "¡Qué grande es tu pantalla!", "¡Allá voy!"))) }, 900)
         handler.post(tick)
+        val f = IntentFilter().apply {
+            addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_BATTERY_CHANGED)
+            addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(this, sysReceiver, f, ContextCompat.RECEIVER_NOT_EXPORTED)
+        startSensors()
+        getSystemService(AudioManager::class.java).registerAudioDeviceCallback(audioCb, handler)
         handler.postDelayed(updateCheck, 60_000)
     }
 
@@ -245,6 +266,91 @@ class EkoService : Service() {
     private fun feed() { js("eat()"); idle(3000); handler.postDelayed({ say(pick(listOf("¡Ñam! Gracias", "¡Qué rica!", "Mmm… ¡otra!"))) }, 900) }
     private fun play() { js("spin()"); idle(2500); handler.postDelayed({ say(pick(listOf("¡Voltereta!", "¿Has visto eso?", "¡Otra vez, otra vez!"))) }, 700) }
 
+    // ---------- Lo que Eko nota del móvil (sin permisos) ----------
+    // Batería, pantalla apagada/desbloqueo, agitar el móvil, ponerlo boca abajo y auriculares.
+    private var lowSaid = false
+    private var screenOffAt = 0L
+    private var lastDizzy = 0L
+    private val sysReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            val now = SystemClock.uptimeMillis()
+            when (i.action) {
+                Intent.ACTION_POWER_CONNECTED -> {
+                    if (st == St.SLEEP) js("wake()")
+                    js("happy()"); idle(2500)
+                    say(pick(listOf("¡Comida eléctrica! Ñam", "¡Recargando! Qué gustito", "Gracias, ya me notaba flojito")))
+                }
+                Intent.ACTION_BATTERY_CHANGED -> {
+                    val lvl = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+                    val pct = lvl * 100 / scale
+                    val plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+                    if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; say("Estoy cansadito… ¿me cargas el móvil?", 3500) }
+                    if (pct > 30 || plugged) lowSaid = false
+                }
+                Intent.ACTION_SCREEN_OFF -> {
+                    screenOffAt = now; closeMenu(); stopSensors()
+                    if (st != St.DRAG && st != St.FALL) { st = St.SLEEP; until = Long.MAX_VALUE; js("set('sleep', $dir)") }
+                }
+                Intent.ACTION_USER_PRESENT -> {
+                    startSensors()
+                    if (st == St.SLEEP) { js("wake()"); idle(2000) }
+                    if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) say(pick(listOf("¡Has vuelto!", "Te estaba esperando", "¡Hola otra vez!")))
+                }
+            }
+        }
+    }
+
+    private val sensors by lazy { getSystemService(SensorManager::class.java) }
+    private val motion = object : SensorEventListener {
+        var peaks = 0
+        var firstPeak = 0L
+        var downSince = 0L
+        override fun onSensorChanged(e: SensorEvent) {
+            val ax = e.values[0]; val ay = e.values[1]; val az = e.values[2]
+            val g = sqrt(ax * ax + ay * ay + az * az) / 9.81f
+            val now = SystemClock.uptimeMillis()
+            // agitar: 3 sacudidas fuertes en poco más de un segundo
+            if (g > 2.3f) {
+                if (now - firstPeak > 1200) { firstPeak = now; peaks = 0 }
+                peaks++
+                if (peaks >= 3 && now - lastDizzy > 4000) { lastDizzy = now; peaks = 0; dizzy() }
+            }
+            // boca abajo un par de segundos: siesta
+            if (az < -8.5f && abs(ax) < 2.5f && abs(ay) < 2.5f) {
+                if (downSince == 0L) downSince = now
+                else if (now - downSince > 2500 && st != St.SLEEP && st != St.DRAG) { downSince = now + 60_000; faceDown() }
+            } else if (downSince in 1..now) downSince = 0L
+        }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+    private fun startSensors() {
+        sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensors.registerListener(motion, it, SensorManager.SENSOR_DELAY_UI) }
+    }
+    private fun stopSensors() { sensors.unregisterListener(motion) }
+    private fun dizzy() {
+        if (st == St.DRAG || st == St.FALL) return
+        if (st == St.SLEEP) js("wake()")
+        js("dizzy()"); idle(3200)
+        say(pick(listOf("¡Me mareooo!", "¡Para, para, que todo da vueltas!", "Uy… veo tres pantallas")))
+    }
+    private fun faceDown() {
+        say("Qué oscurito… me echo una siesta", 2200)
+        handler.postDelayed({ st = St.SLEEP; until = SystemClock.uptimeMillis() + 5 * 60_000; js("set('sleep', $dir)") }, 1500)
+    }
+
+    private val HEADS = setOf(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_BLE_HEADSET)
+    private val audioCb = object : AudioDeviceCallback() {
+        var ready = false
+        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) {
+            if (!ready) { ready = true; return }          // la primera llamada son los que ya estaban conectados
+            if (added.any { it.isSink && it.type in HEADS }) { js("happy()"); say(pick(listOf("¡Cascos puestos! ¿Qué escuchamos?", "¡Música! Yo también me los pongo", "Pon algo que se pueda bailar"))) }
+        }
+        override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) {
+            if (removed.any { it.isSink && it.type in HEADS }) say("¿Se acabó la música?")
+        }
+    }
+
     private fun js(code: String) { web?.evaluateJavascript("window.eko && eko.$code", null) }
 
     private fun idle(ms: Long) { st = St.IDLE; until = SystemClock.uptimeMillis() + ms; js("set('idle', $dir)") }
@@ -275,7 +381,7 @@ class EkoService : Service() {
                 }
                 St.IDLE -> {
                     y = ground()
-                    if (now > until) { val r = Random.nextFloat(); if (r < 0.75f) walk() else if (r < 0.88f) idle(Random.nextLong(2000, 5000)) else sleep() }
+                    if (now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
                 }
                 St.SLEEP -> { y = ground(); if (now > until) { js("wake()"); idle(1500) } }
                 St.FALL -> {
@@ -343,6 +449,9 @@ class EkoService : Service() {
         alive = false
         Choreographer.getInstance().removeFrameCallback(tick)
         closeMenu()
+        try { unregisterReceiver(sysReceiver) } catch (_: Exception) {}
+        stopSensors()
+        try { getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(audioCb) } catch (_: Exception) {}
         bubble?.let { try { wm.removeView(it) } catch (_: Exception) {} }
         bubble = null
         handler.removeCallbacksAndMessages(null)

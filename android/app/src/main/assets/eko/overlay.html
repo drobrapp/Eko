@@ -283,6 +283,7 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
     tap() { E.happyUntil = E.t + 1.2; E.hop = E.t; },
     happy() { E.happyUntil = E.t + 1.5; },
     land() { E.squash = E.t; E.happyUntil = E.t + 0.8; },
+    dizzy() { E.dizzyUntil = E.t + 2.8; eko.dataset.eyes = "spiral"; },
     eat() { const c = document.getElementById("cookie"); c.classList.add("on"); E.happyUntil = E.t + 2.2; setTimeout(() => c.classList.remove("on"), 1700); },
     spin() { E.spin = E.t; E.hop = E.t; E.happyUntil = E.t + 1.6; },
     wake() { E.st = "idle"; eko.dataset.state = "idle"; eko.dataset.eyes = "happy"; E.happyUntil = E.t + 1.4; E.hop = E.t; },
@@ -312,7 +313,10 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
     const spq = E.t - (E.spin || -9), spinDeg = spq < 0.8 ? 360 * (1 - Math.pow(1 - spq / 0.8, 2)) : 0, spinJump = spq < 0.8 ? Math.sin(spq / 0.8 * Math.PI) * 5 : 0, spinS = spq < 0.8 ? 1 - Math.sin(spq / 0.8 * Math.PI) * 0.22 : 1;
     svg.style.transformOrigin = spq < 0.8 ? "50% 58%" : "50% 100%";
     svg.style.transform = `translateX(-50%) translateY(${-(jump + bob + spinJump)}%) rotate(${spinDeg.toFixed(1)}deg) scale(${((2 - sy) * spinS).toFixed(3)}, ${(sy * spinS).toFixed(3)})`;
-    if (!sleeping) {
+    const dizzy = E.t < (E.dizzyUntil || 0);
+    if (dizzy) { eko.dataset.eyes = "spiral"; if (el.head) el.head.setAttribute("transform", `rotate(${(Math.sin(E.t * 11) * 9).toFixed(1)} 0 40)`); if (el.pet) el.pet.setAttribute("transform", `rotate(${(Math.sin(E.t * 6) * 7).toFixed(1)} 0 176)`); }
+    else if (eko.dataset.eyes === "spiral") eko.dataset.eyes = "open";
+    if (!sleeping && !dizzy) {
       if (E.t < E.happyUntil) eko.dataset.eyes = "happy";
       else if (E.t > E.blinkAt) { eko.dataset.eyes = "closed"; if (E.t > E.blinkAt + 0.13) { eko.dataset.eyes = "open"; E.blinkAt = E.t + 2 + Math.random() * 4; } }
       else if (eko.dataset.eyes === "happy") eko.dataset.eyes = "open";

@@ -23,6 +23,7 @@ window.EkoNeeds = (() => {
 
   let saved = null; try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
   const N = Object.assign({ hunger: 75, energy: 85, fun: 70, love: 70, t: Date.now(), hintAt: 0, happyAt: 0, log: [] }, saved || {});
+  let napping = false;                                     // siesta por cansancio: termina sola al recargar
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(N)); } catch (_) {} };
 
   // ---------- Lo que ha pasado con el PC apagado o Eko cerrado ----------
@@ -48,7 +49,9 @@ window.EkoNeeds = (() => {
     if (S.sleeping) {
       N.energy = clamp(N.energy + 30 * h * recoveryMult(), 0, 100); // dormir recarga energía
       N.hunger = clamp(N.hunger - RATE.hunger * 0.4 * h * m, 0, 100);
+      if (napping && N.energy >= 96) { napping = false; E.wakeUp(true, true); }
     } else {
+      napping = false;
       for (const k of KINDS) N[k] = clamp(N[k] - RATE[k] * h * m, 0, 100);
     }
     save();
@@ -177,7 +180,7 @@ window.EkoNeeds = (() => {
     const now = Date.now(), k = low(), v = N[k];
     const idleMin = (now - E.lastInteraction()) / 60000;
     // Siesta sola si está agotado y no le estás haciendo caso
-    if (k === "energy" && v < 12 && idleMin > 2) { say(L.nap, 2400); setTimeout(() => E.goToSleep(false), 1800); return; }
+    if (k === "energy" && v < 12 && idleMin > 2) { say(L.nap, 2400); setTimeout(() => { E.goToSleep(false); napping = true; }, 1800); return; }
     if (v >= 40) {
       // Todo bien: de vez en cuando lo celebra
       if (KINDS.every((x) => N[x] >= 75) && now > N.happyAt) {

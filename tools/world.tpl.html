@@ -13,16 +13,23 @@ body.night #sun{animation:none}
 .cloud{position:fixed;opacity:.92;pointer-events:none;filter:drop-shadow(0 6px 8px rgba(150,175,205,.3))}
 .layer{position:fixed;left:0;right:0;bottom:0;background-repeat:repeat-x;background-size:auto 100%;pointer-events:none}
 #world{position:fixed;left:0;bottom:0;height:100%;will-change:transform}
-.prop{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 100%}
+.prop{position:absolute;pointer-events:auto;cursor:default;transform-origin:50% 100%}
+.prop.interactable{cursor:pointer}
 .prop img{width:100%;height:100%;display:block;pointer-events:none}
+.prop.interactable:hover img,.plant:hover img{filter:drop-shadow(0 0 8px rgba(255,236,158,.78))}
+.prop[data-garden-tool],.plant{touch-action:none;cursor:grab}
+.prop[data-garden-tool]:active,.plant:active{cursor:grabbing}
 .prop.sway{animation:sway 6s ease-in-out infinite}
 @keyframes sway{50%{transform:rotate(1.2deg)}}
+.prop.story-target img{animation:storyGlow 1.8s ease-in-out infinite alternate}
+@keyframes storyGlow{to{filter:drop-shadow(0 0 18px rgba(255,236,158,.95))}}
 .glow{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,214,140,.85),rgba(255,200,120,.25) 50%,transparent);opacity:0;transition:opacity 2s}
 .lit .glow{opacity:1}
 #eko{position:absolute;pointer-events:auto;cursor:pointer}
 #eko #mochi{position:absolute;left:0;bottom:0;overflow:visible}
-#bub{position:absolute;transform:translate(-50%,-100%);background:#fffaf6;color:#3b2f2a;padding:8px 13px;border-radius:15px;box-shadow:0 4px 14px rgba(50,30,20,.25);font-size:15px;max-width:300px;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;white-space:normal}
+#bub{position:absolute;transform:translate(-50%,-100%);background:#fffaf6;color:#3b2f2a;padding:8px 13px;border-radius:15px;box-shadow:0 4px 14px rgba(50,30,20,.25);font-size:15px;max-width:300px;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;white-space:normal;cursor:pointer}
 #bub.on{opacity:1}
+#bub.on{pointer-events:auto}
 #bub::after{content:"";position:absolute;left:50%;bottom:-7px;width:14px;height:14px;margin-left:-7px;background:#fffaf6;transform:rotate(45deg);border-radius:0 0 4px 0}
 #fogR,#fogL{position:absolute;bottom:0;height:100%;pointer-events:none}
 #fogR{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(250,248,244,.92) 35%,#f7f4ef 60%)}
@@ -30,7 +37,7 @@ body.night #sun{animation:none}
 .mist{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.9),transparent);animation:mist 9s ease-in-out infinite;pointer-events:none}
 @keyframes mist{50%{transform:translateX(-40px) scale(1.1)}}
 #signText{position:absolute;text-align:center;font:700 22px "Segoe Print","Comic Sans MS",cursive;color:#6b4a33;pointer-events:none;line-height:1.1}
-#back{position:fixed;left:18px;top:16px;z-index:50;border:none;border-radius:18px;padding:9px 16px;background:#fffaf6;color:#5a463d;font:700 14px "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 14px rgba(50,30,20,.25);cursor:pointer}
+#back{position:fixed;left:18px;top:16px;z-index:70;border:none;border-radius:18px;padding:9px 16px;background:#fffaf6;color:#5a463d;font:700 14px "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 14px rgba(50,30,20,.25);cursor:pointer}
 #title{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;font:700 20px "Segoe Print","Comic Sans MS",cursive;color:#fff;text-shadow:0 2px 6px rgba(40,30,60,.35);opacity:0;transition:opacity 1.2s;pointer-events:none}
 #title.on{opacity:1}
 #cover{position:fixed;inset:0;z-index:80;pointer-events:none;background:#fff;opacity:1;transition:opacity 1.2s}
@@ -38,8 +45,9 @@ body.night #sun{animation:none}
 .flake{position:fixed;top:-10px;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.9;pointer-events:none;animation:fall linear infinite}
 .flake.leaf{width:9px;height:6px;border-radius:3px}
 @keyframes fall{to{transform:translate(60px,110vh) rotate(300deg)}}
-.plant{position:absolute;z-index:5;pointer-events:auto;cursor:pointer;transform-origin:50% 100%}
+.plant{position:absolute;z-index:5;pointer-events:auto;cursor:grab;transform-origin:50% 100%;touch-action:none}
 .plant img{width:100%;height:100%;display:block;pointer-events:none}
+.garden-drag{position:fixed;z-index:100;width:76px;height:76px;object-fit:contain;transform:translate(-50%,-50%);filter:drop-shadow(0 5px 8px rgba(40,30,20,.32));pointer-events:none}
 .plant.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}@keyframes pop{from{transform:scale(.2)}}
 .plant .thirst{position:absolute;left:50%;top:-14px;width:10px;height:13px;margin-left:-5px;background:#7FB3E0;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;clip-path:polygon(50% 0,100% 60%,85% 95%,15% 95%,0 60%);opacity:0;transition:opacity .4s}
 .plant.dry .thirst{opacity:.9;animation:bob 1.6s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-5px)}}
@@ -103,14 +111,14 @@ body.night #houseView{filter:brightness(.57) saturate(.8)}
 #houseGallery img{width:74px;height:74px;object-fit:contain;display:block;margin:0 auto 8px}
 #houseGalleryClose{position:fixed;right:14%;top:10%;z-index:21;border:0;border-radius:50%;width:42px;height:42px;background:#fff8ed;color:#634734;font-size:24px;cursor:pointer;display:none}
 #houseGallery.on+#houseGalleryClose{display:block}
-body.in-house #back,body.in-house #title{display:none}
+body.in-house #title{display:none}
 </style></head><body>
 <div id="sky"></div><div id="sun"></div><div id="stars"></div><div id="clouds"></div>
 <div class="layer" id="far"></div><div class="layer" id="mid"></div>
 <div class="layer" id="ground"></div>
 <div id="world"><div id="backL"></div><div id="ekoBox"></div><div id="frontL"></div></div>
 <div id="interior" aria-label="Interior de la casa"><div id="houseView" aria-hidden="true"><img id="houseWindowSun" src="art/valley/sun.webp" alt=""><img class="houseWindowCloud" src="art/valley/cloud.webp" alt=""><div id="houseViewFar"></div><div id="houseViewMid"></div><div id="houseSeason"></div></div><img id="houseRoom" src="art/house-room.png" alt="" draggable="false"><div id="houseWallTint"></div><div id="houseFloorTint"></div><div id="houseProps"></div><button id="houseExit" aria-label="Salir al valle por la puerta"></button><button id="houseStairs" aria-label="Subir las escaleras"><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="rail"></span><span class="landing"></span></button><div id="houseGallery" aria-label="Recuerdos y cuadros"></div><button id="houseGalleryClose" aria-label="Cerrar vitrina">×</button><div id="houseActors"></div></div>
-<button id="back">← Volver a casa</button><div id="title"></div><div id="cover"></div>
+<button id="back">← Volver</button><div id="title"></div><div id="cover"></div>
 <div id="ekoTpl" style="display:none">
 <!--SVG-->
 </div>

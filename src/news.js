@@ -5,12 +5,13 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
-    "0.29.18": { important: true, lines: ["Ahora abro o cierro directamente el programa que me pidas, sin pedirte otra confirmación", "Si encuentro varios, pruebo primero el que más se parece al nombre que has dicho", "Windows aún puede pedirte que guardes cambios antes de cerrar una aplicación"] },
-    "0.29.17": { important: true, lines: ["La voz y la IA reutilizan las mismas acciones cuando ambas las permiten", "Primero te digo que voy a intentarlo; después confirmo si la acción funcionó", "Si me duermo, solo me despierta un clic izquierdo, también cuando la voz está activada"] },
-    "0.29.16": { important: true, lines: ["Ahora puedo regar mi brote y visitar el valle cuando me lo pidas", "También puedo iniciar un Pomodoro, guardar notas, enseñarte tus tareas y cambiar el modo discreto", "He ampliado lo que entiendo del menú: puedo proponerte juegos, darte un abrazo o ayudarte con música y carpetas"] },
-    "0.29.15": { important: true, lines: ["Ahora puedo buscar un programa por un nombre corto, como Photoshop, y preguntarte antes de abrirlo", "También puedo cerrar un programa cuando me lo pidas; su aplicación puede preguntarte qué hacer con los cambios sin guardar", "Y si me dices «vuela», ¡despego con mi capa!"] },
-    "0.29.14": { important: true, lines: ["Ahora te pregunto antes de abrir programas, páginas o descargas, y antes de guardar lo que me cuentas", "Solo hago una cosa cada vez y, si no entiendo bien una orden, te pregunto en vez de improvisar"] },
-    "0.29.13": { important: true, lines: ["¡Ahora entiendo mejor lo que me pides! Puedo responder y hacer mis acciones en un formato ordenado"] },
+    "0.29.19": { important: true, lines: ["Si me quedo dormido de cansancio, me despierto yo solo cuando he recargado", "Y si tenías un recordatorio, me despierto para avisarte. ¡No se me escapa ninguno!"] },
+    "0.29.18": { important: true, lines: ["Pídeme que abra o cierre un programa y lo hago al momento", "Si cierro algo con cambios sin guardar, el programa te preguntará antes, tranqui"] },
+    "0.29.17": { important: true, lines: ["Ahora te entiendo lo mismo hablando que escribiendo", "Y si me duermo, despiértame con un clic. ¡Ya no me despierto con cualquier ruido!"] },
+    "0.29.16": { important: true, lines: ["¡Ahora puedo regar mi brote o llevarte al valle si me lo pides!", "También pongo un Pomodoro, apunto notas y te enseño tus tareas", "Y si te apetece, te propongo un juego o te doy un abrazo"] },
+    "0.29.15": { important: true, lines: ["Dime solo «Photoshop» y lo encuentro, no hace falta el nombre entero", "Y si me dices «vuela», ¡despego con mi capa!"] },
+    "0.29.14": { important: true, lines: ["Antes de guardar algo que me cuentas, te pregunto si quieres que lo recuerde", "Y si no entiendo bien lo que me pides, te pregunto en vez de inventármelo"] },
+    "0.29.13": { important: true, lines: ["¡Ahora te entiendo mucho mejor cuando hablamos!"] },
     "0.29.12": { important: true, lines: ["¡Piedra, papel o tijera tiene imágenes nuevas! Y ahora enseño en la mano lo que he elegido"] },
     "0.29.10": { important: true, lines: ["He ordenado mi habitación: los muebles y recuerdos se ven en su sitio, sin marcos duplicados", "Ahora mis plantas asoman desde la tierra y puedo pasar bajo el arco", "Por la ventana cambian el cielo, el sol y las hojas o la nieve según la hora y la estación"] },
     "0.29.6": { important: true, lines: ["¡La niebla se ha apartado! Al otro lado del valle hay un huerto entero: cruza el arco y conoce a Don Paja", "La regadera se vacía: rellénala en el pozo. Y lo que cosechéis va a la carretilla"] },

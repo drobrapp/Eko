@@ -967,10 +967,11 @@
     });
   }
   function checkReminders() {
-    if (E.S.sleeping) return;
     const now = Date.now();
     const due = reminders.filter((r) => r.at <= now);
     if (!due.length) return;
+    // Un recordatorio es lo único (aparte del clic izquierdo) que despierta a Eko: no puede perderse
+    if (E.S.sleeping) { E.wakeUp(false, true); setTimeout(checkReminders, 1600); return; }
     reminders = reminders.filter((r) => r.at > now);
     store.set("eko-reminders", reminders);
     const r = due[0];

@@ -2191,7 +2191,7 @@
       listen("eko-reset", () => location.reload());
       listen("cmd", (e) => {
         const c = e.payload;
-        if (c === "sleep") S.sleeping ? wakeUp() : goToSleep();
+        if (c === "sleep") S.sleeping ? wakeUp(true, true) : goToSleep(); // desde la bandeja: es una orden tuya, sí lo despierta
         if (c === "wake") lastPosKey = "";
         if (c === "updating") { act("bye"); say(pick(TXT.updating), 4000, true); }
         if (c === "sound-on") { Voice.setOn(true); Voice.chirp(); }

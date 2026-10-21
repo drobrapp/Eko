@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.WindowInsets
@@ -154,14 +155,17 @@ class EkoService : Service() {
     }
     private fun sleep() { st = St.SLEEP; until = SystemClock.uptimeMillis() + Random.nextLong(40_000, 90_000); js("set('sleep', $dir)") }
 
-    private val tick = object : Runnable {
-        override fun run() {
+    private var alive = true
+    private val tick = object : Choreographer.FrameCallback, Runnable {
+        override fun run() { Choreographer.getInstance().postFrameCallback(this) }
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!alive) return
             val now = SystemClock.uptimeMillis()
             val dt = ((now - last).coerceAtMost(100)) / 1000f
             last = now
             when (st) {
                 St.WALK -> {
-                    x += dir * 42 * dens * dt
+                    x += dir * 72 * dens * dt
                     if ((dir > 0 && x >= targetX) || (dir < 0 && x <= targetX) || x <= 0f || x >= maxX()) {
                         x = x.coerceIn(0f, maxX()); idle(Random.nextLong(1500, 6000))
                     }
@@ -184,7 +188,7 @@ class EkoService : Service() {
                 lp.x = x.toInt(); lp.y = y.toInt()
                 web?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) {} }
             }
-            handler.postDelayed(this, 33)
+            Choreographer.getInstance().postFrameCallback(this)
         }
     }
 
@@ -233,6 +237,8 @@ class EkoService : Service() {
 
     override fun onDestroy() {
         running = false
+        alive = false
+        Choreographer.getInstance().removeFrameCallback(tick)
         handler.removeCallbacksAndMessages(null)
         web?.let { try { wm.removeView(it) } catch (_: Exception) {}; it.destroy() }
         web = null

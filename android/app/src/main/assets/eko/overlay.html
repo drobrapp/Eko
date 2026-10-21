@@ -286,7 +286,7 @@ html,body{margin:0;width:100%;height:100%;background:transparent!important;overf
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; E.t += dt;
     const walking = E.st === "walk", drag = E.st === "drag" || E.st === "fall", sleeping = E.st === "sleep";
-    if (walking) E.ph += dt * 9;
+    if (walking) E.ph += dt * 12;   // pasos al ritmo de la nueva velocidad
     const s = Math.sin(E.ph);
     if (drag) {
       const w = Math.sin(E.t * 9);

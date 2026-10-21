@@ -11,8 +11,8 @@ android {
         applicationId = "app.drobr.eko"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
     }
 
     // Firma fija (guardada en el repo) para que cada APK nuevo se instale encima del anterior sin desinstalar

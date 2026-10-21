@@ -18,6 +18,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.webkit.WebView
 import kotlin.math.abs
@@ -84,7 +85,20 @@ class EkoService : Service() {
         val id = resources.getIdentifier("navigation_bar_height", "dimen", "android")
         return if (id > 0) resources.getDimensionPixelSize(id) else 0
     }
-    private fun ground(): Float = (screenH() - navBar() - winH).toFloat()
+    // Barra de abajo (gestos o botones) según Android, y desfase real de la ventana: en algunos móviles
+    // la «y» de la ventana empieza debajo de la barra de estado, así que se mide dónde acaba de verdad.
+    private var yOffset = 0
+    private fun bottomInset(): Int =
+        if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()).bottom
+        else navBar()
+    private fun ground(): Float = (screenH() - bottomInset() - winH - yOffset - (6 * dens).toInt()).toFloat()
+    private fun calibrate() {
+        val w = web ?: return
+        val loc = IntArray(2)
+        w.getLocationOnScreen(loc)
+        if (loc[1] != 0 || lp.y == 0) yOffset = loc[1] - lp.y
+    }
     private fun maxX(): Float = (screenW() - winW).toFloat()
 
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
@@ -113,6 +127,8 @@ class EkoService : Service() {
         wm.addView(w, lp)
         web = w
         w.setOnTouchListener { _, e -> touch(e); true }
+        handler.postDelayed({ calibrate(); y = ground() }, 400)
+        handler.postDelayed({ calibrate() }, 3000)
         last = SystemClock.uptimeMillis()
         idle(2000)
         handler.post(tick)

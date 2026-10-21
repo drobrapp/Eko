@@ -27,6 +27,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -124,21 +125,30 @@ class EkoService : Service(), Host {
     @Volatile private var ch = 160.0
     @Volatile private var rawX = 0f
     @Volatile private var rawY = 0f
-    @Volatile private var pending = false
+    @Volatile private var dirty = false
+    private var alive = true
     private val apply = Runnable {
-        pending = false
         val b = box ?: return@Runnable
         val w = web ?: return@Runnable
-        lp.x = ((vx + cl) * dens).roundToInt()
-        lp.y = ((vy + ct) * dens).roundToInt() - yOffset
+        val nx = ((vx + cl) * dens).roundToInt()
+        val ny = ((vy + ct) * dens).roundToInt() - yOffset
         val nw = (cw * dens).roundToInt().coerceAtLeast(1)
         val nh = (ch * dens).roundToInt().coerceAtLeast(1)
-        lp.width = nw; lp.height = nh
         w.translationX = (-cl * dens).toFloat()
         w.translationY = (-ct * dens).toFloat()
+        if (nx == lp.x && ny == lp.y && nw == lp.width && nh == lp.height) return@Runnable
+        lp.x = nx; lp.y = ny; lp.width = nw; lp.height = nh
         try { wm.updateViewLayout(b, lp) } catch (_: Exception) {}
     }
-    private fun schedule() { if (!pending) { pending = true; handler.post(apply) } }
+    // La ventana se recoloca una vez por fotograma de la pantalla (sincronizada con el refresco), con lo último que pidió la página
+    private val frame = object : Choreographer.FrameCallback {
+        override fun doFrame(t: Long) {
+            if (!alive) return
+            if (dirty) { dirty = false; apply.run() }
+            Choreographer.getInstance().postFrameCallback(this)
+        }
+    }
+    private fun schedule() { dirty = true }
     override fun pos(x: Double, y: Double) { vx = x; vy = y; schedule() }
     override fun clip(l: Double, t: Double, w: Double, h: Double) { cl = l; ct = t; cw = w; ch = h; schedule() }
     override fun screen(): String = sc
@@ -179,6 +189,7 @@ class EkoService : Service(), Host {
         apply.run()
         wm.addView(b, lp)
         Hub.setup(this, w, "overlay", this, "index.html")
+        Choreographer.getInstance().postFrameCallback(frame)
         handler.postDelayed({ calibrate(); schedule() }, 400)
         handler.postDelayed({ calibrate(); schedule() }, 3000)
         handler.postDelayed(remeasure, 2000)
@@ -269,6 +280,8 @@ class EkoService : Service(), Host {
 
     override fun onDestroy() {
         running = false
+        alive = false
+        Choreographer.getInstance().removeFrameCallback(frame)
         try { unregisterReceiver(sysReceiver) } catch (_: Exception) {}
         stopSensors()
         try { getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(audioCb) } catch (_: Exception) {}

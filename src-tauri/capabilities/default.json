@@ -9,7 +9,8 @@
     "chatbar",
     "catch",
     "corner",
-    "world"
+    "world",
+    "wrapped"
   ],
   "permissions": [
     "core:default",

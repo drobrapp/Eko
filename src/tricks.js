@@ -472,6 +472,7 @@ window.EkoTricks = (() => {
     S.mode = "idle"; S.modeUntil = A.t + E.ACTIONS[id].dur + 0.8; S.vx = 0;
     if (cur) { cur = null; clear(); }
     E.act(id);
+    if (window.EkoStats) window.EkoStats.add("trick");
     const o = A.action && A.action.opts;
     if (o && E.ACTIONS[id].start) E.ACTIONS[id].start(o);
     if (t.say.length && Math.random() < 0.6) E.say(t.say[Math.floor(Math.random() * t.say.length)], 1500, false);

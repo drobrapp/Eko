@@ -65,10 +65,12 @@ body.night #sun{animation:none}
 #ekoShadow{position:absolute;z-index:19;border-radius:50%;background:radial-gradient(closest-side,rgba(45,60,25,.35),rgba(45,60,25,0));pointer-events:none}
 #sunflowers{position:absolute;z-index:3;pointer-events:none;background:url(art/valley/h-sunflowers.webp) repeat-x left bottom;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .plaque{position:absolute;text-align:center;font:700 20px "Segoe Print","Comic Sans MS",cursive;color:#6b4a33;pointer-events:none}
-#interior{position:fixed;inset:0;z-index:60;display:none;overflow:hidden;background:transparent}
+#interior{position:fixed;inset:0;z-index:60;display:none;overflow:hidden;background:#c98f58 url(art/house-salon.webp) center top/100% 4000% no-repeat}
 #interior.on{display:block;animation:houseIn .65s ease-out both}
 @keyframes houseIn{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:none}}
-#houseView{position:absolute;left:39.7%;top:15.6%;width:20.6%;height:38.3%;overflow:hidden;z-index:0;background:#9CC9EE;transition:background 2s;clip-path:inset(0 round 46% 46% 2% 2% / 28% 28% 2% 2%)}
+#houseStage{position:absolute;left:50%;bottom:0;transform:translateX(-50%)}
+#houseStage.gap #houseRoom{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 9%);mask-image:linear-gradient(to bottom,transparent 0,#000 9%)}
+#houseView{position:absolute;left:40.9%;top:32.2%;width:18.2%;height:26%;overflow:hidden;z-index:0;background:#9CC9EE;transition:background 2s}
 #houseViewFar,#houseViewMid{position:absolute;left:-4%;right:-4%;background-repeat:repeat-x;background-position:center bottom;pointer-events:none}
 #houseViewFar{bottom:20%;height:46%;background-image:url(art/valley/hills-far.webp);background-size:auto 100%;opacity:.82}
 #houseViewMid{bottom:0;height:45%;background-image:url(art/valley/hills-mid.webp);background-size:auto 100%}
@@ -100,7 +102,7 @@ body.night #houseView{filter:brightness(.57) saturate(.8)}
 #houseActors #eko{z-index:8;pointer-events:auto}
 #houseActors #ekoShadow{z-index:7}
 #houseActors #bub{z-index:10}
-#houseExit{position:absolute;left:2.2%;top:52%;width:7.5%;height:30%;border:0;background:transparent;cursor:pointer;z-index:9;opacity:0}
+#houseExit{position:absolute;left:3%;top:33%;width:9%;height:53%;border:0;background:transparent;cursor:pointer;z-index:9;opacity:0}
 #houseExit:focus-visible,#houseStairs:focus-visible{outline:3px solid #fff;outline-offset:3px;opacity:.7}
 #houseStairs{position:absolute;right:1.8%;bottom:21.5%;width:13%;height:37%;border:0;padding:0;background:transparent;cursor:pointer;z-index:2}
 #houseStairs .step{position:absolute;left:0;bottom:0;width:72%;height:11%;border-radius:9px 4px 2px 2px;background:linear-gradient(155deg,#dbad78,#b47a4c);border:2px solid #9a6b42;box-shadow:inset 0 4px 0 rgba(255,238,200,.35),0 3px 5px rgba(50,30,20,.16)}
@@ -148,12 +150,18 @@ body.in-house #title{display:none}
 .fly{position:absolute;z-index:36;pointer-events:none;opacity:0;animation:flyAway 3.8s ease-in-out forwards}
 @keyframes flyAway{10%{opacity:1}30%{transform:translate(calc(var(--dx)*.3),calc(var(--dy)*.4)) rotate(-12deg) scaleX(.7)}55%{transform:translate(calc(var(--dx)*.6),calc(var(--dy)*.6)) rotate(10deg)}80%{opacity:1}to{transform:translate(var(--dx),var(--dy)) rotate(-8deg);opacity:0}}
 body.night .deco-farolillos img{filter:drop-shadow(0 0 10px rgba(255,214,140,.9)) brightness(1.15)}
+#houseWallTint,#houseFloorTint{display:none!important}
+.house-spot{position:absolute;border:0;padding:0;background:transparent;cursor:pointer;pointer-events:auto;border-radius:22px;transition:background .2s}
+.house-spot:hover{background:radial-gradient(closest-side,rgba(255,240,190,.22),transparent)}
+.house-glow{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(255,214,140,.6),rgba(255,200,120,.2) 55%,transparent);mix-blend-mode:screen;opacity:0;transition:opacity .6s;z-index:5}
+.house-glow.on{opacity:1}
+body.night #houseRoom{filter:brightness(.66) saturate(.85)}
 </style></head><body>
 <div id="sky"></div><div id="sun"></div><div id="stars"></div><div id="clouds"></div>
 <div class="layer" id="far"></div><div class="layer" id="mid"></div>
 <div class="layer" id="ground"></div>
 <div id="world"><div id="backL"></div><div id="ekoBox"></div><div id="frontL"></div></div>
-<div id="interior" aria-label="Interior de la casa"><div id="houseView" aria-hidden="true"><img id="houseWindowSun" src="art/valley/sun.webp" alt=""><img class="houseWindowCloud" src="art/valley/cloud.webp" alt=""><div id="houseViewFar"></div><div id="houseViewMid"></div><div id="houseSeason"></div></div><img id="houseRoom" src="art/house-room.png" alt="" draggable="false"><div id="houseWallTint"></div><div id="houseFloorTint"></div><div id="houseProps"></div><button id="houseExit" aria-label="Salir al valle por la puerta"></button><button id="houseStairs" aria-label="Subir las escaleras"><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="rail"></span><span class="landing"></span></button><div id="houseGallery" aria-label="Recuerdos y cuadros"></div><button id="houseGalleryClose" aria-label="Cerrar vitrina">×</button><div id="houseActors"></div></div>
+<div id="interior" aria-label="Interior de la casa"><div id="houseView" aria-hidden="true"><img id="houseWindowSun" src="art/valley/sun.webp" alt=""><img class="houseWindowCloud" src="art/valley/cloud.webp" alt=""><div id="houseViewFar"></div><div id="houseViewMid"></div><div id="houseSeason"></div></div><img id="houseRoom" src="art/house-salon.webp" alt="" draggable="false"><div id="houseWallTint"></div><div id="houseFloorTint"></div><div id="houseProps"></div><button id="houseExit" aria-label="Salir al valle por la puerta"></button><button id="houseStairs" aria-label="Subir las escaleras"><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="step"></span><span class="rail"></span><span class="landing"></span></button><div id="houseGallery" aria-label="Recuerdos y cuadros"></div><button id="houseGalleryClose" aria-label="Cerrar vitrina">×</button><div id="houseActors"></div></div>
 <button id="back">← Volver</button><div id="title"></div><div id="cover"></div>
 <div id="ekoTpl" style="display:none">
 <!--SVG-->

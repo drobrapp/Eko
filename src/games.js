@@ -105,6 +105,7 @@ window.EkoGames = (() => {
     game = Object.assign({ id, t0: A.t }, obj);
     A.gameMode = id;
     E.hold(1e6);
+    if (window.EkoStats) window.EkoStats.add("game");
     return true;
   }
   function stop(quiet) {

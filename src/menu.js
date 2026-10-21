@@ -535,7 +535,7 @@
       const n = list.filter((a) => got[a.id]).length;
       return tabs + `<p class="nsub">${n} / ${list.length}</p><div class="nach" style="--medal:url('${artSrc("artMedal")}')">${list.map((a) => `<button type="button" class="nmed${got[a.id] ? " got" : ""}${a.soon ? " soon" : ""}" data-a="${a.id}"><img src="${artSrc(a.ic)}" alt=""></button>`).join("")}</div><p class="ninfo">${ES ? "Toca una medalla para ver cómo se consigue" : "Tap a medal to see how to get it"}</p>`;
     }
-    let html = tabs;
+    let html = tabs + `<p class="ninfo"><button type="button" class="nlink nweek">${ES ? "✦ Nuestra semana" : "✦ Our week"}</button></p>`;
     if (P) {
       const l = P.level(), x = P.get().xp, a = P.xpFor(l), b = l < P.MAX ? P.xpFor(l + 1) : a + 1;
       const pct = l >= P.MAX ? 100 : Math.round(((x - a) / (b - a)) * 100);
@@ -554,6 +554,7 @@
   function wireNotebook(body) {
     const P = PG(), Nd = window.EkoNeeds;
     body.querySelectorAll(".ntabs button").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); nbTab = b.dataset.t; render("notebook"); }));
+    const wk = body.querySelector(".nweek"); if (wk) wk.addEventListener("click", (e) => { e.stopPropagation(); close(); if (window.EkoStats) window.EkoStats.open(); });
     const act = {
       hunger: () => giveSnack(),
       energy: () => (Nd.get().energy < 60 ? E.goToSleep() : (E.act("shake"), E.say(ES ? "¡Aún no tengo sueño!" : "I'm not sleepy yet!", 2000, true))),

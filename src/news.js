@@ -5,6 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.31.0": { important: true, lines: ["¡Novedad! Cada domingo por la tarde te preparo un resumen de nuestra semana", "Y si no puedes esperar, míralo en mi libreta: «Nuestra semana»"] },
+    "0.30.6": { important: true, lines: ["¡Mi casa del valle es nueva! Ahora tengo un saloncito con sillón, lamparita y ventana al valle", "Toca las cosas de casa: puedo encender las luces, sentarme en el sillón o enseñarte mis recuerdos"] },
     "0.30.3": { important: true, lines: ["Toca los arbustos del valle… y el árbol grande, tres veces seguidas", "¡Ojo con los pájaros y las malas hierbas del huerto!", "Y los premios de los encargos ya se ven en el valle"] },
     "0.30.2": { important: true, lines: ["¡Ahora puedes coger tú la regadera! Pásala por encima de una planta con sed para regarla, o por el pozo para llenarla", "Con el saquito de semillas, plantas donde lo sueltes. Yo me aparto y te animo"] },
     "0.30.1": { important: true, lines: ["En el huerto, toca la regadera o el saquito y lo hago yo. Si quieres elegir dónde, arrástralos"] },

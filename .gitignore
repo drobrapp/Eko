@@ -2,3 +2,7 @@ node_modules/
 src-tauri/target/
 src-tauri/gen/
 arte-original/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

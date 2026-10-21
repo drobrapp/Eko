@@ -3,7 +3,7 @@ name: Eko Android
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'src/**', 'src-tauri/tauri.conf.json']
+    paths: ['android/**']
   workflow_dispatch:
 
 permissions:

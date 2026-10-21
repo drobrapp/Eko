@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.30.1": { important: true, lines: ["En el huerto, toca la regadera o el saquito y lo hago yo. Si quieres elegir dónde, arrástralos"] },
     "0.30.0": { important: true, lines: ["Alguien está dejando notas con encargos clavadas en Don Paja… ¿Quién será?", "Si cumples los encargos, aparecen cosas nuevas en el valle", "Y ahora paso por debajo del arco al entrar al huerto"] },
     "0.29.19": { important: true, lines: ["En el huerto ya puedes soltar las semillas o la regadera en cualquier parte del bancal, ¡y voy yo solito!", "Si llegas al huerto por tu cuenta, te enseño a plantar ahí mismo", "Y si tenías un recordatorio mientras dormía, me despierto para avisarte"] },
     "0.29.18": { important: true, lines: ["Pídeme que abra o cierre un programa y lo hago al momento", "Si cierro algo con cambios sin guardar, el programa te preguntará antes, tranqui"] },

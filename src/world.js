@@ -73,7 +73,7 @@
   let storyStep = 0;
   try { if (!localStorage.getItem("eko-valley-story-v1")) storyStep = 1; } catch (_) { storyStep = 1; }
   let suppressGardenClick = 0, gardenDrag = null;
-  function storyTarget(p) { props.forEach((v) => v.el.classList.remove("story-target")); if (p) p.el.classList.add("story-target"); }
+  function storyTarget(p) { props.forEach((v) => v.el.classList.remove("story-target")); if (p) p.el.classList.add("story-target"); if (p === arch) archNear.el.classList.add("story-target"); }
   const props = [];
   function prop(src, ux, uh, layer, base, o = {}) {
     const el = document.createElement("div"); el.className = "prop" + (o.sway ? " sway" : "") + (o.click ? " interactable" : "");
@@ -111,10 +111,10 @@
     }
     goTo(330, () => say(pick(["Este árbol es mi favorito", "Aquí da una sombrita estupenda", "Algún día le pondré un columpio"])));
   } });
-  prop("bush.webp", 560, 120, "back", "back", { ar: 786 / 710, click: () => goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))) });
+  prop("bush.webp", 560, 120, "back", "back", { ar: 786 / 710, click: () => { butterflies(560); goTo(560, () => say(pick(["¡Qué florecitas!", "Huele a primavera", "Las flores lilas son las mejores"]))); } });
   prop("fence.webp", 1300, 90, "back", "back", { ar: 900 / 338 });
-  prop("bush.webp", 1560, 100, "back", "back", { ar: 786 / 710 });
-  prop("tree.webp", 1820, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio"]))) });
+  prop("bush.webp", 1560, 100, "back", "back", { ar: 786 / 710, click: () => { butterflies(1560); goTo(1560, () => say(pick(["¡Mariposas!", "Las he despertado, perdón"]))); } });
+  const bigTree = prop("tree.webp", 1820, 400, "back", "back", { ar: 736 / 800, sway: true, click: () => treeTap() });
   const lamps = [prop("lamp.webp", 420, 260, "front", "front", { ar: 162 / 800 }), prop("lamp.webp", 1460, 260, "front", "front", { ar: 162 / 800 })];
   for (const l of lamps) { const g = document.createElement("div"); g.className = "glow"; g.dataset.g = [0.54, 0.17, 120]; l.el.appendChild(g); l.el.addEventListener("click", (e) => { e.stopPropagation(); goTo(l.ux + 40, () => say(phase() === "night" ? "De noche se encienden solas" : "Por la noche esto brilla muchísimo")); }); }
   const sign = prop("sign.webp", 1180, 240, "front", "front", { ar: 379 / 700, click: () => goTo(1140, () => say(`«El Valle de ${name}». ¡Bienvenido a mi valle!`)) });
@@ -133,13 +133,18 @@
   const Z = { arch: 2260, x0: 2300, x1: 3760 };               // la zona del huerto
   // girasoles: una franja de fondo solo en el huerto
   const sun1 = document.createElement("div"); sun1.id = "sunflowers"; back.appendChild(sun1);
-  const arch = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: () => goTo(E.x < Z.arch ? Z.arch + 145 : Z.arch - 145) });
+  const archClick = () => goTo(E.x < Z.arch ? Z.arch + 145 : Z.arch - 145);
+  // El arco está algo en perspectiva (el poste izquierdo queda más cerca). Para que Eko pase POR DEBAJO:
+  // el arco entero queda detrás de él y una copia recortada al poste cercano va delante.
+  const arch = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: archClick });
+  const archNear = prop("h-arch.webp", Z.arch, 360, "front", "front", { ar: 697 / 900, click: archClick });
+  archNear.el.style.clipPath = "polygon(0 0, 36% 0, 36% 100%, 0 100%)"; archNear.el.style.pointerEvents = "none";
   const at = document.createElement("div"); at.className = "plaque"; at.textContent = "Huerto"; arch.el.appendChild(at);
   prop("h-shed.webp", 2520, 290, "back", "back", { ar: 900 / 820, click: () => goTo(2520, () => say(pick(["Aquí guardo las herramientas", "Huele a madera y a tierra", "Un día ordenaré este cobertizo… algún día", "Dentro hay más macetas que sitio"]))) });
   const BEDS = [{ ux: 2860 }, { ux: 3290 }], BED = { uh: 66, ar: 1000 / 202 };
   const beds = BEDS.map((b, j) => { const p = prop("g-bed.webp", b.ux, BED.uh, "back", "back", { ar: BED.ar, click: () => say("Coge el saquito de semillas y suéltalo donde quieras plantar.") }); p.el.dataset.bedIndex = j; return p; });
   const bedFronts = BEDS.map(() => { const img = document.createElement("img"); img.className = "bed-front"; img.src = "art/valley/g-bed.webp"; img.alt = ""; img.draggable = false; back.appendChild(img); return img; });
-  const scarecrow = prop("h-scarecrow.webp", 3075, 250, "back", "back", { ar: 572 / 800, sway: true, click: () => goTo(3035, () => chatPaja()) });
+  const scarecrow = prop("h-scarecrow.webp", 3075, 250, "back", "back", { ar: 572 / 800, sway: true, click: () => pajaTap() });
   const well = prop("h-well.webp", 3560, 230, "back", "back", { ar: 627 / 800, click: () => say("Arrastra aquí la regadera para llenarla.") });
   const can = prop("g-can.webp", 2590, 58, "front", "front", { ar: 500 / 265, click: () => waterPrompt() });
   can.el.dataset.gardenTool = "water";
@@ -154,7 +159,7 @@
   const thirsty = (s) => s.st < 2 && !(s.wet > s.since);
   function grow() {
     const now = Date.now(); let ch = false;
-    for (const s of GD.slots) if (s && s.st < 2 && s.wet > s.since && now - s.since >= GROW) { s.st++; s.since = now; ch = true; }
+    for (const s of GD.slots) if (s && s.st < 2 && s.wet > s.since && now - s.since >= GROW * (weedy(GD.slots.indexOf(s)) ? 1.5 : 1)) { s.st++; s.since = now; ch = true; }
     if (ch) gSave();
     drawPlants();
   }
@@ -165,7 +170,7 @@
       if (!img.src.endsWith(src)) img.src = "art/valley/" + src;
       d.dataset.ar = ar; d.dataset.uh = uh; d.classList.toggle("dry", thirsty(s));
     });
-    const full = GD.cart.carrot + GD.cart.tomato > 0, im = barrow.el.firstChild;
+    const full = (GD.cart.carrot || 0) + (GD.cart.tomato || 0) + (GD.cart.apple || 0) > 0, im = barrow.el.firstChild;
     barrow.ar = full ? 600 / 358 : 600 / 253; barrow.uh = full ? 120 : 92;
     if (!im.src.endsWith(full ? "h-barrowfull.webp" : "h-barrow.webp")) im.src = "art/valley/" + (full ? "h-barrowfull.webp" : "h-barrow.webp");
     layout();
@@ -235,7 +240,7 @@
         say(left > 0 && !testMode ? `${pick(GL.wait)} (unas ${hrs} h)` : pick(GL.wait), 2600);
       } else {
         work("dig", 1100, () => {
-          const n = s.c === "tomato" ? 3 : 1;
+          const n = s.c === "tomato" ? 3 - Math.min(2, s.eaten || 0) : 1; s.eaten = 0;
           GD.hv[s.c] = (GD.hv[s.c] || 0) + n; GD.cart[s.c] = (GD.cart[s.c] || 0) + n;
           if (s.c === "carrot") { GD.slots[i] = null; const im = document.createElement("img"); im.src = "art/valley/g-carrot.webp"; im.className = "pull"; Object.assign(im.style, { left: bx - U(60) + "px", top: by - U(60) + "px", width: U(120) + "px" }); front.appendChild(im); setTimeout(() => im.remove(), 1800); }
           else { s.st = 1; s.since = Date.now(); s.wet = 0; floatText("+3 tomates", bx, by - U(150)); }
@@ -250,61 +255,6 @@
     E.face = 1; say("Clonc, clonc…", 1400);
     work("dig", 1400, () => { GD.water = CAN; gSave(); fx("drop", U(well.ux), BACK() - U(120), 8, 500); say(pick(GL.fill), 1600); if (then) setTimeout(then, 900); });
   }
-  function emptyCart() {
-    const c = GD.cart, t = c.carrot + c.tomato;
-    if (!t) { say(pick(GL.cartEmpty)); return; }
-    const parts = [c.carrot ? `${c.carrot} zanahoria${c.carrot > 1 ? "s" : ""}` : "", c.tomato ? `${c.tomato} tomate${c.tomato > 1 ? "s" : ""}` : ""].filter(Boolean).join(" y ");
-    say(`¡${parts}! Me lo llevo a casa para cenar`, 3000);
-    work("dig", 900, () => { GD.cart = { carrot: 0, tomato: 0 }; gSave(); drawPlants(); });
-  }
-  function beginGardenDrag(e, kind, index = -1) {
-    if (e.button !== 0 || !inGarden() || inHouse || gBusy) return;
-    if (kind === "harvest" && (!GD.slots[index] || GD.slots[index].st < 2)) return;
-    e.preventDefault(); e.stopPropagation();
-    storyTarget(null);
-    const src = kind === "water" ? "g-can.webp" : kind === "seed" ? "g-seeds.webp" : GD.slots[index].c === "carrot" ? "g-carrot.webp" : "g-tomato.webp";
-    const ghost = document.createElement("img"); ghost.className = "garden-drag"; ghost.src = "art/valley/" + src; ghost.alt = ""; document.body.appendChild(ghost);
-    gardenDrag = { kind, index, ghost, x: e.clientX, y: e.clientY, moved: false };
-    moveGardenDrag(e);
-  }
-  function moveGardenDrag(e) {
-    if (!gardenDrag) return;
-    if (!gardenDrag.moved && Math.hypot(e.clientX - gardenDrag.x, e.clientY - gardenDrag.y) < 8) return;
-    gardenDrag.moved = true;
-    gardenDrag.ghost.style.left = e.clientX + "px"; gardenDrag.ghost.style.top = e.clientY + "px";
-  }
-  function dropGardenDrag(e) {
-    if (!gardenDrag) return;
-    const d = gardenDrag; gardenDrag = null; d.ghost.remove(); suppressGardenClick = Date.now() + 350;
-    if (!d.moved) {
-      if (d.kind === "water") waterPrompt();
-      else if (d.kind === "seed") say("Coge el saquito y suéltalo en un hueco del bancal.");
-      else explainPlant(d.index);
-      return;
-    }
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    const plant = target && target.closest(".plant");
-    const propEl = target && target.closest(".prop");
-    if (d.kind === "seed") {
-      const bed = target && target.closest(".prop[data-bed-index]");
-      if (bed) {
-        const j = Number(bed.dataset.bedIndex), worldX = (e.clientX + cam) / k;
-        const candidates = [0, 1, 2].map((n) => j * 3 + n).sort((a, b) => Math.abs(slotX(a) - worldX) - Math.abs(slotX(b) - worldX));
-        const i = candidates[0];
-        if (!GD.slots[i]) act(i, "plant"); else say("Ese hueco ya está ocupado. Prueba con otro.");
-      }
-    } else if (d.kind === "water") {
-      if (plant) act(Number(plant.dataset.slot), "water");
-      else if (propEl === well.el) goTo(3500, () => fillCan());
-    } else if (d.kind === "harvest" && propEl === barrow.el) act(d.index, "harvest");
-  }
-  can.el.addEventListener("pointerdown", (e) => beginGardenDrag(e, "water"));
-  seedBag.el.addEventListener("pointerdown", (e) => beginGardenDrag(e, "seed"));
-  plants.forEach((p, i) => p.addEventListener("pointerdown", (e) => beginGardenDrag(e, "harvest", i)));
-  addEventListener("pointermove", moveGardenDrag);
-  addEventListener("pointerup", dropGardenDrag);
-  addEventListener("pointercancel", () => { if (gardenDrag) { gardenDrag.ghost.remove(); gardenDrag = null; } });
-  let pajaI = -1;
   function chatPaja() {
     const r = GD.slots.filter((s) => s && s.st >= 2).length, d = GD.slots.filter((s) => s && thirsty(s)).length;
     if (r && Math.random() < 0.5) { say("Don Paja dice que hay cosas listas para cosechar", 2600); return; }
@@ -316,6 +266,12 @@
     const n = GD.slots.filter((s) => s && thirsty(s)).length, r = GD.slots.filter((s) => s && s.st >= 2).length;
     if (inGarden()) return r ? "¡Hay cosas listas para cosechar!" : n ? "Algunas plantas tienen sed" : GD.slots.every((s) => !s) ? "¿Plantamos algo?" : pick(["Me encanta este sitio", "Los girasoles siempre miran al sol", "Don Paja hace muy bien su trabajo"]);
     return r ? "¡Hay cosas listas en el huerto!" : n ? "Las plantas del huerto tienen sed" : "";
+  }
+  function skipStoryToGarden() {
+    try { localStorage.setItem("eko-valley-story-v1", "1"); } catch (_) {}
+    if (GD.slots.some(Boolean)) { storyStep = 0; gardenWelcome(); return; }
+    storyStep = 5; storyTarget(seedBag);
+    say("¡Has encontrado el huerto! Don Paja lo cuida. ¿Me ayudas a plantar? Arrastra el saquito hasta un hueco del bancal.", 5200);
   }
   function gardenWelcome() {
     const dry = GD.slots.filter((s) => s && thirsty(s)).length;
@@ -343,7 +299,7 @@
     for (const p of props) {
       const h = U(p.uh), w = h * p.ar;
       const by = p.base === "front" ? FRONT() : BACK();
-      Object.assign(p.el.style, { left: U(p.ux) - w / 2 + "px", top: by - h + "px", width: w + "px", height: h + "px", zIndex: p.base === "front" ? 30 : 5 });
+      Object.assign(p.el.style, { left: U(p.ux) - w / 2 + "px", top: by - h - U((p.o && p.o.lift) || 0) + "px", width: w + "px", height: h + "px", zIndex: p.base === "front" ? 30 : 5 });
       p.el.querySelectorAll(".glow").forEach((g) => { const [gx, gy, gs] = g.dataset.g.split(",").map(Number); const s = U(gs); Object.assign(g.style, { left: gx * w - s / 2 + "px", top: gy * h - s / 2 + "px", width: s + "px", height: s + "px" }); });
     }
     const sb = sign.el; Object.assign(st.style, { left: "4%", width: "92%", top: "13%", fontSize: U(21) + "px" });
@@ -425,6 +381,7 @@
     eko.style.width = w + "px"; eko.style.height = h + "px";
   }
   function say(t, ms = 2600) {
+    const pb = document.getElementById("pajaBub"); if (pb) pb.classList.remove("on"); // nunca dos bocadillos a la vez
     bub.textContent = t; bub.classList.add("on"); E.talkUntil = E.t + ms / 1000;
     clearTimeout(say.tm); say.tm = setTimeout(() => bub.classList.remove("on"), ms);
   }
@@ -578,6 +535,7 @@
   });
   document.addEventListener("click", (e) => {
     if (inHouse) return;
+    if (Date.now() < suppressGardenClick) return; // el clic que sigue a soltar algo no es «camina hasta aquí»
     if (e.target.closest("#back") || e.target.closest(".prop") || e.target.closest("#eko") || e.target.closest("#bub")) return;
     goTo((e.clientX + cam) / k);
   });
@@ -600,7 +558,7 @@
     setTimeout(() => emit("world-exit"), 2100);
   }
   $("#back").addEventListener("click", (e) => { e.stopPropagation(); if (Date.now() < suppressGardenClick) return; if (inHouse) { exitHouse(); return; } goTo(house.ux - 560 * 1102 / 971 * 0.18, () => leaveValley()); });
-  addEventListener("keydown", (e) => { if (e.key === "Escape") { if (inHouse) { if (houseGallery.classList.contains("on")) houseGallery.classList.remove("on"); else exitHouse(); } else { E.tx = null; leaveValley(); } } });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") { if (gardenDrag) { cancelGardenDrag(); return; } if (inHouse) { if (houseGallery.classList.contains("on")) houseGallery.classList.remove("on"); else exitHouse(); } else { E.tx = null; leaveValley(); } } });
   addEventListener("resize", layout);
   addEventListener("resize", () => { if (inHouse) renderHouse(true); });
   setInterval(() => { if (inHouse) renderHouse(); }, 900);
@@ -629,13 +587,12 @@
     }
     if (inHouse) walking = houseWalk;
     E.ph += dt * (walking ? 9 : 0);
-    if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { if (storyStep !== 3 && storyStep !== 4) gardenWelcome(); if (!GD.seen) { GD.seen = true; gSave(); } } }
+    if (inGarden() !== E.inG) { E.inG = inGarden(); if (E.inG && E.t > 2) { if (storyStep === 1 || storyStep === 2) skipStoryToGarden(); else if (storyStep !== 3 && storyStep !== 4) gardenWelcome(); if (!GD.seen) { GD.seen = true; gSave(); } } }
     // Eko: pasea por el valle o por la habitación a pantalla completa.
     const h = inHouse ? U(235) : EH(), w = h * 240 / 310;
     const archDepth = !inHouse ? clamp((155 - Math.abs(E.x - Z.arch)) / 75, 0, 1) : 0;
-    const archPass = archDepth > 0.5;
     const archBlend = archDepth * archDepth * (3 - 2 * archDepth);
-    let y = lerp(PATH(), FRONT(), archBlend), sc = 1, op = 1;
+    let y = lerp(PATH(), FRONT() - U(360) * 0.03, archBlend), sc = 1, op = 1; // bajo el arco pisa entre sus dos postes
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
@@ -645,7 +602,7 @@
       Object.assign(shd.style, { left: W * houseX / 100 - w * 0.42 + "px", top: floor - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: 0.72 - Math.max(0, -houseLift / H) });
       Object.assign(bub.style, { left: W * houseX / 100 + "px", top: floor - h * houseScale - U(14) + "px", zIndex: 45 });
     } else {
-      arch.el.style.zIndex = 30; eko.style.zIndex = archPass ? 32 : 20;
+      arch.el.style.zIndex = 30; archNear.el.style.zIndex = 34; eko.style.zIndex = archDepth > 0 ? 32 : 20;
       Object.assign(eko.style, { left: U(E.x) - (w * sc) / 2 + "px", top: y - h * sc - bob + "px", transform: `scale(${sc})`, transformOrigin: "50% 100%", opacity: op });
       Object.assign(shd.style, { left: U(E.x) - w * 0.42 + "px", top: y - U(9) + "px", width: w * 0.84 + "px", height: U(18) + "px", opacity: op * (1 - bob / U(12)) });
       Object.assign(bub.style, { left: U(E.x) + "px", top: y - h * sc - U(14) + "px", zIndex: 45 });
@@ -675,7 +632,7 @@
 
   // Comentarios sueltos mientras paseáis
   setInterval(() => {
-    if (inHouse || storyStep > 0 || E.t < E.talkUntil + 6 || E.exiting || gBusy || Math.random() < 0.5) return;
+    if (inHouse || (storyStep > 0 && storyStep < 5) || E.t < E.talkUntil + 6 || E.exiting || gBusy || Math.random() < 0.5) return;
     const gt = gardenTalk(); if (gt && Math.random() < 0.4) { say(gt, 2800); return; }
     const p = phase();
     say(pick(p === "night" ? ["Mira cuántas estrellas", "Qué tranquilo está el valle de noche", "Los farolillos de casa son mi parte favorita"] : p === "dusk" ? ["Qué atardecer más bonito", "El cielo se está poniendo naranja"] : sky.w === "snow" ? ["¡Está nevando!", "Brrr… qué frío"] : sky.w === "leaves" ? ["Me encanta el ruido de las hojas", "Ya es otoño en el valle"] : ["Qué buen día hace", "Me encanta pasear contigo", "¿Oyes los pájaros?", "Huele a hierba recién cortada"]), 2800);
@@ -683,6 +640,301 @@
 
   // ---------- Arranque ----------
   $("#title").textContent = `El Valle de ${name}`;
+
+  // ---------- Don Paja: encargos, premios y su secreto ----------
+  // Al principio solo es un espantapájaros… pero alguien deja notas con encargos. Tras unos cuantos, habla.
+  // Etapas: 0 nada raro · 1 se mueve cuando no miras · 2 se revela al entregar el 4.º encargo · 3 vivo, con personalidad.
+  GD.ord = Object.assign({ n: 0, need: null, fresh: true }, GD.ord || {});
+  GD.paja = Object.assign({ revealed: false, skin: "auto", told: 0 }, GD.paja || {});
+  GD.cart.apple = GD.cart.apple || 0; GD.hv.apple = GD.hv.apple || 0;
+  GD.weeds = GD.weeds || []; GD.weedT = GD.weedT || Date.now(); GD.appleT = GD.appleT || 0;
+  const ITEMS = { carrot: ["zanahoria", "zanahorias", "g-carrot.webp"], tomato: ["tomate", "tomates", "g-tomato.webp"], apple: ["manzana", "manzanas", "g-manzana.webp"] };
+  const REWARDS = [
+    { id: "flores", kind: "skin", name: "Sombrero de flores", quip: "Flores. En la cabeza. Si algún cuervo se ríe, lo espanto con la mirada." },
+    { id: "banderines", kind: "deco", name: "Banderines en el arco", quip: "Banderines. Muy festivo. Los pájaros pensarán que hay fiesta… mal asunto." },
+    { id: "lana", kind: "skin", name: "Gorro y bufanda de lana", quip: "Por fin. Llevaba tres inviernos con la paja helada." },
+    { id: "columpio", kind: "deco", name: "Columpio en el árbol", quip: "Un columpio. Yo no puedo subir. Pero me alegro por vosotros. Mucho. En serio." },
+    { id: "gafas", kind: "skin", name: "Gafas de sol", quip: "No me mires a los ojos. Bueno, a los botones." },
+    { id: "caseta", kind: "deco", name: "Caseta de pájaros", quip: "¿Una casa para PÁJAROS? ¿En MI huerto? Respira, Paja. Respira." },
+    { id: "pajarita", kind: "skin", name: "Pajarita", quip: "Elegante pero práctico. Como yo." },
+    { id: "molinillo", kind: "deco", name: "Molinillo de viento", quip: "Gira y gira y no llega a ninguna parte. Me cae bien." },
+    { id: "farolillos", kind: "deco", name: "Farolillos en el camino", quip: "Ahora de noche se ve todo. Incluido yo. Bien." },
+    { id: "corona", kind: "skin", name: "Corona de paja dorada", quip: "Rey del huerto. Podéis llamarme Majestad. O Don Paja. Prefiero Majestad." },
+  ];
+  const unlocked = () => REWARDS.slice(0, GD.ord.n);
+  const has = (id) => unlocked().some((r) => r.id === id);
+  const halloween = () => { const d = new Date(), m = d.getMonth(), day = d.getDate(); return (m === 9 && day >= 24) || (m === 10 && day <= 2); };
+  const stageP = () => GD.paja.revealed ? 3 : GD.ord.n >= 2 ? 1 : 0;
+  // Imágenes nuevas: cada cosa se activa sola cuando su imagen existe (hasta entonces, no aparece)
+  const artOK = {};
+  const probe = (key, src) => { const im = new Image(); im.onload = () => { artOK[key] = true; }; im.src = "art/valley/" + src; };
+  probe("weed", "g-maleza.webp"); probe("bird", "g-pajaro.webp"); probe("birdFly", "g-pajaro-vuela.webp"); probe("fly", "g-mariposa.webp"); probe("apple", "g-manzana.webp");
+
+  // Pedidos: empiezan pequeños y crecen poco a poco (las manzanas salen del árbol grande)
+  const FIRST = [{ carrot: 1 }, { tomato: 3 }, { carrot: 1, tomato: 3 }, { carrot: 2 }, { tomato: 6 }, { carrot: 2, tomato: 3, apple: 1 }];
+  function makeOrder(n) {
+    if (FIRST[n]) return { ...FIRST[n] };
+    const o = { carrot: 2 + (n % 3), tomato: 3 * (1 + (n % 2)) };
+    if (n % 3 === 0 && artOK.apple) o.apple = 1;
+    return o;
+  }
+  if (!GD.ord.need) { GD.ord.need = makeOrder(GD.ord.n); GD.ord.fresh = true; }
+  const missing = () => Object.entries(GD.ord.need).map(([k, v]) => [k, Math.max(0, v - (GD.cart[k] || 0))]).filter(([, v]) => v > 0);
+  const listTxt = (pairs) => pairs.map(([k, v]) => `${v} ${ITEMS[k][v === 1 ? 0 : 1]}`).join(" y ").replace(/ y (?=.* y )/g, ", ");
+
+  // Ropa de Don Paja (variantes completas de la imagen) y decoración del valle
+  const pajaImg = scarecrow.el.firstChild;
+  function currentSkin() {
+    const s = GD.paja.skin;
+    if (s === "auto") { if (halloween()) return "calabaza"; const sk = unlocked().filter((r) => r.kind === "skin"); return sk.length ? sk[sk.length - 1].id : "normal"; }
+    return s;
+  }
+  function applySkin() {
+    const id = currentSkin(), src = id === "normal" ? "h-scarecrow.webp" : `paja-${id}.webp`;
+    pajaImg.onerror = () => { pajaImg.onerror = null; pajaImg.src = "art/valley/h-scarecrow.webp"; };
+    if (!pajaImg.src.endsWith(src)) pajaImg.src = "art/valley/" + src;
+  }
+  const DECO = {
+    banderines: ["deco-banderines.webp", Z.arch, 70, "front", 245],
+    columpio: ["deco-columpio.webp", 1880, 210, "back", 12],
+    caseta: ["deco-caseta.webp", 2440, 150, "back", 0],
+    molinillo: ["deco-molinillo.webp", 3470, 120, "back", 0],
+    farolillos: ["deco-farolillos.webp", 1320, 70, "front", 178],
+  };
+  const decos = {};
+  function placeDecos() {
+    for (const r of unlocked()) {
+      if (r.kind !== "deco" || decos[r.id]) continue;
+      const [src, ux, uh, base, lift] = DECO[r.id];
+      const p = prop(src, ux, uh, base, base, { lift, click: r.id === "columpio" ? () => goTo(1860, () => say(pick(["¡Wiii! Bueno, me imagino el wiii", "Algún día me atreveré a columpiarme bien alto"]))) : null });
+      p.el.classList.add("deco", "deco-" + r.id);
+      const im = p.el.firstChild; im.onerror = () => { p.el.style.display = "none"; };
+      im.onload = () => { p.ar = im.naturalWidth / im.naturalHeight; layout(); };
+      decos[r.id] = p;
+    }
+  }
+
+  // Nota clavada y aviso «!» en Don Paja
+  const note = document.createElement("img"); note.className = "paja-note"; note.src = "art/valley/g-nota.webp"; note.alt = ""; note.draggable = false; note.onerror = () => note.remove(); scarecrow.el.appendChild(note);
+  const alertB = document.createElement("b"); alertB.className = "paja-alert"; alertB.textContent = "!"; scarecrow.el.appendChild(alertB);
+  const markNote = () => scarecrow.el.classList.toggle("has-order", !!GD.ord.fresh);
+
+  // Bocadillo propio de Don Paja (papel de estraza). Si no se le ve, habla desde el borde de la pantalla.
+  const pBub = document.createElement("div"); pBub.id = "pajaBub"; document.body.appendChild(pBub);
+  function pSay(t, ms = 3600) {
+    bub.classList.remove("on"); clearTimeout(say.tm);
+    pBub.textContent = t; pBub.classList.add("on"); E.talkUntil = E.t + ms / 1000; posPBub();
+    clearTimeout(pSay.tm); pSay.tm = setTimeout(() => pBub.classList.remove("on"), ms);
+    pajaAnim("paja-hop");
+  }
+  function posPBub() {
+    if (!pBub.classList.contains("on")) return;
+    const r = scarecrow.el.getBoundingClientRect(), off = r.right < 0 || r.left > innerWidth;
+    pBub.classList.toggle("edge", off);
+    if (off) Object.assign(pBub.style, { left: (r.left > innerWidth ? innerWidth - 20 : 20) + "px", top: innerHeight * 0.42 + "px" });
+    else Object.assign(pBub.style, { left: r.left + r.width / 2 + "px", top: r.top - 6 + "px" });
+    pBub.classList.toggle("left", off && r.right < 0);
+  }
+  setInterval(posPBub, 120);
+  function pajaAnim(cls) { pajaImg.classList.remove(cls); void pajaImg.offsetWidth; pajaImg.classList.add(cls); setTimeout(() => pajaImg.classList.remove(cls), 700); }
+
+  const PL = {
+    tap: ["Cuidado con la camisa, que es de cuadros vintage.", "Si me tocas tanto, se me cae la paja.", "¿Sí? Estoy ocupado. Mirando. Es mi trabajo.", "Un día me bajaré de este palo. Hoy no.", "Me pica la oreja. Ah, no, que no tengo orejas.", "Llevo aquí plantado más tiempo que el pozo. Y el pozo no se queja tanto."],
+    thirsty: ["Psst. Tú. Sí, tú. Hay una planta con más sed que yo.", "Esa plantita lleva un rato mirándome con cara de pena. Riégala, anda.", "Te lo digo yo, que no bebo: esa planta necesita agua."],
+    ripe: ["Eso ya está maduro. Si tardas, se lo lleva un pájaro. Los conozco.", "Huele a cosecha. Y a pájaro con hambre.", "¿Vas a cosechar o lo dejamos de adorno?"],
+    weeds: ["Hay una mala hierba. No me mires, mis manos son de paja.", "Esa hierba me está mirando raro. Arráncala, por favor."],
+    idle: ["¿Te vas a quedar ahí mirando? Yo llevo años y no lo recomiendo.", "La regadera no se va a mover sola. Créeme, lo he intentado.", "Eko habla mucho, ¿no? Yo prefiero escuchar. Y juzgar en silencio.", "Si buscas conversación, soy todo oídos. Metafóricamente."],
+    night: ["De noche el huerto es mío. Tú vete a dormir, que mañana hay encargos.", "Las estrellas y yo tenemos un trato: ellas brillan, yo vigilo.", "¿Despierto a estas horas? Yo no duermo. ¿Tú qué excusa tienes?"],
+    far: ["¡Eh! ¡Desde aquí veo una planta con sed!", "¡Psst! ¡El huerto te echa de menos! Bueno, yo no. Las plantas.", "¡Hay cosecha esperando! Lo digo por decir…"],
+    order: ["Te he dejado una nota. Sí, la escribo yo. ¿Quién creías?", "Nuevo encargo. Y no, no me como las zanahorias. Son para… un amigo.", "Otra notita. Mi letra mejora, ¿verdad?"],
+    thanks: ["Perfecto. Bueno, aceptable. Vale, perfecto.", "Gracias. Esto queda entre tú, yo y la carretilla.", "Buen trabajo. No lo diré dos veces."],
+    shoo: ["¡Fuera, plumífero! … Gracias. Me dan pánico.", "Un espantapájaros con miedo a los pájaros. No se lo cuentes a nadie.", "Eso, eso. ¡Y no vuelvas! … Bueno, vuelve en primavera."],
+    ate: ["Se ha llevado un tomate. Yo he hecho lo que he podido: nada.", "Un tomate menos. Lo apunto en mi lista de enemigos."],
+  };
+  const HINT = ["Juraría que Don Paja tenía el sombrero recto…", "¿Lo has visto? ¡Creo que se ha movido!", "Don Paja, ¿has sido tú? … Nada. Ni pestañea.", "Qué raro… esta mañana miraba hacia el otro lado."];
+
+  // Tarjeta del encargo (y ropa de Don Paja)
+  const card = document.createElement("div"); card.id = "pajaCard"; document.body.appendChild(card);
+  card.addEventListener("pointerdown", (e) => e.stopPropagation());
+  card.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.k === "close") { card.classList.remove("on"); return; }
+    if (b.dataset.k === "give") { card.classList.remove("on"); goTo(3030, () => emptyCart()); return; }
+    if (b.dataset.skin) { GD.paja.skin = b.dataset.skin; gSave(); applySkin(); pajaAnim("paja-shake"); renderCard(); }
+  });
+  function renderCard() {
+    const st = stageP(), m = new Map(missing()), next = REWARDS[GD.ord.n];
+    const items = Object.entries(GD.ord.need).map(([k, v]) => { const got = Math.min(v, GD.cart[k] || 0); return `<span class="it${got >= v ? " ok" : ""}"><img src="art/valley/${ITEMS[k][2]}" alt="">${got}/${v}</span>`; }).join("");
+    const skins = [["auto", "Automático"], ["normal", "Sombrero de paja"], ...unlocked().filter((r) => r.kind === "skin").map((r) => [r.id, r.name]), ...(halloween() ? [["calabaza", "Calabaza"]] : [])];
+    card.innerHTML = `<button class="x" data-k="close" aria-label="Cerrar">×</button>
+      <h3>${st >= 2 ? "Encargo de Don Paja" : "Una nota misteriosa"}</h3>
+      <p class="sub">${st >= 2 ? "Llévalo en la carretilla" : "Alguien la ha clavado en el espantapájaros…"}</p>
+      <div class="items">${items}</div>
+      <p class="prize">${next ? `Premio: <b>${next.name}</b>` : "¡Ya tienes todos los premios! Los encargos siguen, por amor al arte."}</p>
+      ${m.size ? `<p class="hint">Faltan ${listTxt([...m])}</p>` : `<button class="give" data-k="give">Entregar</button>`}
+      ${GD.paja.revealed && skins.length > 2 ? `<div class="skins"><span>Ropa:</span>${skins.map(([id, n]) => `<button data-skin="${id}" class="${GD.paja.skin === id ? "on" : ""}">${n}</button>`).join("")}</div>` : ""}`;
+  }
+  function openCard() { renderCard(); card.classList.add("on"); if (GD.ord.fresh) { GD.ord.fresh = false; gSave(); markNote(); } }
+
+  function pajaTap() {
+    goTo(2975, () => {
+      const st = stageP(), fresh = GD.ord.fresh;
+      if (st === 3) pSay(fresh ? pick(PL.order) : pick(PL.tap), 3400);
+      else if (fresh) say(GD.ord.n === 0 ? "¡Hay una nota clavada en Don Paja! ¿Quién la habrá dejado?" : st === 1 ? pick(["Otra nota… y Don Paja sin moverse. Muy sospechoso.", "¿Otra nota? Aquí no ha entrado nadie…"]) : "¡Otra nota! Qué misterio…", 3200);
+      else if (st === 1 && Math.random() < 0.5) say(pick(HINT), 2800);
+      else chatPaja();
+      setTimeout(openCard, 500);
+    });
+  }
+
+  // Entregar: si la carretilla lleva lo pedido, el encargo se cumple y llega el premio
+  function emptyCart() {
+    const c = GD.cart, t = (c.carrot || 0) + (c.tomato || 0) + (c.apple || 0);
+    if (!t) { say(pick(GL.cartEmpty)); return; }
+    const m = missing();
+    if (m.length) { say(`Para el encargo de Don Paja aún faltan ${listTxt(m)}. Lo guardo en la carretilla.`, 3400); return; }
+    work("dig", 900, () => {
+      for (const [k, v] of Object.entries(GD.ord.need)) GD.cart[k] -= v;
+      const r = REWARDS[GD.ord.n];
+      GD.ord.n++; GD.ord.need = makeOrder(GD.ord.n); GD.ord.fresh = true;
+      gSave(); drawPlants(); markNote(); placeDecos(); applySkin();
+      floatText("¡Encargo cumplido!", U(3075), BACK() - U(280));
+      fx("drop", U(3075), BACK() - U(200), 10, 600);
+      if (GD.ord.n === 4 && !GD.paja.revealed) { reveal(r); return; }
+      const after = () => { if (r) setTimeout(() => celebrate(r), 300); };
+      if (GD.paja.revealed) { pSay(pick(PL.thanks), 2800); setTimeout(after, 3000); }
+      else { say(pick(["¡Entregado! Seguro que a quien escribe las notas le gusta", "¡Hecho! Aunque… ¿para quién será todo esto?"]), 2800); setTimeout(after, 3000); }
+    });
+  }
+  function celebrate(r) {
+    floatText("¡Nuevo! " + r.name, U(r.kind === "deco" ? DECO[r.id][1] : 3075), BACK() - U(320));
+    if (GD.paja.revealed) pSay(r.quip, 4200);
+    else say(r.kind === "skin" ? `¡Don Paja tiene ${r.name.toLowerCase()}! ¿Quién se lo habrá puesto?` : `¡Ha aparecido algo nuevo en el valle: ${r.name.toLowerCase()}!`, 3600);
+  }
+  // La revelación: la primera vez que Don Paja habla
+  function reveal(r) {
+    GD.paja.revealed = true; gSave();
+    const seq = [
+      [() => { pajaAnim("paja-shake"); pSay("…Ejem.", 1800); }, 2000],
+      [() => say("¡¿Has… HABLADO?!", 1800), 2000],
+      [() => pSay("Llevo aquí plantado desde antes que tú. Alguien tenía que escribir las notas.", 4200), 4400],
+      [() => say("¡Don Paja está vivo! ¡Siempre lo supe! … Bueno, casi siempre.", 3000), 3200],
+      [() => pSay("Vivo, vivo… digamos que aguanto de pie. Y gracias por los encargos. De verdad.", 4200), 4400],
+      [() => r && celebrate(r), 0],
+    ];
+    let t = 600; for (const [f, ms] of seq) { setTimeout(f, t); t += ms; }
+  }
+
+  // Malas hierbas: salen con el tiempo (como mucho 2) y se arrancan arrastrando hacia arriba
+  const weedEls = [];
+  function drawWeeds() {
+    weedEls.forEach((w) => w.remove()); weedEls.length = 0;
+    if (!artOK.weed) return;
+    GD.weeds.forEach((wd, idx) => {
+      const im = document.createElement("img"); im.className = "weed"; im.src = "art/valley/g-maleza.webp"; im.alt = ""; im.draggable = false; im.dataset.idx = idx;
+      const h = U(46), x = U(slotX(wd.slot) + (wd.side || 0.32) * BED.uh * BED.ar / 3);
+      Object.assign(im.style, { left: x - h / 2 + "px", top: BACK() - U(BED.uh) * 0.6 - h + "px", width: h + "px", height: h + "px" });
+      let y0 = null;
+      im.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); y0 = e.clientY; im.setPointerCapture(e.pointerId); });
+      im.addEventListener("pointermove", (e) => { if (y0 == null) return; const dy = Math.min(0, e.clientY - y0); im.style.transform = `translateY(${dy * 0.6}px) scaleY(${1 - dy / 300})`; if (dy < -45) { y0 = null; pullWeed(idx, im); } });
+      im.addEventListener("pointerup", () => { if (y0 == null) return; y0 = null; im.style.transform = ""; say("¡Tira hacia arriba para arrancarla!", 2000); });
+      im.addEventListener("click", (e) => e.stopPropagation());
+      back.appendChild(im); weedEls.push(im);
+    });
+  }
+  function pullWeed(idx, im) {
+    suppressGardenClick = Date.now() + 350;
+    im.classList.add("gone"); fx("dirt", parseFloat(im.style.left) + U(23), parseFloat(im.style.top) + U(40), 8, 300);
+    GD.weeds.splice(idx, 1); gSave(); setTimeout(drawWeeds, 500);
+    if (GD.paja.revealed && Math.random() < 0.4) setTimeout(() => pSay(pick(["Gracias. Esa hierba llevaba días cotilleando.", "Fuera intrusa. Buen tirón."]), 2600), 600);
+    else say(pick(["¡Fuera, hierbajo!", "¡Pop! Arrancada", "Una menos"]), 1600);
+  }
+  function spawnWeeds() {
+    if (!artOK.weed || !GD.seen) return;
+    const every = testMode ? 60e3 : 3 * 3600e3;
+    while (Date.now() - GD.weedT > every && GD.weeds.length < 2) {
+      GD.weedT += every;
+      const slot = Math.floor(Math.random() * 6);
+      if (!GD.weeds.some((w) => w.slot === slot)) GD.weeds.push({ slot, side: Math.random() < 0.5 ? -0.32 : 0.32 });
+    }
+    if (GD.weeds.length >= 2) GD.weedT = Date.now();
+    gSave(); drawWeeds();
+  }
+  const weedy = (i) => GD.weeds.some((w) => w.slot === i);
+
+  // Pájaros: se posan en lo que está maduro. Tócalos para espantarlos; si no, se llevan un tomate
+  let bird = null;
+  function maybeBird() {
+    if (bird || !artOK.bird || !artOK.birdFly || inHouse || !inGarden() || Math.random() > 0.25) return;
+    const ripe = GD.slots.map((s, i) => (s && s.st >= 2 ? i : -1)).filter((i) => i >= 0); if (!ripe.length) return;
+    const i = pick(ripe), im = document.createElement("img"); im.className = "bird"; im.src = "art/valley/g-pajaro.webp"; im.alt = ""; im.draggable = false;
+    const h = U(54); Object.assign(im.style, { left: U(slotX(i)) - h / 2 + "px", top: BACK() - U(BED.uh) * 0.4 - U(110) - h + "px", width: h + "px", height: h + "px" });
+    back.appendChild(im); bird = { im, i, tm: setTimeout(() => birdLeave(true), 25000) };
+    im.addEventListener("pointerdown", (e) => { e.stopPropagation(); e.preventDefault(); if (bird && bird.im === im) { clearTimeout(bird.tm); birdLeave(false); } });
+    im.addEventListener("click", (e) => e.stopPropagation());
+    if (stageP() === 3 && Math.random() < 0.6) setTimeout(() => pSay(pick(["¡Pájaro! ¡PÁJARO! Haz algo, que yo no puedo.", "Ahí hay uno. Espántalo tú, que a mí no me hace caso."]), 2800), 900);
+    else if (stageP() >= 1) setTimeout(() => pajaAnim("paja-shake"), 700);
+  }
+  function birdLeave(ate) {
+    if (!bird) return; const { im, i } = bird; bird = null; suppressGardenClick = Date.now() + 350;
+    const s = GD.slots[i];
+    if (ate && s && s.c === "tomato" && s.st >= 2 && !(s.eaten > 1)) { s.eaten = (s.eaten || 0) + 1; gSave(); if (stageP() === 3) pSay(pick(PL.ate), 3000); else say("¡Un pájaro se ha comido un tomate!", 2400); }
+    else if (!ate) { if (stageP() === 3 && Math.random() < 0.6) setTimeout(() => pSay(pick(PL.shoo), 3000), 400); else say(pick(["¡Fuera, pajarito!", "¡Zas! Se ha ido volando"]), 1800); }
+    im.src = "art/valley/g-pajaro-vuela.webp"; im.classList.add("away"); setTimeout(() => im.remove(), 1400);
+  }
+
+  // Árbol grande: tres toques seguidos lo sacuden; a veces cae una manzana (va a la carretilla)
+  let treeTaps = [];
+  function treeTap() {
+    const now = Date.now(); treeTaps = treeTaps.filter((t) => now - t < 1600); treeTaps.push(now);
+    bigTree.el.classList.remove("shake"); void bigTree.el.offsetWidth; bigTree.el.classList.add("shake");
+    if (treeTaps.length < 3) { if (treeTaps.length === 1) goTo(1780, () => say(pick(["Desde aquí se ve todo el valle", "Este árbol es muy viejo… y muy sabio", "Si lo sacudes bien… a veces cae algo"]))); return; }
+    treeTaps = [];
+    const leaves = document.createElement("div"); leaves.className = "treeLeaves";
+    for (let j = 0; j < 9; j++) { const l = document.createElement("i"); l.style.left = 20 + Math.random() * 60 + "%"; l.style.animationDelay = j * 90 + "ms"; leaves.appendChild(l); }
+    bigTree.el.appendChild(leaves); setTimeout(() => leaves.remove(), 2200);
+    const wait = testMode ? 20e3 : 2 * 3600e3;
+    if (artOK.apple && now - GD.appleT > wait && Math.random() < 0.6) {
+      GD.appleT = now; gSave();
+      const im = document.createElement("img"); im.className = "apple"; im.src = "art/valley/g-manzana.webp"; im.alt = ""; im.draggable = false;
+      const h = U(40), x = U(1820 + (Math.random() - 0.5) * 160);
+      Object.assign(im.style, { left: x - h / 2 + "px", top: BACK() - U(250) + "px", width: h + "px", height: h + "px", "--fall": U(250) - h + U(6) + "px" });
+      back.appendChild(im);
+      im.addEventListener("click", (e) => { e.stopPropagation(); goTo(x / k, () => { im.remove(); GD.cart.apple = (GD.cart.apple || 0) + 1; GD.hv.apple = (GD.hv.apple || 0) + 1; gSave(); drawPlants(); say("¡Una manzana! A la carretilla del huerto", 2400); }); });
+      setTimeout(() => say("¡Ha caído una manzana! Tócala y la recojo", 2400), 700);
+    }
+  }
+
+  // Mariposas al tocar los arbustos (y alguna suelta por el huerto)
+  function butterflies(ux, n = 3) {
+    if (!artOK.fly) return;
+    for (let j = 0; j < n; j++) {
+      const im = document.createElement("img"); im.className = "fly"; im.src = "art/valley/g-mariposa.webp"; im.alt = ""; im.draggable = false;
+      const h = U(30 + Math.random() * 10); Object.assign(im.style, { left: U(ux + (Math.random() - 0.5) * 80) + "px", top: BACK() - U(80) + "px", width: h + "px", height: h + "px", animationDelay: j * 180 + "ms", "--dx": (Math.random() - 0.3) * U(300) + "px", "--dy": -U(220 + Math.random() * 120) + "px" });
+      front.appendChild(im); setTimeout(() => im.remove(), 4400);
+    }
+  }
+
+  // Don Paja te llama la atención de vez en cuando (y antes de revelarse… se mueve cuando no miras)
+  let lastUser = Date.now();
+  addEventListener("pointerdown", () => { lastUser = Date.now(); }, true);
+  setInterval(() => {
+    if (inHouse || E.exiting || (storyStep > 0 && storyStep < 5) || E.t < E.talkUntil + 4 || card.classList.contains("on")) return;
+    maybeBird();
+    const st = stageP(), dry = GD.slots.some((s, i) => s && thirsty(s)), ripe = GD.slots.some((s) => s && s.st >= 2);
+    if (st === 1 && inGarden() && Math.random() < 0.12) { pajaAnim("paja-snap"); if (Math.random() < 0.5) setTimeout(() => say(pick(HINT), 2600), 600); return; }
+    if (st !== 3 || Math.random() > 0.3) return;
+    if (!inGarden()) { if ((dry || ripe) && Math.random() < 0.4) pSay(pick(PL.far), 3000); return; }
+    const idle = Date.now() - lastUser > 40e3;
+    const pool = dry ? PL.thirsty : ripe ? PL.ripe : GD.weeds.length && artOK.weed ? PL.weeds : phase() === "night" ? PL.night : idle ? PL.idle : null;
+    if (pool) pSay(pick(pool), 3600); else if (Math.random() < 0.3) pSay(pick(PL.tap), 3200);
+  }, testMode ? 6000 : 15000);
+
+  applySkin(); placeDecos(); markNote();
+  setTimeout(() => { spawnWeeds(); drawWeeds(); }, 1500); setInterval(spawnWeeds, 60000);
+  addEventListener("resize", () => { drawWeeds(); card.classList.remove("on"); });
+
   layout(); sky(); setInterval(sky, 60000); grow(); setInterval(grow, testMode ? 2000 : 30000);
   cam = clamp(U(E.x) - W / 2, U(OPEN.x0 - 300), U(WORLD) - W);
   E.entering = 0.001;

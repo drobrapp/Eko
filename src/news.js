@@ -5,7 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
-    "0.29.19": { important: true, lines: ["Si me quedo dormido de cansancio, me despierto yo solo cuando he recargado", "Y si tenías un recordatorio, me despierto para avisarte. ¡No se me escapa ninguno!"] },
+    "0.30.0": { important: true, lines: ["Alguien está dejando notas con encargos clavadas en Don Paja… ¿Quién será?", "Si cumples los encargos, aparecen cosas nuevas en el valle", "Y ahora paso por debajo del arco al entrar al huerto"] },
+    "0.29.19": { important: true, lines: ["En el huerto ya puedes soltar las semillas o la regadera en cualquier parte del bancal, ¡y voy yo solito!", "Si llegas al huerto por tu cuenta, te enseño a plantar ahí mismo", "Y si tenías un recordatorio mientras dormía, me despierto para avisarte"] },
     "0.29.18": { important: true, lines: ["Pídeme que abra o cierre un programa y lo hago al momento", "Si cierro algo con cambios sin guardar, el programa te preguntará antes, tranqui"] },
     "0.29.17": { important: true, lines: ["Ahora te entiendo lo mismo hablando que escribiendo", "Y si me duermo, despiértame con un clic. ¡Ya no me despierto con cualquier ruido!"] },
     "0.29.16": { important: true, lines: ["¡Ahora puedo regar mi brote o llevarte al valle si me lo pides!", "También pongo un Pomodoro, apunto notas y te enseño tus tareas", "Y si te apetece, te propongo un juego o te doy un abrazo"] },

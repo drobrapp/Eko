@@ -5,6 +5,8 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.30.3": { important: true, lines: ["Toca los arbustos del valle… y el árbol grande, tres veces seguidas", "¡Ojo con los pájaros y las malas hierbas del huerto!", "Y los premios de los encargos ya se ven en el valle"] },
+    "0.30.2": { important: true, lines: ["¡Ahora puedes coger tú la regadera! Pásala por encima de una planta con sed para regarla, o por el pozo para llenarla", "Con el saquito de semillas, plantas donde lo sueltes. Yo me aparto y te animo"] },
     "0.30.1": { important: true, lines: ["En el huerto, toca la regadera o el saquito y lo hago yo. Si quieres elegir dónde, arrástralos"] },
     "0.30.0": { important: true, lines: ["Alguien está dejando notas con encargos clavadas en Don Paja… ¿Quién será?", "Si cumples los encargos, aparecen cosas nuevas en el valle", "Y ahora paso por debajo del arco al entrar al huerto"] },
     "0.29.19": { important: true, lines: ["En el huerto ya puedes soltar las semillas o la regadera en cualquier parte del bancal, ¡y voy yo solito!", "Si llegas al huerto por tu cuenta, te enseño a plantar ahí mismo", "Y si tenías un recordatorio mientras dormía, me despierto para avisarte"] },

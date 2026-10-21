@@ -263,25 +263,146 @@
     E.face = 1; say("Clonc, clonc…", 1400);
     work("dig", 1400, () => { GD.water = CAN; gSave(); fx("drop", U(well.ux), BACK() - U(120), 8, 500); say(pick(GL.fill), 1600); if (then) setTimeout(then, 900); });
   }
+  // ---------- Herramientas en tu mano ----------
+  // Coges la regadera o el saquito de verdad (el original desaparece de su sitio y vuelve al soltarlo).
+  // Pasando la regadera por encima de una planta con sed, la riegas; por el pozo, la llenas. Con el saquito, plantas en un hueco libre.
+  // Mientras tanto Eko se aparta y comenta lo que haces. Un toque sin arrastrar sigue siendo «hazlo tú, Eko».
+  const DWELL = { water: 550, fill: 650, seed: 380 };
+  const EC = {
+    water: ["¡Eso, riega tú!", "Te miro desde aquí", "Cuidado, que pesa un poquito"],
+    seed: ["¿Dónde plantamos?", "Busca un hueco libre", "¡Tú eliges el sitio!"],
+    watered: ["¡Glu, glu! Bien regada", "¡Esa tenía sed!", "¡Perfecto!", "Riegas mejor que yo", "¡Qué fresquita!"],
+    noNeed: ["Esa ya tiene agua", "Esa no necesita más, de momento"],
+    empty: ["¡Se ha vaciado! Llévala al pozo", "Sin agua… ¡al pozo!"],
+    filled: ["¡Llena hasta arriba!", "Clonc, clonc… ¡llena!", "Agua fresquita del pozo"],
+    full: ["Ya está llena"],
+    planted: ["¡Plantada! Ahora necesita agua", "¡Qué bien se te da!", "Una semillita más", "¡Ahí crecerá genial!"],
+    taken: ["Ahí ya hay algo plantado"],
+    noRoom: ["Ya no quedan huecos libres"],
+  };
+  let eTalk = 0;
+  function comment(key, force = false) {
+    if (!force && Date.now() - eTalk < 2200) return;
+    eTalk = Date.now(); say(pick(EC[key]), 2200);
+  }
+  function stepAside() {
+    // Eko se aparta de los bancales para no estorbar y mira hacia donde trabajas
+    if (gBusy) return;
+    const side = E.x < 3000 ? 2440 : 3690;
+    if (E.x > 2600 && E.x < 3560) goTo(side);
+  }
+  const plantPos = (i) => [U(slotX(i)), BACK() - U(BED.uh) * 0.5];
+  function userPlant(i) {
+    if (GD.slots[i]) return false;
+    const c = (GD.hv.carrot || 0) <= (GD.hv.tomato || 0) ? (Math.random() < 0.65 ? "carrot" : "tomato") : (Math.random() < 0.65 ? "tomato" : "carrot");
+    GD.slots[i] = { c, st: 0, since: Date.now(), wet: 0 }; gSave(); drawPlants();
+    plants[i].classList.add("pop"); setTimeout(() => plants[i].classList.remove("pop"), 600);
+    const [bx, by] = plantPos(i); fx("dirt", bx, by, 10, 400);
+    if (storyStep === 5) { storyStep = 6; storyTarget(can); setTimeout(() => say("¡Muy bien! Ahora coge la regadera y pásala por encima de la plantita.", 4500), 300); }
+    else comment(GD.slots.some((s) => !s) ? "planted" : "noRoom", true);
+    return true;
+  }
+  function userWater(i) {
+    const s = GD.slots[i];
+    if (!s || !thirsty(s)) return false;
+    if (GD.water <= 0) { comment("empty", true); return false; }
+    GD.water--; s.since = Date.now(); s.wet = s.since + 1; gSave(); drawPlants();
+    const [bx, by] = plantPos(i); fx("drop", bx, by - U(110), 14, 900);
+    if (storyStep === 6) { storyStep = 0; storyTarget(null); setTimeout(() => say("¡Hecho! Ahora la dejamos crecer. Cuando tenga sed o esté lista, te aviso.", 3500), 300); }
+    else if (GD.water === 0) comment("empty", true);
+    else if (GD.paja.revealed && Math.random() < 0.15) pSay(pick(["Buen pulso. Ni una gota fuera.", "Ni una gota en mis zapatos. Ah, que no tengo."]), 2600);
+    else comment("watered", true);
+    return true;
+  }
+  function userFill() {
+    if (GD.water >= CAN) { comment("full"); return false; }
+    GD.water = CAN; gSave(); fx("drop", U(well.ux), BACK() - U(120), 8, 500); comment("filled", true);
+    return true;
+  }
+  function harvestNow(i) {
+    const s = GD.slots[i]; if (!s || s.st < 2) return false;
+    const [bx, by] = plantPos(i), n = s.c === "tomato" ? 3 - Math.min(2, s.eaten || 0) : 1; s.eaten = 0;
+    GD.hv[s.c] = (GD.hv[s.c] || 0) + n; GD.cart[s.c] = (GD.cart[s.c] || 0) + n;
+    if (s.c === "carrot") GD.slots[i] = null; else { s.st = 1; s.since = Date.now(); s.wet = 0; }
+    floatText(`+${n} ${n === 1 ? (s.c === "carrot" ? "zanahoria" : "tomate") : (s.c === "carrot" ? "zanahorias" : "tomates")}`, U(barrow.ux), BACK() - U(130));
+    gSave(); drawPlants(); fx("dirt", bx, by, 8, 300);
+    say(pick(GL[s.c]), 2200);
+    return true;
+  }
+
   function beginGardenDrag(e, kind, index = -1) {
     if (e.button !== 0 || inHouse) return;
     if (kind === "harvest" && (!GD.slots[index] || GD.slots[index].st < 2)) return;
     e.preventDefault(); e.stopPropagation();
-    storyTarget(null);
+    const tool = kind === "water" ? can : kind === "seed" ? seedBag : null;
     const src = kind === "water" ? "g-can.webp" : kind === "seed" ? "g-seeds.webp" : GD.slots[index].c === "carrot" ? "g-carrot.webp" : "g-tomato.webp";
-    const ghost = document.createElement("img"); ghost.className = "garden-drag"; ghost.src = "art/valley/" + src; ghost.alt = ""; document.body.appendChild(ghost);
-    gardenDrag = { kind, index, ghost, x: e.clientX, y: e.clientY, moved: false };
-    moveGardenDrag(e);
+    const r = tool ? tool.el.getBoundingClientRect() : null;
+    gardenDrag = { kind, index, tool, src, r, x: e.clientX, y: e.clientY, ox: r ? e.clientX - r.left : 38, oy: r ? e.clientY - r.top : 38, moved: false, ghost: null, aim: null, aimT: 0, done: new Set(), px: e.clientX, py: e.clientY };
+  }
+  function startCarry(d) {
+    d.moved = true; storyTarget(null);
+    const g = document.createElement("img"); g.className = "garden-drag"; g.src = "art/valley/" + d.src; g.alt = "";
+    if (d.r) Object.assign(g.style, { width: d.r.width + "px", height: d.r.height + "px" });
+    document.body.appendChild(g); d.ghost = g;
+    if (d.tool) { d.tool.el.style.visibility = "hidden"; stepAside(); comment(d.kind, true); }
   }
   function moveGardenDrag(e) {
-    if (!gardenDrag) return;
-    if (!gardenDrag.moved && Math.hypot(e.clientX - gardenDrag.x, e.clientY - gardenDrag.y) < 8) return;
-    gardenDrag.moved = true;
-    gardenDrag.ghost.style.left = e.clientX + "px"; gardenDrag.ghost.style.top = e.clientY + "px";
+    const d = gardenDrag; if (!d) return;
+    d.px = e.clientX; d.py = e.clientY;
+    if (!d.moved) { if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return; startCarry(d); }
+    const w = d.ghost.offsetWidth || 76, h = d.ghost.offsetHeight || 76;
+    const ox = d.r ? d.ox : w / 2, oy = d.r ? d.oy : h / 2;
+    d.ghost.style.left = e.clientX - ox + "px"; d.ghost.style.top = e.clientY - oy + "px";
+  }
+  // Lo que hay bajo la herramienta: para la regadera se mira el pico (abajo a la izquierda), para el saquito su base
+  function aimAt(d) {
+    const gr = d.ghost.getBoundingClientRect();
+    const x = d.kind === "water" ? gr.left + gr.width * 0.12 : gr.left + gr.width / 2, y = gr.top + gr.height * (d.kind === "water" ? 0.55 : 0.9);
+    if (d.kind === "water") {
+      if (near(well.el, x, y, 10)) return "well";
+      const i = slotAtPoint(x, y + U(60)); return i >= 0 && GD.slots[i] ? i : null;
+    }
+    if (d.kind === "seed") { const i = slotAtPoint(x, y); return i >= 0 ? i : null; }
+    return null;
+  }
+  function carryTick() {
+    const d = gardenDrag;
+    if (d && d.moved && d.kind !== "harvest") {
+      const a = aimAt(d), now = performance.now();
+      if (a !== d.aim) { d.aim = a; d.aimT = now; }
+      let pouring = false;
+      if (a === "well") { if (GD.water < CAN) { pouring = true; if (now - d.aimT > DWELL.fill && !d.done.has("well")) { d.done.add("well"); userFill(); } } else if (!d.done.has("wellFull")) { d.done.add("wellFull"); comment("full"); } }
+      else if (a != null && d.kind === "water") {
+        const s = GD.slots[a];
+        if (s && thirsty(s)) { pouring = GD.water > 0; if (now - d.aimT > DWELL.water && !d.done.has(a)) { d.done.add(a); userWater(a); } }
+        else if (!d.done.has("no" + a)) { d.done.add("no" + a); comment("noNeed"); }
+      } else if (a != null && d.kind === "seed") {
+        if (!GD.slots[a]) { if (now - d.aimT > DWELL.seed) { d.done.add(a); userPlant(a); } }
+        else if (!d.done.has("no" + a) && !d.done.has(a)) { d.done.add("no" + a); comment("taken"); }
+      }
+      d.ghost.classList.toggle("pour", pouring && d.kind === "water");
+      if (pouring && d.kind === "water" && a !== "well" && Math.random() < 0.35) {
+        // pico de la regadera ya inclinada (−32° sobre el asa): ≈ 6 % del ancho y 91 % del alto de la caja sin girar
+        const g = d.ghost, fr = front.getBoundingClientRect(), wx = parseFloat(g.style.left) + g.offsetWidth * 0.06 - fr.left, wy = parseFloat(g.style.top) + g.offsetHeight * 0.91 - fr.top;
+        const dr = document.createElement("i"); dr.className = "drop pourDrop"; Object.assign(dr.style, { left: wx + "px", top: wy + "px" }); front.appendChild(dr); setTimeout(() => dr.remove(), 900);
+      }
+      if (E.tx == null && !gBusy) E.face = (d.px + cam) / k > E.x ? 1 : -1;
+    }
+    requestAnimationFrame(carryTick);
+  }
+  requestAnimationFrame(carryTick);
+  function putBack(d) {
+    if (!d.ghost) return;
+    const g = d.ghost;
+    if (!d.tool) { g.remove(); return; }
+    const r = d.tool.el.getBoundingClientRect();
+    g.classList.remove("pour"); g.classList.add("back");
+    Object.assign(g.style, { left: r.left + "px", top: r.top + "px" });
+    setTimeout(() => { g.remove(); d.tool.el.style.visibility = ""; }, 320);
   }
   function dropGardenDrag(e) {
     if (!gardenDrag) return;
-    const d = gardenDrag; gardenDrag = null; d.ghost.remove(); suppressGardenClick = Date.now() + 350;
+    const d = gardenDrag; gardenDrag = null; suppressGardenClick = Date.now() + 350;
     if (!d.moved) {
       if (d.kind === "water") waterNext();       // un toque: Eko lo hace solo con la primera que lo necesite
       else if (d.kind === "seed") plantNext();
@@ -289,20 +410,17 @@
       return;
     }
     const x = e.clientX, y = e.clientY;
-    if (d.kind === "seed") {
-      const i = slotAtPoint(x, y);
-      if (i < 0) say("Suéltalo encima de un hueco del bancal.", 2400);
-      else if (!GD.slots[i]) act(i, "plant");
-      else say("Ese hueco ya está ocupado. Prueba con otro.");
-    } else if (d.kind === "water") {
-      const i = slotAtPoint(x, y);
-      if (near(well.el, x, y)) goTo(3500, () => fillCan());
-      else if (i >= 0) act(i, "water");
-      else say("Suéltala encima de una planta con sed… o en el pozo para llenarla.", 2800);
-    } else if (d.kind === "harvest") {
-      if (near(barrow.el, x, y)) act(d.index, "harvest");
-      else say("Llévala hasta la carretilla para recogerla.", 2400);
+    if (d.kind === "harvest") {
+      d.ghost.remove();
+      if (near(barrow.el, x, y)) harvestNow(d.index); else say("Llévala hasta la carretilla para recogerla.", 2400);
+      return;
     }
+    // Si sueltas justo encima de algo antes de que dé tiempo, también cuenta
+    const a = aimAt(d);
+    if (d.kind === "water" && a === "well" && !d.done.has("well")) userFill();
+    else if (d.kind === "water" && a != null && a !== "well" && !d.done.has(a)) userWater(a);
+    else if (d.kind === "seed" && a != null && !GD.slots[a]) userPlant(a);
+    putBack(d);
   }
   // ¿Qué hueco del bancal hay bajo el puntero? Se mide por posición (con margen por arriba para las plantas altas),
   // así da igual soltar sobre la tierra, el borde delantero del bancal o la propia planta.
@@ -321,7 +439,7 @@
   plants.forEach((p, i) => p.addEventListener("pointerdown", (e) => beginGardenDrag(e, "harvest", i)));
   addEventListener("pointermove", moveGardenDrag);
   addEventListener("pointerup", dropGardenDrag);
-  const cancelGardenDrag = () => { if (gardenDrag) { gardenDrag.ghost.remove(); gardenDrag = null; } };
+  const cancelGardenDrag = () => { const d = gardenDrag; if (!d) return; gardenDrag = null; if (d.ghost) putBack(d); };
   addEventListener("pointercancel", cancelGardenDrag);
   addEventListener("blur", cancelGardenDrag);
   let pajaI = -1;
@@ -369,7 +487,7 @@
     for (const p of props) {
       const h = U(p.uh), w = h * p.ar;
       const by = p.base === "front" ? FRONT() : BACK();
-      Object.assign(p.el.style, { left: U(p.ux) - w / 2 + "px", top: by - h - U((p.o && p.o.lift) || 0) + "px", width: w + "px", height: h + "px", zIndex: p.base === "front" ? 30 : 5 });
+      Object.assign(p.el.style, { left: U(p.ux) - w / 2 + "px", top: by - h - U((p.o && p.o.lift) || 0) + "px", width: w + "px", height: h + "px", zIndex: (p.o && p.o.z) || (p.base === "front" ? 30 : 5) });
       p.el.querySelectorAll(".glow").forEach((g) => { const [gx, gy, gs] = g.dataset.g.split(",").map(Number); const s = U(gs); Object.assign(g.style, { left: gx * w - s / 2 + "px", top: gy * h - s / 2 + "px", width: s + "px", height: s + "px" }); });
     }
     const sb = sign.el; Object.assign(st.style, { left: "4%", width: "92%", top: "13%", fontSize: U(21) + "px" });
@@ -769,17 +887,17 @@
   }
   const DECO = {
     banderines: ["deco-banderines.webp", Z.arch + 4, 46, "front", 196],
-    columpio: ["deco-columpio.webp", 1880, 210, "back", 12],
-    caseta: ["deco-caseta.webp", 2440, 150, "back", 0],
+    columpio: ["deco-columpio.webp", 1930, 230, "back", 10, 4],   // detrás del árbol: las cuerdas se pierden en la copa
+    caseta: ["deco-caseta.webp", 1660, 175, "back", 0],
     molinillo: ["deco-molinillo.webp", 3470, 120, "back", 0],
-    farolillos: ["deco-farolillos.webp", 1320, 70, "front", 178],
+    farolillos: ["deco-farolillos.webp", 1352, 46, "front", 196],
   };
   const decos = {};
   function placeDecos() {
     for (const r of unlocked()) {
       if (r.kind !== "deco" || decos[r.id]) continue;
-      const [src, ux, uh, base, lift] = DECO[r.id];
-      const p = prop(src, ux, uh, base, base, { lift, click: r.id === "columpio" ? () => goTo(1860, () => say(pick(["¡Wiii! Bueno, me imagino el wiii", "Algún día me atreveré a columpiarme bien alto"]))) : null });
+      const [src, ux, uh, base, lift, z] = DECO[r.id];
+      const p = prop(src, ux, uh, base, base, { lift, z, click: r.id === "columpio" ? () => goTo(1860, () => say(pick(["¡Wiii! Bueno, me imagino el wiii", "Algún día me atreveré a columpiarme bien alto"]))) : null });
       p.el.classList.add("deco", "deco-" + r.id);
       const im = p.el.firstChild; im.onerror = () => { p.el.style.display = "none"; };
       im.onload = () => { p.ar = im.naturalWidth / im.naturalHeight; layout(); };
@@ -906,7 +1024,7 @@
     if (!artOK.weed) return;
     GD.weeds.forEach((wd, idx) => {
       const im = document.createElement("img"); im.className = "weed"; im.src = "art/valley/g-maleza.webp"; im.alt = ""; im.draggable = false; im.dataset.idx = idx;
-      const h = U(46), x = U(slotX(wd.slot) + (wd.side || 0.32) * BED.uh * BED.ar / 3);
+      const h = U(72), x = U(slotX(wd.slot) + (wd.side || 0.32) * BED.uh * BED.ar / 3);
       Object.assign(im.style, { left: x - h / 2 + "px", top: BACK() - U(BED.uh) * 0.6 - h + "px", width: h + "px", height: h + "px" });
       let y0 = null;
       im.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); y0 = e.clientY; im.setPointerCapture(e.pointerId); });
@@ -918,7 +1036,7 @@
   }
   function pullWeed(idx, im) {
     suppressGardenClick = Date.now() + 350;
-    im.classList.add("gone"); fx("dirt", parseFloat(im.style.left) + U(23), parseFloat(im.style.top) + U(40), 8, 300);
+    im.classList.add("gone"); fx("dirt", parseFloat(im.style.left) + U(36), parseFloat(im.style.top) + U(62), 8, 300);
     GD.weeds.splice(idx, 1); gSave(); setTimeout(drawWeeds, 500);
     if (GD.paja.revealed && Math.random() < 0.4) setTimeout(() => pSay(pick(["Gracias. Esa hierba llevaba días cotilleando.", "Fuera intrusa. Buen tirón."]), 2600), 600);
     else say(pick(["¡Fuera, hierbajo!", "¡Pop! Arrancada", "Una menos"]), 1600);

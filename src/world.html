@@ -47,7 +47,11 @@ body.night #sun{animation:none}
 @keyframes fall{to{transform:translate(60px,110vh) rotate(300deg)}}
 .plant{position:absolute;z-index:5;pointer-events:auto;cursor:grab;transform-origin:50% 100%;touch-action:none}
 .plant img{width:100%;height:100%;display:block;pointer-events:none}
-.garden-drag{position:fixed;z-index:100;width:76px;height:76px;object-fit:contain;transform:translate(-50%,-50%);filter:drop-shadow(0 5px 8px rgba(40,30,20,.32));pointer-events:none}
+.garden-drag{position:fixed;z-index:100;width:76px;height:76px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(40,30,20,.3));pointer-events:none;transform-origin:78% 45%;transition:transform .25s ease-out}
+.garden-drag.pour{transform:rotate(-32deg)}
+.drop,.dirt{z-index:36}
+.drop.pourDrop{width:6px;height:11px;background:#7FB8EA}
+.garden-drag.back{transition:left .3s ease-in-out,top .3s ease-in-out,transform .2s}
 .plant.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}@keyframes pop{from{transform:scale(.2)}}
 .plant .thirst{position:absolute;left:50%;top:-14px;width:10px;height:13px;margin-left:-5px;background:#7FB3E0;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;clip-path:polygon(50% 0,100% 60%,85% 95%,15% 95%,0 60%);opacity:0;transition:opacity .4s}
 .plant.dry .thirst{opacity:.9;animation:bob 1.6s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-5px)}}
@@ -117,9 +121,9 @@ body.in-house #title{display:none}
 .prop img.paja-hop{animation:pajaHop .5s ease-out}@keyframes pajaHop{40%{transform:translateY(-5%) rotate(-2deg)}}
 .prop img.paja-shake{animation:pajaShake .6s}@keyframes pajaShake{20%{transform:rotate(4deg)}40%{transform:rotate(-4deg)}60%{transform:rotate(3deg)}80%{transform:rotate(-2deg)}}
 .prop img.paja-snap{animation:pajaSnap .45s}@keyframes pajaSnap{25%{transform:rotate(-8deg) translateX(-2%)}}
-.paja-note{position:absolute;left:47%;top:46%;width:24%;transform:rotate(7deg);pointer-events:none;display:none}
+.prop img.paja-note{position:absolute;left:46%;top:44%;width:22%;height:auto;transform:rotate(7deg);pointer-events:none;display:none;filter:drop-shadow(0 2px 3px rgba(60,40,20,.3))}
 .paja-alert{position:absolute;left:50%;top:-7%;margin-left:-14px;width:28px;height:28px;border-radius:50%;background:#E9A93B;color:#fff;font:800 18px/28px "Segoe UI",system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(80,50,20,.35);display:none;animation:bob 1.6s ease-in-out infinite}
-.has-order .paja-note,.has-order .paja-alert{display:block}
+.prop.has-order img.paja-note,.has-order .paja-alert{display:block}
 #pajaBub{position:fixed;transform:translate(-50%,-100%);background:#F3E2B8;color:#4a3520;padding:8px 13px;border-radius:14px;border:2px solid #d9bf87;box-shadow:0 4px 14px rgba(50,30,20,.25);font:700 15px "Segoe Print","Comic Sans MS",cursive;max-width:300px;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;z-index:46}
 #pajaBub.on{opacity:1}
 #pajaBub::after{content:"";position:absolute;left:50%;bottom:-8px;width:12px;height:12px;margin-left:-6px;background:#F3E2B8;border-right:2px solid #d9bf87;border-bottom:2px solid #d9bf87;transform:rotate(45deg)}

@@ -51,9 +51,16 @@ class EkoService : Service() {
     private var last = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
+    private fun prefs() = getSharedPreferences("eko", MODE_PRIVATE)
+
+    // Cada 6 horas mira si hay versión nueva (la primera vez, al minuto de salir)
+    private val updateCheck = object : Runnable {
+        override fun run() { Updater.check(this@EkoService); handler.postDelayed(this, 6 * 3600 * 1000L) }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP") { stopSelf(); return START_NOT_STICKY }
+        if (intent?.action == "STOP") { prefs().edit().putBoolean("out", false).apply(); stopSelf(); return START_NOT_STICKY }
+        prefs().edit().putBoolean("out", true).apply()
         goForeground()
         if (web == null) addOverlay()
         running = true
@@ -132,6 +139,7 @@ class EkoService : Service() {
         last = SystemClock.uptimeMillis()
         idle(2000)
         handler.post(tick)
+        handler.postDelayed(updateCheck, 60_000)
     }
 
     private fun js(code: String) { web?.evaluateJavascript("window.eko && eko.$code", null) }

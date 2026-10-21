@@ -21,6 +21,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
+    private lateinit var upd: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,13 @@ class MainActivity : Activity() {
         root.addView(status)
         root.addView(button("Sacar a Eko a la pantalla", "#5FA88E") { bringOut() })
         root.addView(button("Guardar a Eko", "#D0795A") { putAway() })
+        upd = TextView(this).apply {
+            textSize = 14f
+            setTextColor(Color.parseColor("#9A8478"))
+            gravity = Gravity.CENTER
+            setPadding(0, (22 * d).toInt(), 0, 0)
+        }
+        root.addView(upd)
         setContentView(root)
     }
 
@@ -65,6 +73,19 @@ class MainActivity : Activity() {
             !Settings.canDrawOverlays(this) -> "Para que Eko pueda pasear por tu móvil, activa «Mostrar sobre otras apps»."
             EkoService.running -> "Eko está paseando por tu pantalla. Tócalo, arrástralo… y mantén pulsado para volver aquí."
             else -> "Eko está aquí dentro, esperando a salir."
+        }
+        upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
+        Updater.check(this) { msg ->
+            runOnUiThread {
+                when (msg) {
+                    "" -> upd.text = "Versión ${Updater.versionName(this)} · está al día"
+                    "NEEDS_PERMISSION" -> {
+                        upd.text = "Hay una versión nueva. Toca aquí y activa «Permitir de esta fuente» para que Eko pueda actualizarse solo."
+                        upd.setOnClickListener { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) }
+                    }
+                    else -> upd.text = msg
+                }
+            }
         }
     }
 
@@ -82,6 +103,7 @@ class MainActivity : Activity() {
     }
 
     private fun putAway() {
+        getSharedPreferences("eko", MODE_PRIVATE).edit().putBoolean("out", false).apply()
         stopService(Intent(this, EkoService::class.java))
         status.text = "Eko está aquí dentro, esperando a salir."
     }

@@ -11,8 +11,10 @@ android {
         applicationId = "app.drobr.eko"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.1.1"
+        // En GitHub, cada compilación lleva el número de «prueba» (android-N) como versión: así la app sabe si hay una más nueva
+        val run = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionCode = run
+        versionName = "0.1.$run"
     }
 
     // Firma fija (guardada en el repo) para que cada APK nuevo se instale encima del anterior sin desinstalar

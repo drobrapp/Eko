@@ -3,6 +3,9 @@
 (() => {
   "use strict";
   const T = {
+    albumAsk: ["¿Me das tus favoritas para mi álbum? Tócame", "Tócame y elige las mejores fotos del paseo", "¡Quiero ver las fotos! Tócame y me das alguna"],
+    photoGift: ["¡Gracias! Ya tengo {app} fotos nuevas en mi álbum", "¡Qué bonitas! Las guardo con cariño", "Mi álbum está cada vez más chulo"],
+    diaryAsk: ["¿Me cuentas qué tal el día? Tócame", "Es hora del diario. Tócame y me lo cuentas", "¿Qué tal hoy? Tócame, que tengo la libreta preparada"],
     stepsGoal: ["¡Meta cumplida: {app} pasos! Qué piernas tenemos", "¡Ya llevamos {app} pasos! Me he ganado un premio, ¿no?", "{app} pasos… ¡meta conseguida!", "¡Toma ya, {app} pasos! Meta del día hecha"],
     goalStreak: ["¡Meta cumplida! Llevamos {app} días seguidos", "¡{app} días seguidos cumpliendo! Somos imparables", "Racha de {app} días. ¡No la rompamos!", "¡Otro día más! Ya van {app}"],
     stepsHalf: ["¡Ya vamos por la mitad! {app} pasos", "Medio camino hecho: {app} pasos", "{app} pasos. ¡Vamos, que se puede!"],
@@ -122,6 +125,7 @@
     netLost: "asustado", netBack: "contento", batteryFull: "orgulloso", lateNight: "cansado", stepsGoal: "orgulloso", walking: "emocionado",
     goalStreak: "orgulloso", stepsHalf: "contento", stepsBeyond: "emocionado", find: "sorprendido", findMany: "emocionado", longWalk: "cansado",
     streakLost: "triste", lazy: "esperanzado", sedentary: "esperanzado", photoWalkStart: "emocionado", photoWalkEnd: "contento", challenge: "curioso", golden: "emocionado",
+    albumAsk: "esperanzado", photoGift: "enamorado", diaryAsk: "curioso",
   };
   // Frases para apps concretas (se mezclan con las de su tipo)
   const APP = {

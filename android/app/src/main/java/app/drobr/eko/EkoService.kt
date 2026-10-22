@@ -534,17 +534,35 @@ class EkoService : Service() {
     private var nextChallenge = 0L
     private fun photoWalk() {
         val now = SystemClock.elapsedRealtime()   // sigue contando con la pantalla apagada
-        if (now < photoUntil) { photoUntil = 0L; talk("photoWalkEnd"); return }
+        if (now < photoUntil) { photoUntil = 0L; talk("photoWalkEnd"); offerAlbum(); return }
         photoUntil = now + 60 * 60_000L; nextChallenge = now + 4000
         js("act('tada')"); talk("photoWalkStart")
     }
     private fun checkPhotoWalk() {
         if (photoUntil == 0L) return
         val now = SystemClock.elapsedRealtime()
-        if (now > photoUntil) { photoUntil = 0L; if (quiet()) talk("photoWalkEnd"); return }
+        if (now > photoUntil) { photoUntil = 0L; if (quiet()) { talk("photoWalkEnd"); offerAlbum() }; return }
         if (now > nextChallenge && quiet()) { nextChallenge = now + kotlin.random.Random.nextLong(8, 13) * 60_000; talk("challenge") }
     }
     fun goldenSay() { handler.post { if (running && quiet()) talk("golden") } }
+
+    // ---------- Álbum y diario ----------
+    // Durante un rato, tocar a Eko abre algo (el álbum tras un paseo de fotos, el diario por la noche)
+    private var tapOpens: Intent? = null
+    private var tapOpensUntil = 0L
+    private fun offerTap(i: Intent) { tapOpens = i; tapOpensUntil = SystemClock.uptimeMillis() + 3 * 60_000 }
+    private fun offerAlbum() {
+        handler.postDelayed({ talk("albumAsk"); offerTap(Intent(this, AlbumActivity::class.java).putExtra("walk", true)) }, 3500)
+    }
+    fun photosAdded(n: Int) { handler.post { if (!running) return@post; give(l = 8f, f = 5f); js("act('tada')"); talkArg("photoGift", n.toString()) } }
+    fun diaryDone(reply: String) { handler.post { if (!running) return@post; give(l = 10f); js("act('tada')"); say(reply, 4200) } }
+    private fun checkDiary() {
+        val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); if (h < 20 || h >= 23 || !quiet()) return
+        val day = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        if (prefs().getInt("diaryAskDay", -1) == day || Diary.writtenToday(this)) return
+        prefs().edit().putInt("diaryAskDay", day).apply()
+        talk("diaryAsk"); offerTap(Intent(this, DiaryActivity::class.java))
+    }
     private fun dizzy() {
         if (st == St.DRAG || st == St.FALL) return
         if (st == St.SLEEP) js("wake()")
@@ -705,7 +723,7 @@ class EkoService : Service() {
             if ((st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE && now > nextChat) {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
-            if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary() }
+            if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary(); checkDiary() }
             checkPhotoWalk()
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
@@ -796,6 +814,11 @@ class EkoService : Service() {
                 if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
                 else if (!longDone) {
                     if (st == St.SLEEP) { js("wake()"); idle(2500); talk("wake") }
+                    else if (tapOpens != null && SystemClock.uptimeMillis() < tapOpensUntil) {
+                        val i = tapOpens!!; tapOpens = null
+                        js("tap()"); idle(2000); buzz()
+                        startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
                     else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7); buzz() }
                 }
             }

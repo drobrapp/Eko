@@ -65,6 +65,8 @@ class MainActivity : Activity() {
         root.addView(status)
         root.addView(button("Sacar a Eko a la pantalla", "#5FA88E") { bringOut() })
         root.addView(button("Guardar a Eko", "#D0795A") { putAway() })
+        root.addView(button("Su álbum de fotos", "#E9A93B") { startActivity(Intent(this, AlbumActivity::class.java)) })
+        root.addView(button("Diario con Eko", "#9B85CC") { startActivity(Intent(this, DiaryActivity::class.java)) })
         kb = button("", "#9B85CC") { askAccess() }
         root.addView(kb)
         notes = button("", "#6F94C2") { EkoNotes.setEnabled(this, !EkoNotes.enabled(this)); showNotes() }

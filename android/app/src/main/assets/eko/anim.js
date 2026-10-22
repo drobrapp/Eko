@@ -461,7 +461,7 @@
 
   // ---------- Ahorro: fotogramas según lo que haga y ventana grande solo cuando hace falta ----------
   // Siempre a la velocidad de la pantalla (sin límite de fotogramas)
-  let last = performance.now(), lowPower = false, big = false, bigUntil = 0, hitT = 0, hitKey = "";
+  let last = performance.now(), lowPower = false, big = false, bigUntil = 0, hitT = 0, hitKey = "", clipPx = 0;
   function busy() { return !!A.action || S.walking || S.dragging || S.airborne || A.dance || A.t < A.danceUntil || Math.abs(A.squashV) > 2; }
   function wantBig() { return !!A.action || S.dragging || S.airborne || A.dance || A.t < A.danceUntil; }
   function frame(now) {
@@ -473,7 +473,8 @@
     if (AND && AND.hit && A.t > hitT) {
       hitT = A.t + 0.12;
       const r = el.pet.getBoundingClientRect(), p = 8;
-      const k = [r.left - p, r.top - p, r.right + p, r.bottom + p].map(Math.round);
+      // si está escondido detrás del teclado, la parte tapada no recibe toques (para no robarle teclas)
+      const k = [r.left - p, r.top - p, r.right + p, Math.min(r.bottom + p, innerHeight - clipPx)].map(Math.round);
       const key = k.join(",");
       if (key !== hitKey) { hitKey = key; AND.hit(k[0], k[1], k[2], k[3]); }
     }
@@ -506,6 +507,8 @@
     dizzy() { act("dizzy", { dur: 2.8 }); A.woozyUntil = A.t + 4.5; },
     eat() { act("eat"); },
     spin() { act(TRICKS[Math.floor(Math.random() * TRICKS.length)]); },
+    // Esconder la parte de abajo (cuando se asoma por detrás del teclado): px desde abajo de la ventana
+    clip(px) { clipPx = Math.max(0, px || 0); stage.style.clipPath = clipPx ? `inset(0 0 ${clipPx}px 0)` : "none"; hitKey = ""; },
     lowPower(v) { lowPower = !!v; },
     act, fx, blush, express,
     talk(ev, chance, arg) { if (window.ekoTalk) ekoTalk.talk(ev, chance, arg); },

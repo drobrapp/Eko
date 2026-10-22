@@ -52,7 +52,7 @@ class EkoService : Service() {
 
     companion object { var running = false; var instance: EkoService? = null }
 
-    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK }
+    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK, KB }
 
     private lateinit var wm: WindowManager
     private lateinit var lp: WindowManager.LayoutParams
@@ -176,7 +176,7 @@ class EkoService : Service() {
         if (abs(d) <= 2 * dens) { y = g; return false }
         st = St.FALL; hopping = true
         if (d < 0) { vy = 0f; talk("kbGone", 0.4) }
-        else { vy = -sqrt(2f * 2400 * dens * (d + 30 * dens)); talk("keyboard", 0.35) }
+        else { vy = -sqrt(2f * 2400 * dens * (d + 30 * dens)); pendingKb = EkoAccess.kbTop > 0; if (!pendingKb) talk("keyboard", 0.35) }
         js("set('fall', $dir)")
         return true
     }
@@ -712,6 +712,60 @@ class EkoService : Service() {
     }
     private var nextChat = 0L
     private var hopping = false
+
+    // ---------- Con el teclado abierto: se quita de en medio (cada vez de una forma) ----------
+    //  side   = se esconde en el borde de la pantalla y solo asoma media cara
+    //  behind = se mete detrás del teclado y solo saca la cabeza
+    //  corner = se va a una esquina, encima del teclado
+    private var pendingKb = false
+    private var kbMode = "side"
+    private var kbTarget = 0f
+    private var kbArrived = false
+    private var kbSink = 0f            // cuánto se ha hundido detrás del teclado (px)
+    private var kbClip = -1
+    private var kbNextTalk = 0L
+    private fun enterKb() {
+        val r = Random.nextFloat()
+        kbMode = if (r < 0.4f) "side" else if (r < 0.8f) "behind" else "corner"
+        val left = x < maxX() / 2
+        kbTarget = when (kbMode) {
+            "side" -> if (left) -105 * dens else maxX() + 105 * dens      // solo asoman ~30 dp de su cuerpo
+            "corner" -> if (left) -20 * dens else maxX() + 20 * dens
+            else -> (if (left) 0.18f else 0.62f) * maxX() + Random.nextFloat() * 0.12f * maxX()
+        }
+        dir = if (kbTarget > x) 1 else -1
+        kbArrived = false; kbSink = 0f
+        st = St.KB; js("set('walk', $dir)")
+    }
+    private fun setClip(px: Int) { if (px != kbClip) { kbClip = px; js("clip($px)") } }
+    private fun exitKb() {
+        setClip(0); kbSink = 0f
+        x = x.coerceIn(0f, maxX())
+        st = St.FALL; vy = 0f; hopping = true; js("set('fall', $dir)")
+    }
+    private fun kbTick(dt: Float) {
+        if (EkoAccess.kbTop <= 0) { exitKb(); talk("kbGone", 0.4); return }
+        if (!kbArrived) {
+            x += dir * 95 * dens * dt
+            if ((dir > 0 && x >= kbTarget) || (dir < 0 && x <= kbTarget)) {
+                x = kbTarget; kbArrived = true
+                // mirando hacia dentro de la pantalla (hacia lo que escribes)
+                dir = if (kbMode == "behind") (if (x < maxX() / 2) 1 else -1) else (if (x < 0) 1 else if (x > maxX()) -1 else dir)
+                js("set('idle', $dir)")
+                // lo comenta al llegar a su escondite (y de vez en cuando si sigues escribiendo mucho rato)
+                talk("kb_$kbMode", 0.75)
+                kbNextTalk = SystemClock.uptimeMillis() + Random.nextLong(90_000, 180_000)
+            }
+        } else if (SystemClock.uptimeMillis() > kbNextTalk) {
+            kbNextTalk = SystemClock.uptimeMillis() + Random.nextLong(120_000, 240_000)
+            talk("kbLong", 0.5)
+        }
+        // detrás del teclado: se va hundiendo hasta que solo se le ve la cabeza
+        val sinkMax = 82 * dens
+        if (kbMode == "behind" && kbArrived && kbSink < sinkMax) kbSink = (kbSink + 120 * dens * dt).coerceAtMost(sinkMax)
+        y = ground() + kbSink
+        setClip(((kbSink + 4 * dens) / dens).toInt().takeIf { kbSink > 0 } ?: 0)
+    }
     private var dragVx = 0f
     private var dragVy = 0f
     private var lastMoveAt = 0L
@@ -762,9 +816,11 @@ class EkoService : Service() {
                     vy += 2400 * dens * dt
                     y += vy * dt
                     js("v(0, ${(vy / dens).toInt()})")
-                    if (vy >= 0 && y >= ground()) { if (vy > 1200 * dens) buzz(true); y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
+                    if (vy >= 0 && y >= ground()) { if (vy > 1200 * dens) buzz(true); y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false
+                        if (pendingKb) { pendingKb = false; if (EkoAccess.kbTop > 0) enterKb() } }
                 }
                 St.DRAG -> {}
+                St.KB -> kbTick(dt)
                 St.PEEK -> {
                     settle()
                     if (until == 0L) {
@@ -773,7 +829,7 @@ class EkoService : Service() {
                     } else if (now > until) { x = x.coerceIn(0f, maxX()); walk(); talk("peekBack", 0.5) }
                 }
             }
-            if (st != St.PEEK) x = x.coerceIn(0f, maxX())
+            if (st != St.PEEK && st != St.KB) x = x.coerceIn(0f, maxX())
             if (lp.x != x.toInt() || lp.y != y.toInt()) {
                 lp.x = x.toInt(); lp.y = y.toInt()
                 web?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) {} }
@@ -810,7 +866,7 @@ class EkoService : Service() {
                 val dy = e.rawY - downY
                 if (!dragging && hypot(dx, dy) > 12 * dens) {
                     dragging = true; handler.removeCallbacks(longPress)
-                    st = St.DRAG; js("set('drag', $dir)"); closeMenu(); hopping = false
+                    st = St.DRAG; js("set('drag', $dir)"); closeMenu(); hopping = false; pendingKb = false; setClip(0); kbSink = 0f
                     dragVx = 0f; dragVy = 0f; lastMoveAt = SystemClock.uptimeMillis()
                     dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5); buzz()
                 }
@@ -832,6 +888,7 @@ class EkoService : Service() {
                 if (dragging) { st = St.FALL; vy = 0f; js("set('fall', $dir)") }
                 else if (!longDone) {
                     if (st == St.SLEEP) { js("wake()"); idle(2500); talk("wake") }
+                    else if (st == St.KB) { js("tap()"); buzz(); kbSink = (kbSink - 40 * dens).coerceAtLeast(0f) }   // se asoma un poco más y vuelve a esconderse
                     else if (tapOpens != null && SystemClock.uptimeMillis() < tapOpensUntil) {
                         val i = tapOpens!!; tapOpens = null
                         js("tap()"); idle(2000); buzz()

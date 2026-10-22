@@ -3,6 +3,11 @@
 (() => {
   "use strict";
   const T = {
+    // Con el teclado abierto: se quita de en medio y lo cuenta
+    kb_side: ["Me escondo aquí al ladito, tú escribe", "Yo me aparto, que tienes cosas que contar", "Desde aquí te espío… es broma, no miro", "Me hago pequeñito para no estorbar", "Aquí en el borde no molesto, ¿verdad?", "Escribe tranquilo, yo me asomo de vez en cuando", "Me quito de en medio. Tú a lo tuyo"],
+    kb_behind: ["Me meto detrás del teclado, que hay sitio", "Solo asomo la cabecita, prometido", "Aquí abajo se está calentito", "Tú escribe, yo me agacho", "Escondido entre las teclas… ¡no me pulses!", "Me agacho para que veas bien lo que escribes", "Modo ninja: solo se me ven los ojos"],
+    kb_corner: ["Me siento aquí en la esquina mientras escribes", "Yo me quedo en mi rinconcito", "Desde aquí te animo a escribir", "Esquina reservada para mí. Tú escribe", "Me aparto a un ladito, que necesitas espacio", "Aquí sentadito no estorbo"],
+    kbLong: ["¿Todavía escribiendo? Qué inspiración", "Cuánto tienes que contar…", "Yo sigo aquí escondido, sin molestar", "Me encanta el sonido de las teclas. Bueno, me lo imagino", "No te preocupes por mí, estoy bien aquí", "¿Es una carta de amor? No, no me lo digas", "Escribes más rápido que yo ando"],
     albumAsk: ["¿Me das tus favoritas para mi álbum? Tócame", "Tócame y elige las mejores fotos del paseo", "¡Quiero ver las fotos! Tócame y me das alguna"],
     photoGift: ["¡Gracias! Ya tengo {app} fotos nuevas en mi álbum", "¡Qué bonitas! Las guardo con cariño", "Mi álbum está cada vez más chulo"],
     diaryAsk: ["¿Me cuentas qué tal el día? Tócame", "Es hora del diario. Tócame y me lo cuentas", "¿Qué tal hoy? Tócame, que tengo la libreta preparada"],
@@ -116,7 +121,7 @@
   let pokes = [];
   // Cara que pone con cada cosa (catálogo expr.js del PC)
   const EXPR = {
-    hello: "emocionado", noteHi: "enamorado", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
+    hello: "emocionado", noteHi: "enamorado", kb_side: "timido", kb_behind: "picaro", kb_corner: "contento", kbLong: "curioso", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
     drop: "orgulloso", shake: "asustado", dizzy: "confundido", wake: "cansado", hunger: "cansado",
     keyboard: "curioso", kbGone: "sorprendido", costume: "canalla", music: "emocionado", musicOff: "triste",
     lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",

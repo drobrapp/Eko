@@ -51,8 +51,15 @@
   .spot { position: absolute; border-radius: 26px; transition: background .15s; }
   .spot:active { background: rgba(255,247,238,.22); }
 
+  /* Sombra de Eko: se queda en el suelo (o en el sillón) y encoge cuanto más alto está */
+  #shadowF { left: 0; top: 0; width: 100px; height: 24px; border-radius: 50%; pointer-events: none; transform-origin: 50% 50%;
+             background: radial-gradient(closest-side, rgba(70,40,20,.55), rgba(70,40,20,.25) 60%, transparent); }
+  /* Parte delantera del sillón (brazos y frente del asiento), recortada de la misma imagen: tapa a Eko cuando se sienta */
+  #fg { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; display: none;
+        clip-path: polygon(605px 890px, 610px 865px, 620px 845px, 640px 835px, 670px 833px, 688px 840px, 696px 858px, 688px 890px, 666px 915px, 660px 958px, 720px 962px, 773px 958px, 772px 905px, 780px 882px, 800px 872px, 822px 875px, 838px 892px, 846px 935px, 850px 1000px, 828px 1032px, 788px 1036px, 720px 1010px, 660px 1002px, 618px 992px, 605px 950px); }
   #eko { left: 0; top: 0; width: 160px; height: 250px; border: 0; background: transparent; pointer-events: none; transform-origin: 50% 100%; }
-  #ekoHit { width: 230px; height: 300px; border-radius: 40%; }
+  #ekoHit { width: 300px; height: 400px; border-radius: 40%; touch-action: none; }
+  #ekoHit:active { background: transparent; }
 
   /* Bocadillo de Eko */
   #bub { max-width: 600px; padding: 20px 30px; border-radius: 34px; background: var(--cream); color: var(--ink); font-size: 38px; font-weight: 500; line-height: 1.25;
@@ -115,7 +122,9 @@
   <img id="libreta" src="art/movil-portada.webp" alt="">
   <div id="finds"></div>
   <div id="spots"></div>
+  <div id="shadowF"></div>
   <iframe id="eko" src="overlay.html" title="Eko"></iframe>
+  <img id="fg" src="art/casa-vertical.webp" alt="">
   <div id="ekoHit" class="spot"></div>
   <div id="night"></div>
   <div id="glow"><i style="left:512px;top:200px;width:900px;height:900px"></i><i style="left:968px;top:800px;width:520px;height:520px"></i></div>
@@ -154,20 +163,32 @@
     const k = Math.min(innerWidth / 1024, (availBot - availTop) / 1536);
     const x = (innerWidth - 1024 * k) / 2, y = availTop + ((availBot - availTop) - 1536 * k) / 2;
     room.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
+    ROOM.k = k; ROOM.x = x; ROOM.y = y;
   }
+  const ROOM = { k: 1, x: 0, y: 0 };
+  const toRoom = (cx, cy) => [(cx - ROOM.x) / ROOM.k, (cy - ROOM.y) / ROOM.k];
   window.setInsets = (t, b) => { document.documentElement.style.setProperty("--top", t + "px"); document.documentElement.style.setProperty("--bottom", b + "px"); fit(); };
   addEventListener("resize", fit);
 
   // ---------- Eko dentro de casa (overlay.html en un marco; se le habla con postMessage) ----------
-  const S = 1.75, FLOOR = 1330, XMIN = 120, XMAX = 920;
-  const E = { x: 300, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null };
+  // Tamaño de Eko acorde con los muebles (más o menos tan alto como el sillón)
+  const S = 2.3, FLOOR = 1340, XMIN = 150, XMAX = 880;
+  const E = { x: 300, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null, fx: 0, fy: 0, z: 0 };   // z: 0 = en el suelo de delante, 1 = sentado al fondo (sillón)
   const send = (fn, ...args) => frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
   const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
+  const scale = () => S * (1 - 0.24 * E.z);              // más lejos = más pequeño
   function place() {
-    const y = E.y - E.hop;
-    frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px"; frame.style.transform = `scale(${S})`;
-    hit.style.left = E.x - 115 + "px"; hit.style.top = y - 290 + "px";
-    bub.style.left = Math.min(1024 - 300, Math.max(300, E.x)) + "px"; bub.style.top = y - 330 + "px";
+    const y = E.y - E.hop, sc = scale(), f = sc / S;
+    frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px"; frame.style.transform = `scale(${sc})`;
+    hit.style.left = E.x - 150 * f + "px"; hit.style.top = y - 380 * f + "px"; hit.style.width = 300 * f + "px"; hit.style.height = 400 * f + "px";
+    // sombra: en el suelo bajo Eko (o en el sillón), más pequeña y suave cuanto más alto
+    const ground = FLOOR + (SEAT.y - FLOOR) * E.z, h = Math.max(0, ground - y), k = 1 / (1 + h / 320);
+    const sw = 80 * sc * k;
+    const sh = $("shadowF");
+    sh.style.left = E.x - sw / 2 + "px"; sh.style.top = ground - sw * 0.12 + "px"; sh.style.width = sw + "px"; sh.style.height = sw * 0.24 + "px";
+    sh.style.opacity = (E.z > 0.9 ? 0 : k).toFixed(2);
+    $("fg").style.display = E.z > 0.85 ? "block" : "none";
+    bub.style.left = Math.min(1024 - 300, Math.max(300, E.x)) + "px"; bub.style.top = y - 420 + "px";
   }
   function walkTo(x, then) {
     if (E.mode === "sleep") { wake(); setTimeout(() => walkTo(x, then), 1700); return; }
@@ -178,21 +199,35 @@
   }
   function idle(ms) { E.mode = "idle"; E.target = null; E.next = performance.now() + (ms || 4000 + Math.random() * 6000); send("set", "idle", E.dir); }
   let jump = null;
-  function hopTo(x, y, then) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
+  function hopTo(x, y, then, z) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, z0: E.z, z1: z === undefined ? E.z : z, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
   window.house = { hop(v) { E.vy = Math.min(1400, v * 1.5); }, hold(ms) { E.hold = performance.now() + ms; }, say(t, ms) { say(t, ms); } };
   let bubT = 0;
   function say(t, ms = 2800) { bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
 
-  const SEAT = { x: 752, y: 945 };
-  function nap() { walkTo(SEAT.x - 60, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); })); }
-  function wake() { if (E.mode !== "sleep") return; send("wake"); E.mode = "busy"; setTimeout(() => hopTo(SEAT.x - 120, FLOOR, () => idle(2500)), 900); }
+  // Asiento del sillón: más al fondo (Eko se hace más pequeño) y metido entre los brazos
+  const SEAT = { x: 717, y: 990 };
+  function nap() { walkTo(SEAT.x - 90, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); }, 1)); }
+  function wake() { if (E.mode !== "sleep") return; send("wake"); E.mode = "busy"; setTimeout(() => hopTo(SEAT.x - 170, FLOOR, () => idle(2500), 0), 900); }
 
   let last = performance.now();
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (jump) {
+    if (E.mode === "drag") {
+      // lo llevas tú: la posición la pone el dedo (y si estaba en el sillón, vuelve a su tamaño)
+      E.z = Math.max(0, E.z - dt * 3);
+    } else if (E.mode === "fall") {
+      // lo has soltado: cae con el impulso que llevaba
+      E.fy += 3000 * dt; E.fx *= Math.pow(0.35, dt);
+      E.x = Math.max(XMIN, Math.min(XMAX, E.x + E.fx * dt)); E.y += E.fy * dt;
+      send("v", Math.round(E.fx), Math.round(E.fy));
+      if (E.y >= FLOOR) {
+        const hard = E.fy > 2400;
+        E.y = FLOOR; E.fy = 0; E.fx = 0; send("land"); idle(2000);
+        if (hard) { send("dizzy"); send("talk", "dizzy", 0.8); } else send("talk", "drop", 0.6);
+      }
+    } else if (jump) {
       jump.t = Math.min(1, jump.t + dt / 0.55); const k = jump.t;
-      E.x = jump.x0 + (jump.x1 - jump.x0) * k; E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 130;
+      E.x = jump.x0 + (jump.x1 - jump.x0) * k; E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 130; E.z = jump.z0 + (jump.z1 - jump.z0) * k;
       if (k >= 1) { const t = jump.then; jump = null; send("land"); t && t(); }
     } else if (E.mode === "walk" && now > E.hold) {
       const step = 170 * dt * E.dir;
@@ -282,10 +317,78 @@
   $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}"><img src="${d[0]}" alt="">${d[1]}</button>`).join("");
   $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); DOCK[+b.dataset.i][2](); });
 
-  hit.addEventListener("click", () => {
-    if (E.mode === "sleep") { wake(); say("¡No estaba dormido!", 2000); return; }
-    send("tap"); H && H.give("pet"); E.hold = performance.now() + 2500; setTimeout(needs, 300);
+  // ---------- Tocarlo como fuera: toque, doble toque, caricia, cogerlo y soltarlo, mantener pulsado ----------
+  //  toque: reacciona · doble toque: un truco · acariciar la cabeza (deslizar despacio por arriba): mimos
+  //  arrastrar desde el cuerpo: lo coges y al soltarlo cae · mantener pulsado: un abrazo
+  let touch = null, lastTap = 0;
+  hit.addEventListener("pointerdown", (e) => {
+    if (E.mode === "fall" || jump) return;
+    hit.setPointerCapture(e.pointerId);
+    const [rx, ry] = toRoom(e.clientX, e.clientY);
+    const head = ry < (E.y - E.hop) - 190;          // la parte de arriba es la cabeza
+    touch = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now(), head, moved: 0, pet: 0, lx: rx, ly: ry, lt: performance.now(), vx: 0, vy: 0, drag: false, long: false,
+              ox: rx - E.x, oy: ry - E.y };
+    touch.timer = setTimeout(() => { if (touch && !touch.drag && touch.moved < 18) { touch.long = true; hug(); } }, 650);
+    E.hold = performance.now() + 3000;
   });
+  hit.addEventListener("pointermove", (e) => {
+    if (!touch || e.pointerId !== touch.id) return;
+    const [rx, ry] = toRoom(e.clientX, e.clientY), now = performance.now();
+    const dt = Math.max(1, now - touch.lt) / 1000;
+    touch.vx = (rx - touch.lx) / dt; touch.vy = (ry - touch.ly) / dt;
+    const step = Math.hypot(rx - touch.lx, ry - touch.ly);
+    touch.moved += step; touch.lx = rx; touch.ly = ry; touch.lt = now;
+    if (touch.long) return;
+    if (touch.head && !touch.drag) {
+      // caricia: cada tramo deslizando por la cabeza cuenta como un mimo
+      touch.pet += step;
+      if (touch.pet > 140) { touch.pet = 0; petOnce(); }
+      return;
+    }
+    if (!touch.drag && touch.moved > 30) {
+      touch.drag = true; clearTimeout(touch.timer);
+      if (E.mode === "sleep") send("wake");
+      E.mode = "drag"; E.target = null; E.onArrive = null; jump = null; E.hop = 0; E.vy = 0;
+      send("set", "drag", touch.vx >= 0 ? 1 : -1); send("talk", "grab", 0.5); H && H.give("pet");
+    }
+    if (touch.drag) {
+      E.x = Math.max(XMIN - 60, Math.min(XMAX + 60, rx - touch.ox));
+      E.y = Math.max(560, Math.min(FLOOR, ry - touch.oy));
+      send("v", Math.round(touch.vx), Math.round(touch.vy));
+    }
+  });
+  function endTouch(e) {
+    if (!touch || e.pointerId !== touch.id) return;
+    clearTimeout(touch.timer);
+    const t = touch; touch = null;
+    if (t.drag) {
+      E.mode = "fall"; E.fx = Math.max(-1800, Math.min(1800, t.vx)); E.fy = Math.max(-1600, Math.min(1600, t.vy));
+      send("set", "fall", E.fx >= 0 ? 1 : -1);
+      return;
+    }
+    if (t.long || t.pet > 0 || t.moved > 30) { E.hold = performance.now() + 1500; return; }
+    // toque
+    if (E.mode === "sleep") { wake(); say("¡No estaba dormido!", 2000); return; }
+    const now = performance.now();
+    if (now - lastTap < 350) { lastTap = 0; send("spin"); if (Math.random() < 0.6) say(pick(TRICK_LINES), 2200); H && H.give("play"); setTimeout(needs, 300); return; }
+    lastTap = now;
+    send("tap"); send("talk", "poke", 0.6); H && H.give("pet"); E.hold = performance.now() + 2500; setTimeout(needs, 300);
+  }
+  hit.addEventListener("pointerup", endTouch);
+  hit.addEventListener("pointercancel", endTouch);
+  const PET_LINES = ["Mmm… qué gustito", "Ahí, ahí, justo ahí", "Me encantan tus mimos", "Prrr… ¿los mochis ronronean? Ahora sí", "Otra vez, otra vez", "Así me quedo dormido…"];
+  const HUG_LINES = ["¡Abrazo de plastilina!", "Yo también te quiero", "No me sueltes todavía", "Qué abrazo más rico", "¡Achuchón!"];
+  const TRICK_LINES = ["¡Tachán!", "¿Has visto eso?", "¡Truco nuevo!", "Aplausos, por favor", "Ensayado y todo"];
+  let petSaid = 0;
+  function petOnce() {
+    if (E.mode === "sleep") { send("fx", "heart", 1); H && H.give("pet"); return; }   // dormido: mimos sin despertarlo
+    send("express", "enamorado", 2.2); send("fx", "heart", 1); send("blush", 2.2); H && H.give("pet"); setTimeout(needs, 300);
+    if (performance.now() > petSaid) { petSaid = performance.now() + 6000; if (Math.random() < 0.7) say(pick(PET_LINES), 2200); }
+  }
+  function hug() {
+    if (E.mode === "sleep") { wake(); return; }
+    send("act", "hug"); send("fx", "heart", 2); say(pick(HUG_LINES), 2400); H && H.give("pet"); H && H.give("pet"); setTimeout(needs, 300);
+  }
 
   // ---------- Ropa (hoja que sube desde abajo) ----------
   const WARD = [["auto", "📅", "Según fecha"], ["witch", "art/hat-witch.webp", "Bruja"], ["pumpkin", "art/hat-pumpkin.webp", "Calabaza"], ["vampire", "art/cape-vampire.webp", "Vampiro"],
@@ -305,7 +408,7 @@
   let ekoReady = false;
   addEventListener("message", (e) => {
     const d = e.data || {};
-    if (d.ready) { ekoReady = true; send("set", "idle", 1); }
+    if (d.ready) { ekoReady = true; send("set", "idle", 1); frame.contentWindow.postMessage({ noShadow: true }, "*"); }
     if (d.error) { $("diag").style.display = "block"; $("diag").textContent += "Eko: " + d.error + "\n"; }
   });
   setTimeout(() => { if (!ekoReady) { $("diag").style.display = "block"; $("diag").textContent += "Eko no ha cargado en su casa (sin respuesta del marco).\n"; } }, 6000);

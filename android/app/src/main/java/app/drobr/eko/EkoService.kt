@@ -729,7 +729,7 @@ class EkoService : Service() {
         kbMode = if (r < 0.4f) "side" else if (r < 0.8f) "behind" else "corner"
         val left = x < maxX() / 2
         kbTarget = when (kbMode) {
-            "side" -> if (left) -105 * dens else maxX() + 105 * dens      // solo asoman ~30 dp de su cuerpo
+            "side" -> if (left) -62 * dens else maxX() + 62 * dens       // asoma media cara, con los ojos a la vista
             "corner" -> if (left) -20 * dens else maxX() + 20 * dens
             else -> (if (left) 0.18f else 0.62f) * maxX() + Random.nextFloat() * 0.12f * maxX()
         }
@@ -760,8 +760,9 @@ class EkoService : Service() {
             kbNextTalk = SystemClock.uptimeMillis() + Random.nextLong(120_000, 240_000)
             talk("kbLong", 0.5)
         }
-        // detrás del teclado: se va hundiendo hasta que solo se le ve la cabeza
-        val sinkMax = 82 * dens
+        // detrás del teclado: se va hundiendo hasta que solo se le ven la cabeza y los ojos
+        // (los ojos están a ~68 dp del borde de abajo de su ventana; la línea del teclado queda justo por debajo)
+        val sinkMax = 54 * dens
         if (kbMode == "behind" && kbArrived && kbSink < sinkMax) kbSink = (kbSink + 120 * dens * dt).coerceAtMost(sinkMax)
         y = ground() + kbSink
         setClip(((kbSink + 4 * dens) / dens).toInt().takeIf { kbSink > 0 } ?: 0)

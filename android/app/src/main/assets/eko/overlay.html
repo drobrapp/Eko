@@ -292,6 +292,7 @@ if (window.self !== window.top) {
     const d = e.data || {};
     if (d.eko && window.eko && typeof eko[d.eko] === "function") eko[d.eko].apply(null, d.args || []);
     if (d.look && window.ekoLook) ekoLook.setMode(d.look);
+    if (d.noShadow) { const sh = document.getElementById("shadow"); if (sh) sh.style.display = "none"; }   // en casa la sombra la pone la casa
   });
   parent.postMessage({ ready: !!window.eko }, "*");
 }

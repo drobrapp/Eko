@@ -50,7 +50,7 @@ import kotlin.random.Random
 // Kotlin decide dónde está y qué hace (andar, quedarse quieto, dormir, caer); la página web solo lo dibuja y lo anima.
 class EkoService : Service() {
 
-    companion object { var running = false }
+    companion object { var running = false; var instance: EkoService? = null }
 
     private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK }
 
@@ -81,10 +81,13 @@ class EkoService : Service() {
     private val SMALL_H = 200
     private val BIG_W = 160
     private val BIG_H = 200
+    // Con gorro alto (bruja, Papá Noel…) la ventana crece hacia arriba para que no se corte. Solo cambia al cambiar de disfraz.
+    private val TALL_EXTRA = 50
+    private var tallHat = false
     private fun resize(big: Boolean) {
         val w = web ?: return
         val nw = ((if (big) BIG_W else SMALL_W) * dens).toInt()
-        val nh = ((if (big) BIG_H else SMALL_H) * dens).toInt()
+        val nh = (((if (big) BIG_H else SMALL_H) + (if (tallHat) TALL_EXTRA else 0)) * dens).toInt()
         if (nw == winW && nh == winH) return
         // los pies se quedan donde están: abajo y en el centro
         val dx = (winW - nw) / 2f; val dy = (winH - nh).toFloat()
@@ -121,7 +124,7 @@ class EkoService : Service() {
         prefs().edit().putBoolean("out", true).apply()
         goForeground()
         if (web == null) addOverlay()
-        running = true
+        running = true; instance = this
         return START_STICKY
     }
 
@@ -185,7 +188,7 @@ class EkoService : Service() {
 
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     private fun addOverlay() {
-        wm = getSystemService(WindowManager::class.java)
+        wm = winManager()
         dens = resources.displayMetrics.density
         winW = (SMALL_W * dens).toInt()
         winH = (SMALL_H * dens).toInt()
@@ -193,13 +196,14 @@ class EkoService : Service() {
         w.setBackgroundColor(Color.TRANSPARENT)
         w.settings.javaScriptEnabled = true
         w.settings.allowFileAccess = true
+        w.settings.domStorageEnabled = true   // localStorage: días juntos, etc.
         w.isVerticalScrollBarEnabled = false
         w.isHorizontalScrollBarEnabled = false
         w.addJavascriptInterface(Bridge(), "Android")
         w.loadUrl("file:///android_asset/eko/overlay.html")
         lp = WindowManager.LayoutParams(
             winW, winH,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         )
@@ -236,7 +240,36 @@ class EkoService : Service() {
     private lateinit var bubbleLp: WindowManager.LayoutParams
     private val hideBubble = Runnable { bubble?.visibility = View.GONE }
     private val pick = { l: List<String> -> l[Random.nextInt(l.size)] }
-    private fun overlayType() = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    // Con el permiso de accesibilidad, las ventanas de Eko son de confianza y Android deja pasar los toques
+    // por sus zonas transparentes. Sin él, Android 12+ los bloquea aunque no se vea nada.
+    private fun trusted() = EkoAccess.instance != null
+    private fun overlayType() = if (trusted()) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    private fun winManager(): WindowManager = (EkoAccess.instance ?: this).getSystemService(WindowManager::class.java)
+
+    // Se activa o desactiva la accesibilidad: se vuelven a poner las ventanas con el tipo que toca
+    fun switchWindows() {
+        val w = web ?: return
+        closeMenu()
+        try { wm.removeView(w) } catch (_: Exception) {}
+        bubble?.let { try { wm.removeView(it) } catch (_: Exception) {} }; bubble = null
+        wm = winManager(); lp.type = overlayType()
+        try { wm.addView(w, lp) } catch (_: Exception) {
+            wm = getSystemService(WindowManager::class.java); lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            try { wm.addView(w, lp) } catch (_: Exception) {}
+        }
+        handler.postDelayed({ calibrate() }, 400)
+    }
+
+    // Zona que recibe toques: solo el cuerpo de Eko (Android 14+). El resto del rectángulo deja pasar el toque.
+    private fun setHit(l: Int, t: Int, r: Int, b: Int) {
+        if (Build.VERSION.SDK_INT < 34) return
+        val sc = web?.rootSurfaceControl ?: return
+        try {
+            sc.setTouchableRegion(android.graphics.Region(
+                (l * dens).toInt().coerceAtLeast(0), (t * dens).toInt().coerceAtLeast(0),
+                (r * dens).toInt().coerceAtMost(winW), (b * dens).toInt().coerceAtMost(winH)))
+        } catch (_: Exception) {}
+    }
     private fun card(color: String) = GradientDrawable().apply { cornerRadius = 18 * dens; setColor(Color.parseColor(color)); setStroke((1 * dens).toInt(), Color.parseColor("#E8D8C8")) }
 
     private fun say(text: String, ms: Long = 2600) {
@@ -251,7 +284,7 @@ class EkoService : Service() {
                 WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
-            ).apply { gravity = Gravity.TOP or Gravity.START }
+            ).apply { gravity = Gravity.TOP or Gravity.START; if (!trusted()) alpha = 0.8f }  // 0,8: así Android no bloquea los toques que pasan por debajo
             wm.addView(t, bubbleLp)
             bubble = t
         }
@@ -270,7 +303,7 @@ class EkoService : Service() {
         p.width = w; p.height = h
         val m = (8 * dens).toInt()
         p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(m, (screenW() - w - m).coerceAtLeast(m))
-        p.y = (y + winH - 150 * dens - h).toInt().coerceAtLeast(0)
+        p.y = (y + winH - (if (tallHat) 205 else 150) * dens - h).toInt().coerceAtLeast(0)
         try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
     }
 
@@ -500,6 +533,8 @@ class EkoService : Service() {
         } }
         // Ventana grande solo mientras hace algo que la necesita
         @JavascriptInterface fun big(on: Boolean) { handler.post { resize(on) } }
+        @JavascriptInterface fun hit(l: Int, t: Int, r: Int, b: Int) { handler.post { setHit(l, t, r, b) } }
+        @JavascriptInterface fun tall(on: Boolean) { handler.post { if (tallHat != on) { tallHat = on; resize(false) } } }
         // Que no se ponga a andar en mitad de un gesto
         @JavascriptInterface fun hold(ms: Int) { handler.post { if (st == St.IDLE || st == St.WALK) idle(ms.toLong()) } }
     }
@@ -629,7 +664,7 @@ class EkoService : Service() {
     }
 
     override fun onDestroy() {
-        running = false
+        running = false; instance = null
         alive = false
         Choreographer.getInstance().removeFrameCallback(tick)
         closeMenu()

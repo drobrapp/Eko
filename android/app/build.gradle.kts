@@ -41,7 +41,22 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true }
+    // Arte y catálogos compartidos con el Eko de escritorio (src/): se copian al compilar, sin duplicarlos en el repo
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.get().asFile.resolve("pcAssets"))
 }
+
+val pcAssets = tasks.register<Copy>("pcAssets") {
+    from(rootProject.file("../src")) {
+        include("expr.js", "evo-art.js")
+        into("eko")
+    }
+    from(rootProject.file("../src/art")) {
+        include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp")
+        into("eko/art")
+    }
+    into(layout.buildDirectory.get().asFile.resolve("pcAssets"))
+}
+tasks.named("preBuild") { dependsOn(pcAssets) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

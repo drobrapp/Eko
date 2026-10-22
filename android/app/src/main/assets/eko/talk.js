@@ -3,6 +3,7 @@
 (() => {
   "use strict";
   const T = {
+    costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
     keyboard: ["¡Subo, que vas a escribir!", "¡Hop! Desde aquí se ve mejor", "Escribe, escribe, que no miro", "Me pongo encima, que abajo no se ve nada"],
     kbGone: ["¡Eh, que me quitas el suelo!", "¡Aaay!", "Bajandooo…", "Avisa antes de cerrar el teclado"],
     hello: ["¡Holi!", "¡Ya estoy aquí!", "¿Qué hacemos hoy?", "¡Qué grande es tu pantalla!", "¡Allá voy!", "¿Me has echado de menos? Yo a ti sí"],
@@ -70,13 +71,20 @@
     if (window.Android && Android.say) Android.say(text, ms);
   }
   let pokes = [];
+  // Cara que pone con cada cosa (catálogo expr.js del PC)
+  const EXPR = {
+    hello: "emocionado", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
+    drop: "orgulloso", shake: "asustado", dizzy: "confundido", wake: "cansado", hunger: "cansado",
+    keyboard: "curioso", kbGone: "sorprendido", costume: "canalla", music: "emocionado", musicOff: "triste",
+    lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",
+  };
   function talk(ev, chance = 1) {
     if (Math.random() > chance) return;
     if (ev === "poke") {
       const now = Date.now(); pokes = pokes.filter((t) => now - t < 10000); pokes.push(now);
-      if (pokes.length >= 6) { say(pick("pokeAnnoyed", T.pokeAnnoyed)); return; }
+      if (pokes.length >= 6) { say(pick("pokeAnnoyed", T.pokeAnnoyed)); if (window.eko && eko.express) eko.express("molesto"); return; }
     }
-    const list = T[ev]; if (list) say(pick(ev, list));
+    const list = T[ev]; if (list) { say(pick(ev, list)); if (EXPR[ev] && window.eko && eko.express) eko.express(EXPR[ev]); }
   }
   function special(d) {
     const m = d.getMonth() + 1, day = d.getDate();

@@ -8,11 +8,12 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityWindowInfo
 
-// Servicio de accesibilidad (opcional) para que Eko se suba encima del teclado.
+// Servicio de accesibilidad (opcional) para que Eko se suba encima del teclado y deje pasar los toques a su alrededor.
 // Solo mira DÓNDE está la ventana del teclado. Nunca lee lo que escribes ni lo que hay en pantalla.
 class EkoAccess : AccessibilityService() {
     companion object {
         @Volatile var kbTop = -1   // borde de arriba del teclado (px de pantalla); -1 = no hay teclado
+        var instance: EkoAccess? = null
 
         fun enabled(c: Context): Boolean {
             val s = Settings.Secure.getString(c.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
@@ -24,7 +25,7 @@ class EkoAccess : AccessibilityService() {
 
     private val r = Rect()
 
-    override fun onServiceConnected() { check() }
+    override fun onServiceConnected() { instance = this; EkoService.instance?.switchWindows(); check() }
     override fun onAccessibilityEvent(e: AccessibilityEvent?) { check() }
 
     private fun check() {
@@ -41,5 +42,5 @@ class EkoAccess : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
-    override fun onUnbind(intent: Intent?): Boolean { kbTop = -1; return super.onUnbind(intent) }
+    override fun onUnbind(intent: Intent?): Boolean { kbTop = -1; instance = null; EkoService.instance?.switchWindows(); return super.onUnbind(intent) }
 }

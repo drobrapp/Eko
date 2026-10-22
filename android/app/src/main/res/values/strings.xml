@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="access_label">Eko · subirse al teclado</string>
-    <string name="access_desc">Permite que Eko sepa cuándo abres el teclado para subirse encima y no taparlo. Eko solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.</string>
+    <string name="access_label">Eko · teclado y toques</string>
+    <string name="access_desc">Permite que Eko se suba encima del teclado cuando lo abres y que los toques alrededor de Eko lleguen a la app de debajo. Eko solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.</string>
 </resources>

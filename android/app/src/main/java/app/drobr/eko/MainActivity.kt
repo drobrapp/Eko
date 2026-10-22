@@ -79,7 +79,7 @@ class MainActivity : Activity() {
             else -> "Eko está aquí dentro, esperando a salir."
         }
         upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
-        kb.text = if (EkoAccess.enabled(this)) "Se sube al teclado ✓" else "Que se suba al teclado"
+        kb.text = if (EkoAccess.enabled(this)) "Teclado y toques ✓" else "Teclado y toques"
         Updater.check(this) { msg ->
             runOnUiThread {
                 when (msg) {
@@ -111,8 +111,8 @@ class MainActivity : Activity() {
     private fun askAccess() {
         if (EkoAccess.enabled(this)) { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return }
         AlertDialog.Builder(this)
-            .setTitle("Que Eko se suba al teclado")
-            .setMessage("Para saber cuándo abres el teclado, Eko necesita el permiso de Accesibilidad. Solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · subirse al teclado» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
+            .setTitle("Teclado y toques")
+            .setMessage("Con el permiso de Accesibilidad, Eko se sube encima del teclado cuando lo abres, y los toques alrededor de él llegan a la app de debajo (sin él, Android los bloquea). Eko solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · teclado y toques» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
             .setPositiveButton("Ir a Accesibilidad") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             .setNeutralButton("Información de la app") { _, _ -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
             .setNegativeButton("Ahora no", null)

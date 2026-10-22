@@ -44,6 +44,14 @@
   }
   let blushT = 0;
   function blush(secs = 2.5) { stage.classList.add("blushing"); clearTimeout(blushT); blushT = setTimeout(() => stage.classList.remove("blushing"), secs * 1000); }
+  // Expresiones (catálogo del PC: expr.js). Completan la cara durante unos segundos sin pisar los gestos.
+  function express(name, secs = 2.6) {
+    const ex = window.EkoExpr && EkoExpr.LIST[name];
+    if (!ex) return;
+    A.expr = { ex, t0: A.t, until: A.t + secs };
+    if (ex.fx) fx(ex.fx, ex.fx === "heart" ? 2 : 1);
+    if (ex.blush) blush(secs);
+  }
 
   // ---------- Símbolos que salen de la cabeza (corazones, notas, chispas…) ----------
   const FX = { heart: ["♥", "#ef6b86"], bang: ["!", "#f2a33a"], ask: ["?", "#8a7cc9"], note: ["♪", "#5fa8d8"], spark: ["✦", "#f2c14e"], drop: ["…", "#9d8a7f"], "·": ["·", "#b58a5a"] };
@@ -323,6 +331,19 @@
       if (def.brows && P.brows === "none") P.brows = def.brows;
     }
     if (P.brows === "none" && A.brows !== "none") P.brows = A.brows;
+    if (A.expr && A.t < A.expr.until && !S.sleeping) {
+      const x = A.expr.ex, k = clamp(Math.min(A.t - A.expr.t0, A.expr.until - A.t) / 0.25, 0, 1);
+      if (!P.eyes && x.eyes !== "open") P.eyes = x.eyes;
+      if (P.brows === "none" && x.brows !== "none") P.brows = x.brows;
+      if (!P.mouthShape && x.mouth !== "o" && x.mouth !== "none") P.mouthShape = x.mouth;
+      if (x.mouth === "o") P.mouth = Math.max(P.mouth, (x.o || 0.3) * k);
+      if (x.scale) P.eyeScale *= 1 + (x.scale - 1) * k;
+      if (x.eyeX && P.eyeX == null) P.eyeX = x.eyeX * S.facing * k;
+      if (x.eyeY && P.eyeY == null) P.eyeY = x.eyeY * k;
+      if (x.tilt) P.tilt += x.tilt * k;
+      if (x.nod) P.nod += x.nod * k;
+      if (x.shiver) P.shift += Math.sin(A.t * 42) * 1.3 * k;
+    } else if (A.expr) A.expr = null;
     let eyes = P.eyes;
     if (!eyes) eyes = S.sleeping ? "closed" : A.t < (A.happyUntil || 0) ? "happy" : "open";
     setFace(eyes, P.brows, P.mouth > 0.12 ? "none" : (P.mouthShape || "none"));
@@ -403,6 +424,7 @@
     const ex = P.eyeX != null ? P.eyeX : A.eyeX;
     const ey = (P.eyeY != null ? P.eyeY : A.eyeY) + P.nod * 0.9;
     el.eyes.setAttribute("transform", `translate(${ex.toFixed(2)} ${ey.toFixed(2)})`);
+    if (window.ekoLook) ekoLook.pose(A.t, (A.lag || 0) * 0.4);
     const pos = [];
     el.eyeEls.forEach((e, i) => {
       const base = i === 0 ? -32 : 32;
@@ -439,14 +461,22 @@
 
   // ---------- Ahorro: fotogramas según lo que haga y ventana grande solo cuando hace falta ----------
   // Siempre a la velocidad de la pantalla (sin límite de fotogramas)
-  let last = performance.now(), lowPower = false, big = false, bigUntil = 0;
+  let last = performance.now(), lowPower = false, big = false, bigUntil = 0, hitT = 0, hitKey = "";
   function busy() { return !!A.action || S.walking || S.dragging || S.airborne || A.dance || A.t < A.danceUntil || Math.abs(A.squashV) > 2; }
   function wantBig() { return !!A.action || S.dragging || S.airborne || A.dance || A.t < A.danceUntil; }
   function frame(now) {
     requestAnimationFrame(frame);
-    // Moviéndose: todos los fotogramas de la pantalla (sin límite, también con ahorro de batería). Quieto: 30. Dormido: 15.
+    // Sin límite de fotogramas: se dibuja a la velocidad de la pantalla
     const dt = Math.min(0.07, (now - last) / 1000); last = now;
     update(dt); render();
+    // Zona tocable = solo su cuerpo (Android deja pasar los toques del resto de la ventana)
+    if (AND && AND.hit && A.t > hitT) {
+      hitT = A.t + 0.12;
+      const r = el.pet.getBoundingClientRect(), p = 8;
+      const k = [r.left - p, r.top - p, r.right + p, r.bottom + p].map(Math.round);
+      const key = k.join(",");
+      if (key !== hitKey) { hitKey = key; AND.hit(k[0], k[1], k[2], k[3]); }
+    }
     const w = wantBig();
     if (w) bigUntil = A.t + 0.8;
     if (w !== big && (w || A.t > bigUntil)) { big = w; if (AND && AND.big) AND.big(big); }
@@ -477,7 +507,7 @@
     eat() { act("eat"); },
     spin() { act(TRICKS[Math.floor(Math.random() * TRICKS.length)]); },
     lowPower(v) { lowPower = !!v; },
-    act, fx, blush,
+    act, fx, blush, express,
     talk(ev, chance) { if (window.ekoTalk) ekoTalk.talk(ev, chance); },
     chatter() { if (window.ekoTalk) ekoTalk.chatter(); },
   };

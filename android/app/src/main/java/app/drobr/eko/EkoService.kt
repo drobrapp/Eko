@@ -387,7 +387,7 @@ class EkoService : Service() {
             row.forEach { (id, icon, label) ->
                 r.addView(cell(icon, emoji[id], label, id == cur) {
                     prefs().edit().putString("acc", id).apply()
-                    js("if(window.ekoLook)ekoLook.setMode('$id')"); idle(2500)
+                    web?.evaluateJavascript("window.ekoLook && ekoLook.setMode('$id')", null); idle(2500)
                 })
             }
             m.addView(r)

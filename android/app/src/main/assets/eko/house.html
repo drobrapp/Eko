@@ -3,60 +3,76 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
 <style>
-  /* Casa de Eko en el móvil: su salón (art/casa-movil.webp, de Aitor) es el menú.
-     Todo se coloca en píxeles de la imagen (1536 × 1024) y la habitación entera se escala a la altura de la pantalla. */
+  /* Casa de Eko en el móvil: una pantalla fija tipo Tamagotchi.
+     Arriba sus necesidades, en el centro su salón (art/casa-vertical.webp, de Aitor) y abajo los botones.
+     Todo lo de la habitación se coloca en píxeles de la imagen (1024 × 1536) y se escala para que quepa entera. */
   :root { --ink: #5A463D; --ink2: #7A6458; --cream: #FFF4E8; --coral: #D0795A; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-  html, body { margin: 0; height: 100%; background: #e9c9a2; overflow: hidden; font-family: system-ui, sans-serif; color: var(--ink); }
-  #view { position: absolute; inset: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-  #view::-webkit-scrollbar { display: none; }
-  #wrap { position: relative; }
-  #room { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; transform-origin: 0 0; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; color: var(--ink);
+               background: linear-gradient(#c97739 0 50%, #dd9458 50% 100%); }
+  #room { position: absolute; left: 0; top: 0; width: 1024px; height: 1536px; transform-origin: 0 0; }
   #room > * { position: absolute; }
 
   /* Lo que se ve por la ventana (detrás de la habitación) */
-  #sky { left: 612px; top: 262px; width: 300px; height: 272px; overflow: hidden; background: linear-gradient(#8fc2ec, #d3ebf8); transition: background 3s; }
+  #sky { left: 388px; top: 392px; width: 250px; height: 314px; overflow: hidden; background: linear-gradient(#8fc2ec, #d3ebf8); transition: background 3s; }
   #sky img { position: absolute; pointer-events: none; }
-  #sun { left: 64%; top: 8%; width: 26%; filter: drop-shadow(0 0 10px rgba(255,214,120,.6)); animation: bob 60s ease-in-out infinite; }
-  #moon { left: 62%; top: 10%; width: 22%; display: none; filter: drop-shadow(0 0 8px rgba(255,250,220,.5)); }
-  .cloud { width: 42%; opacity: .9; animation: drift 40s ease-in-out infinite alternate; }
-  #far, #mid { position: absolute; left: -6%; right: -6%; bottom: 0; background-repeat: repeat-x; background-position: center bottom; background-size: auto 100%; }
-  #far { bottom: 16%; height: 44%; background-image: url(art/valley/hills-far.webp); opacity: .85; }
-  #mid { height: 40%; background-image: url(art/valley/hills-mid.webp); }
-  #stars { position: absolute; inset: 0; display: none; background-image: radial-gradient(1.5px 1.5px at 20% 20%, #fff, transparent), radial-gradient(1.5px 1.5px at 70% 35%, #fff, transparent), radial-gradient(1px 1px at 40% 12%, #fff, transparent), radial-gradient(1px 1px at 85% 15%, #fff, transparent), radial-gradient(1.5px 1.5px at 30% 42%, #fff, transparent); }
+  #sun { left: 60%; top: 8%; width: 32%; filter: drop-shadow(0 0 10px rgba(255,214,120,.6)); animation: bob 60s ease-in-out infinite; }
+  #moon { left: 58%; top: 10%; width: 28%; display: none; filter: drop-shadow(0 0 8px rgba(255,250,220,.5)); }
+  .cloud { width: 50%; opacity: .9; animation: drift 40s ease-in-out infinite alternate; }
+  #far, #mid { position: absolute; left: -10%; right: -10%; bottom: 0; background-repeat: repeat-x; background-position: center bottom; background-size: auto 100%; }
+  #far { bottom: 14%; height: 34%; background-image: url(art/valley/hills-far.webp); opacity: .85; }
+  #mid { height: 30%; background-image: url(art/valley/hills-mid.webp); }
+  #stars { position: absolute; inset: 0; display: none; background-image: radial-gradient(2px 2px at 20% 20%, #fff, transparent), radial-gradient(2px 2px at 70% 35%, #fff, transparent), radial-gradient(1.5px 1.5px at 40% 12%, #fff, transparent), radial-gradient(1.5px 1.5px at 85% 15%, #fff, transparent), radial-gradient(2px 2px at 30% 45%, #fff, transparent); }
   body.night #stars, body.night #moon { display: block; }
   body.night #sun, body.night .cloud { display: none; }
   body.night #far, body.night #mid { filter: brightness(.45) saturate(.7); }
   body.gold #far, body.gold #mid { filter: sepia(.35) saturate(1.2); }
   @keyframes bob { 50% { transform: translate(-6px, 6px); } }
-  @keyframes drift { to { transform: translateX(28px); } }
+  @keyframes drift { to { transform: translateX(30px); } }
 
-  /* Tu última foto, colgada en el cuadro de la pared (en perspectiva) */
-  #photo { left: 0; top: 0; width: 100px; height: 100px; transform-origin: 0 0; background: #F3DCC6 center / cover no-repeat; }
-  #bg { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; }
+  /* Tu última foto, dentro del cuadro */
+  #photo { left: 818px; top: 597px; width: 67px; height: 86px; background: #F3DCC6 center / cover no-repeat; }
+  #bg { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; }
 
   /* Cosas encima de los muebles */
-  .find { font-size: 34px; line-height: 1; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgba(90,70,61,.3)); pointer-events: none; }
-  #libreta { left: 788px; top: 548px; width: 96px; transform: rotate(-8deg); filter: drop-shadow(0 4px 4px rgba(70,45,25,.25)); pointer-events: none; }
+  .find { position: absolute; font-size: 46px; line-height: 1; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgba(90,70,61,.3)); pointer-events: none; }
+  #libreta { left: 508px; top: 858px; width: 92px; transform: rotate(-8deg); filter: drop-shadow(0 4px 4px rgba(70,45,25,.25)); pointer-events: none; }
 
   /* Luz: de noche se oscurece y las lámparas iluminan */
-  #night { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; mix-blend-mode: multiply; background: rgba(40,48,96,.6); opacity: 0; transition: opacity 2s; }
-  #glow { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity .6s; }
+  #night { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; mix-blend-mode: multiply; background: rgba(40,48,96,.6); opacity: 0; transition: opacity 2s; }
+  #glow { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity .6s; }
   #glow i { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(255,205,130,.75), rgba(255,190,110,.25) 55%, transparent); }
 
-  /* Zonas que se tocan */
-  .spot { position: absolute; border-radius: 18px; }
-  .spot:active { background: rgba(255,244,232,.18); }
+  .spot { position: absolute; border-radius: 22px; }
+  .spot:active { background: rgba(255,244,232,.22); }
 
   /* Eko: el mismo Eko de la pantalla, dentro de un marco */
   #eko { left: 0; top: 0; width: 160px; height: 250px; border: 0; background: transparent; pointer-events: none; transform-origin: 50% 100%; }
-  #ekoHit { width: 150px; height: 210px; border-radius: 40%; }
-  #bub { max-width: 360px; padding: 12px 18px; border-radius: 22px; background: #fffaf3; color: var(--ink); font-size: 26px; line-height: 1.2;
-         box-shadow: 0 4px 12px rgba(90,70,61,.2); transform: translate(-50%, -100%); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: normal; text-align: center; }
+  #ekoHit { width: 230px; height: 300px; border-radius: 40%; }
+  #bub { max-width: 560px; padding: 18px 26px; border-radius: 30px; background: #fffaf3; color: var(--ink); font-size: 40px; line-height: 1.2;
+         box-shadow: 0 6px 16px rgba(90,70,61,.22); transform: translate(-50%, -100%); opacity: 0; transition: opacity .25s; pointer-events: none; text-align: center; }
   #bub.on { opacity: 1; }
 
-  /* Paneles (menú de Eko, ropa) */
-  .panel { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--cream); border-radius: 22px; padding: 12px; box-shadow: 0 8px 24px rgba(90,70,61,.3); display: none; z-index: 20; max-width: 94vw; }
+  /* Barra de arriba: necesidades */
+  #hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+  .need { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
+          background: conic-gradient(var(--c) calc(var(--v) * 1%), rgba(255,244,232,.35) 0); box-shadow: 0 2px 6px rgba(90,70,61,.25); position: relative; }
+  .need::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--cream); }
+  .need span { position: relative; }
+  .need.low { animation: low 1.2s ease-in-out infinite; }
+  @keyframes low { 50% { transform: scale(1.08); } }
+  #days { margin-left: auto; background: rgba(255,244,232,.9); border-radius: 16px; padding: 6px 12px; font-size: 13px; color: var(--ink2); text-align: right; line-height: 1.25; }
+  #days b { color: var(--ink); font-size: 15px; }
+
+  /* Barra de abajo: botones */
+  #dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 12px); display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; z-index: 10; }
+  #dock button { border: 0; border-radius: 18px; background: var(--cream); color: var(--ink); font-size: 11px; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 3px 8px rgba(90,70,61,.25); }
+  #dock button:active { transform: translateY(2px); box-shadow: 0 1px 4px rgba(90,70,61,.25); }
+  #dock span { font-size: 24px; line-height: 30px; height: 30px; }
+  #dock img { width: 30px; height: 30px; object-fit: contain; }
+
+  /* Ropa */
+  .panel { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); transform: translateX(-50%); background: var(--cream); border-radius: 22px; padding: 12px; box-shadow: 0 8px 24px rgba(90,70,61,.3); display: none; z-index: 20; max-width: 94vw; }
   .panel.on { display: block; }
   .panel .grid { display: grid; grid-template-columns: repeat(4, 74px); gap: 6px; }
   .panel button { border: 0; background: transparent; border-radius: 14px; padding: 6px 2px; font-size: 12px; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -64,131 +80,131 @@
   .panel button span { font-size: 30px; line-height: 44px; height: 44px; }
   .panel button img { width: 44px; height: 44px; object-fit: contain; }
   .panel h3 { margin: 2px 6px 8px; font-size: 15px; font-weight: 600; }
-  #hint { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(255,244,232,.92); color: var(--ink); border-radius: 16px; padding: 8px 14px; font-size: 14px; z-index: 10; transition: opacity .8s; pointer-events: none; text-align: center; }
 </style>
 </head><body>
-<div id="view"><div id="wrap"><div id="room">
+<div id="room">
   <div id="sky">
     <div id="stars"></div>
     <img id="sun" src="art/valley/sun.webp" alt=""><img id="moon" src="art/valley/moon.webp" alt="">
-    <img class="cloud" src="art/valley/cloud.webp" style="left:2%;top:12%" alt="">
-    <img class="cloud" src="art/valley/cloud.webp" style="left:40%;top:30%;width:30%;animation-duration:55s" alt="">
+    <img class="cloud" src="art/valley/cloud.webp" style="left:0;top:12%" alt="">
+    <img class="cloud" src="art/valley/cloud.webp" style="left:45%;top:32%;width:36%;animation-duration:55s" alt="">
     <div id="far"></div><div id="mid"></div>
   </div>
   <div id="photo"></div>
-  <img id="bg" src="art/casa-movil.webp" alt="">
+  <img id="bg" src="art/casa-vertical.webp" alt="">
   <img id="libreta" src="art/movil-portada.webp" alt="">
   <div id="finds"></div>
   <div id="spots"></div>
-  <iframe id="eko" src="overlay.html?house" title="Eko"></iframe>
+  <iframe id="eko" src="overlay.html" title="Eko"></iframe>
   <div id="ekoHit" class="spot"></div>
   <div id="night"></div>
-  <div id="glow"><i id="g1" style="left:768px;top:170px;width:900px;height:900px"></i><i id="g2" style="left:1440px;top:520px;width:520px;height:520px"></i></div>
+  <div id="glow"><i style="left:512px;top:200px;width:900px;height:900px"></i><i style="left:968px;top:800px;width:520px;height:520px"></i></div>
   <div id="bub"></div>
-</div></div></div>
-<div id="hint">Esta es mi casa. Toca las cosas 🙂</div>
-<div id="menu" class="panel"><div class="grid"></div></div>
+</div>
+<div id="hud">
+  <div class="need" id="n-hunger" style="--c:#E9A93B"><span>🍪</span></div>
+  <div class="need" id="n-fun" style="--c:#5FA88E"><span>⚽</span></div>
+  <div class="need" id="n-love" style="--c:#D0795A"><span>💗</span></div>
+  <div class="need" id="n-energy" style="--c:#6F94C2"><span>⚡</span></div>
+  <div id="days"></div>
+</div>
+<div id="dock"></div>
 <div id="ward" class="panel"><h3>¿Qué me pongo?</h3><div class="grid"></div></div>
 <script>
 (() => {
   "use strict";
   const H = window.House;               // puente con Android
   const $ = (id) => document.getElementById(id);
-  const view = $("view"), wrap = $("wrap"), room = $("room"), frame = $("eko"), hit = $("ekoHit"), bub = $("bub");
+  const room = $("room"), frame = $("eko"), hit = $("ekoHit"), bub = $("bub");
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
+  const pick = (l) => l[Math.floor(Math.random() * l.length)];
 
-  // ---------- Escala: la habitación ocupa todo el alto y se recorre deslizando ----------
-  let K = 1;
+  // ---------- Escala: la habitación entera, centrada, sin recorrerla ----------
   function fit() {
-    K = Math.max(innerHeight / 1024, innerWidth / 1536);
-    room.style.transform = `scale(${K})`;
-    wrap.style.width = 1536 * K + "px"; wrap.style.height = 1024 * K + "px";
+    const k = Math.min(innerWidth / 1024, innerHeight / 1536);
+    const x = (innerWidth - 1024 * k) / 2, y = (innerHeight - 1536 * k) / 2;
+    room.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
   }
   addEventListener("resize", fit); fit();
 
   // ---------- Eko dentro de casa (overlay.html en un marco; se le habla con postMessage) ----------
-  const S = 1.35;                        // tamaño de Eko en la habitación
-  const FLOOR = 868;                     // donde pisa
-  const E = { x: 640, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null };
+  const S = 1.75;                        // tamaño de Eko en la habitación
+  const FLOOR = 1330;                    // donde pisa
+  const XMIN = 120, XMAX = 920;
+  const E = { x: 300, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null };
   const send = (fn, ...args) => frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
   const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
   function place() {
     const y = E.y - E.hop;
     frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px";
     frame.style.transform = `scale(${S})`;
-    hit.style.left = E.x - 75 + "px"; hit.style.top = y - 220 + "px";
-    bub.style.left = Math.min(1536 - 190, Math.max(190, E.x)) + "px"; bub.style.top = y - 300 + "px";
+    hit.style.left = E.x - 115 + "px"; hit.style.top = y - 290 + "px";
+    bub.style.left = Math.min(1024 - 290, Math.max(290, E.x)) + "px"; bub.style.top = y - 330 + "px";
   }
   function walkTo(x, then) {
     if (E.mode === "sleep") { wake(); setTimeout(() => walkTo(x, then), 1700); return; }
     if (jump || E.mode === "busy") { setTimeout(() => walkTo(x, then), 400); return; }
-    E.target = Math.max(130, Math.min(1420, x)); E.onArrive = then || null;
+    E.target = Math.max(XMIN, Math.min(XMAX, x)); E.onArrive = then || null;
+    if (Math.abs(E.target - E.x) < 8) { const t = E.onArrive; E.onArrive = null; idle(); t && t(); return; }
     E.mode = "walk"; E.dir = E.target > E.x ? 1 : -1; send("set", "walk", E.dir);
   }
   function idle(ms) { E.mode = "idle"; E.target = null; E.next = performance.now() + (ms || 4000 + Math.random() * 6000); send("set", "idle", E.dir); }
 
-  // Saltitos que pide el propio Eko (trucos) y subir/bajar del sillón
   let jump = null;
   function hopTo(x, y, then) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
   window.house = {
-    hop(v) { E.vy = Math.min(1100, v * 1.2); },
+    hop(v) { E.vy = Math.min(1400, v * 1.5); },
     hold(ms) { E.hold = performance.now() + ms; },
     say(t, ms) { say(t, ms); },
   };
-
   let bubT = 0;
   function say(t, ms = 2800) { bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
 
   // ---------- Siesta en el sillón ----------
-  const SEAT = { x: 1195, y: 650 };
-  function nap() {
-    walkTo(SEAT.x - 20, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); }));
-  }
+  const SEAT = { x: 752, y: 945 };
+  function nap() { walkTo(SEAT.x - 60, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); })); }
   function wake() {
     if (E.mode !== "sleep") return;
     send("wake"); E.mode = "busy";
-    setTimeout(() => hopTo(SEAT.x - 60, FLOOR, () => idle(2500)), 900);
+    setTimeout(() => hopTo(SEAT.x - 120, FLOOR, () => idle(2500)), 900);
   }
 
   // ---------- Bucle ----------
   let last = performance.now();
-  function frameLoop(now) {
+  function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (jump) {
       jump.t = Math.min(1, jump.t + dt / 0.55);
       const k = jump.t;
       E.x = jump.x0 + (jump.x1 - jump.x0) * k;
-      E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 110;
+      E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 130;
       if (k >= 1) { const t = jump.then; jump = null; send("land"); t && t(); }
     } else if (E.mode === "walk" && now > E.hold) {
-      const step = 150 * dt * E.dir;
-      if (Math.abs(E.target - E.x) <= Math.abs(step)) {
-        E.x = E.target; const t = E.onArrive; E.onArrive = null; idle(); t && t();
-      } else { E.x += step; send("v", 150 * E.dir, 0); }
-    } else if (E.mode === "idle" && now > E.next && now > E.hold && !panelOpen()) {
-      roam();
-    }
-    // saltitos de los trucos
+      const step = 170 * dt * E.dir;
+      if (Math.abs(E.target - E.x) <= Math.abs(step)) { E.x = E.target; const t = E.onArrive; E.onArrive = null; idle(); t && t(); }
+      else { E.x += step; send("v", 170 * E.dir, 0); }
+    } else if (E.mode === "idle" && now > E.next && now > E.hold && !panelOpen()) roam();
     if (E.vy || E.hop) {
-      E.hop += E.vy * dt; E.vy -= 2600 * dt;
+      E.hop += E.vy * dt; E.vy -= 3000 * dt;
       if (E.hop <= 0) { E.hop = 0; if (E.vy < -50) send("land"); E.vy = 0; }
     }
     place();
-    requestAnimationFrame(frameLoop);
+    requestAnimationFrame(loop);
   }
 
-  // Lo que hace solo: pasear, asomarse a la ventana, y de noche irse a dormir al sillón
+  // Lo que hace solo: pasear, asomarse a la ventana y, de noche, dormir en el sillón
+  const WINDOW_LINES = ["¡Qué día hace!", "Mira, ¡las colinas!", "Me encanta esta ventana", "¿Salimos luego?"];
   function isNight() { const h = new Date().getHours(); return h >= 23 || h < 7; }
   function roam() {
     if (isNight() && Math.random() < 0.6) { nap(); return; }
     const r = Math.random();
-    if (r < 0.15) walkTo(760, () => { say(pick(WINDOW_LINES), 2600); idle(); });
+    if (r < 0.15) walkTo(512, () => { say(pick(WINDOW_LINES), 2600); idle(); });
     else if (r < 0.22) nap();
-    else walkTo(150 + Math.random() * 1250);
+    else walkTo(XMIN + Math.random() * (XMAX - XMIN));
   }
 
   // ---------- Hora del día: cielo, noche y lámparas ----------
-  const SUNSET = H && H.sunsetMin ? H.sunsetMin() : -1;   // minutos del día (si eligió ciudad en «Hora dorada»)
+  const SUNSET = H && H.sunsetMin ? H.sunsetMin() : -1;
   function sky() {
     const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
     const set = SUNSET > 0 ? SUNSET : 19 * 60 + 30;
@@ -198,91 +214,78 @@
     document.body.classList.toggle("gold", gold);
     $("sky").style.background = night ? "linear-gradient(#1d2650, #3b4479)" : gold ? "linear-gradient(#f2b27c, #fbd9a6)" : "linear-gradient(#8fc2ec, #d3ebf8)";
     $("night").style.opacity = night ? 1 : gold ? .25 : 0;
-    // luces: de noche empiezan encendidas; si las tocas, se recuerda hasta el día siguiente
-    const day = d.toDateString();
-    const saved = ls.get("eko-house-lights", "");
+    const day = d.toDateString(), saved = ls.get("eko-house-lights", "");
     const on = saved.startsWith(day) ? saved.endsWith(":1") : night;
     $("glow").style.opacity = on ? 1 : 0;
     $("night").style.background = on ? "rgba(70,62,96,.5)" : "rgba(40,48,96,.6)";
-    return on;
   }
   function toggleLights() {
     const on = $("glow").style.opacity !== "1";
     ls.set("eko-house-lights", new Date().toDateString() + (on ? ":1" : ":0"));
-    sky();
-    return on;
+    sky(); return on;
   }
 
-  // ---------- Tu última foto en el cuadro (perspectiva exacta del hueco de la pared) ----------
-  function adj(m) { return [m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4], m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5], m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]]; }
-  function mul(a, b) { const c = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { let s = 0; for (let k = 0; k < 3; k++) s += a[3*i+k] * b[3*k+j]; c[3*i+j] = s; } return c; }
-  function mulv(m, v) { return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]]; }
-  function basis(p) { const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1]; const v = mulv(adj(m), [p[6], p[7], 1]); return mul(m, [v[0],0,0, 0,v[1],0, 0,0,v[2]]); }
-  function warp(el, w, h, quad) {
-    const t = mul(basis(quad), adj(basis([0, 0, w, 0, 0, h, w, h])));
-    for (let i = 0; i < 9; i++) t[i] /= t[8];
-    el.style.transform = `matrix3d(${t[0]},${t[3]},0,${t[6]},${t[1]},${t[4]},0,${t[7]},0,0,1,0,${t[2]},${t[5]},0,${t[8]})`;
-  }
-  // esquinas del hueco (arriba izq., arriba der., abajo izq., abajo der.), con 3 px de margen bajo el marco
-  warp($("photo"), 100, 100, [1435, 319, 1471, 314, 1435, 392, 1471, 390]);
-  function photo() {
-    const u = H && H.lastPhoto ? H.lastPhoto() : "";
-    $("photo").style.backgroundImage = u ? `url("${u}")` : "none";
-  }
-
-  // ---------- Lo que ha encontrado paseando, en las baldas ----------
-  const SHELF = [[1084, 292], [1118, 292], [1152, 292], [1206, 402], [1240, 402], [1274, 402], [1306, 402]];
+  // ---------- Tu última foto, lo que ha encontrado (en las baldas) y sus necesidades ----------
+  function photo() { const u = H && H.lastPhoto ? H.lastPhoto() : ""; $("photo").style.backgroundImage = u ? `url("${u}")` : "none"; }
+  const SHELF = [[756, 396], [796, 396], [868, 498], [908, 498], [948, 498]];
   function finds() {
     const list = JSON.parse(H && H.finds ? H.finds() : "[]");
-    $("finds").innerHTML = list.slice(-SHELF.length).map((e, i) => `<span class="find" style="position:absolute;left:${SHELF[i][0]}px;top:${SHELF[i][1] - 34}px">${e}</span>`).join("");
+    $("finds").innerHTML = list.slice(-SHELF.length).map((e, i) => `<span class="find" style="left:${SHELF[i][0]}px;top:${SHELF[i][1] - 46}px">${e}</span>`).join("");
+  }
+  function needs() {
+    const n = JSON.parse(H && H.needs ? H.needs() : '{"hunger":80,"fun":70,"love":70,"energy":85}');
+    for (const k of ["hunger", "fun", "love", "energy"]) {
+      const el = $("n-" + k); el.style.setProperty("--v", Math.round(n[k])); el.classList.toggle("low", n[k] < 25);
+    }
+    // días juntos: los cuenta look.js (mismo almacenamiento que el Eko de la pantalla)
+    const born = new Date(ls.get("eko-born", new Date().toISOString()));
+    const days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 864e5));
+    $("days").innerHTML = `<b>${days} ${days === 1 ? "día" : "días"}</b><br>juntos`;
   }
 
   // ---------- Las cosas de la casa (el menú viviente) ----------
-  const pick = (l) => l[Math.floor(Math.random() * l.length)];
-  const WINDOW_LINES = ["¡Qué día hace!", "Mira, ¡las colinas!", "Me encanta esta ventana", "¿Salimos luego?"];
   const SPOTS = [
-    { id: "door", r: [31, 292, 169, 737], at: 230, say: ["¡Me voy contigo a la pantalla!", "¡A la calle! Bueno, a tu pantalla"] },
-    { id: "wardrobe", r: [215, 276, 438, 492], at: 330, say: ["¿Qué me pongo hoy?", "Vamos a ver mi ropa"] },
-    { id: "settings", r: [253, 515, 492, 694], at: 370, say: ["En estos cajones guardo mis cosas", "Aquí están mis ajustes"] },
-    { id: "walks", r: [584, 230, 945, 561], at: 760, say: ["Mira nuestros paseos", "¿Cuánto hemos andado?"] },
-    { id: "album", r: [770, 520, 900, 670], at: 830, say: ["¡Mi álbum! ¿Lo vemos?", "Vamos a ver las fotos"] },
-    { id: "diary", r: [1085, 350, 1185, 412], at: 1130, say: ["Mi diario… ¿me cuentas algo?", "Vamos a escribir"] },
-    { id: "finds", r: [1060, 200, 1330, 350], at: 1190, say: ["Mira mi colección", "Todo lo que hemos encontrado"] },
-    { id: "photo", r: [1405, 230, 1505, 420], at: 1360, say: ["Mi foto favorita", "Esa la colgué yo"] },
-    { id: "nap", r: [1026, 461, 1390, 737], at: 1180 },
-    { id: "lamp", r: [1390, 479, 1502, 602], at: 1380 },
-    { id: "lamp", r: [688, 23, 845, 192], at: 760 },
+    { id: "door", r: [31, 427, 140, 1015], at: 150, say: ["¡Me voy contigo a la pantalla!", "¡A la calle! Bueno, a tu pantalla"] },
+    { id: "wardrobe", r: [128, 401, 307, 631], at: 220, say: ["¿Qué me pongo hoy?", "Vamos a ver mi ropa"] },
+    { id: "settings", r: [133, 734, 333, 956], at: 240, say: ["En estos cajones guardo mis cosas", "Aquí están mis ajustes"] },
+    { id: "walks", r: [358, 367, 674, 725], at: 512, say: ["Mira nuestros paseos", "¿Cuánto hemos andado?"] },
+    { id: "album", r: [490, 840, 620, 980], at: 560, say: ["¡Mi álbum! ¿Lo vemos?", "Vamos a ver las fotos"] },
+    { id: "diary", r: [750, 440, 860, 512], at: 800, say: ["Mi diario… ¿me cuentas algo?", "Vamos a escribir"] },
+    { id: "finds", r: [737, 290, 956, 440], at: 820, say: ["Mira mi colección", "Todo lo que hemos encontrado"] },
+    { id: "photo", r: [802, 546, 899, 700], at: 850, say: ["Mi foto favorita", "Esa la colgué yo"] },
+    { id: "nap", r: [611, 734, 918, 1041], at: 700 },
+    { id: "lamp", r: [918, 760, 1020, 896], at: 900 },
+    { id: "lamp", r: [427, 26, 597, 230], at: 512 },
   ];
   $("spots").innerHTML = SPOTS.map((s, i) => `<div class="spot" data-i="${i}" style="left:${s.r[0]}px;top:${s.r[1]}px;width:${s.r[2]-s.r[0]}px;height:${s.r[3]-s.r[1]}px"></div>`).join("");
   $("spots").addEventListener("click", (e) => {
     const el = e.target.closest(".spot"); if (!el) return;
-    closePanels(); hideHint();
-    const s = SPOTS[+el.dataset.i];
-    if (s.id === "lamp") { const on = toggleLights(); say(on ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
+    closePanels(); use(SPOTS[+el.dataset.i]);
+  });
+  function use(s) {
+    if (s.id === "lamp") { say(toggleLights() ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
     if (s.id === "nap") { if (E.mode === "sleep") wake(); else { say("Una siestecita…", 1800); nap(); } return; }
     if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 500); }); return; }
-    walkTo(s.at, () => {
-      say(pick(s.say), 1800);
-      send("act", "tada");
-      setTimeout(() => H && H.open(s.id), 900);
-    });
-  });
+    walkTo(s.at, () => { say(pick(s.say), 1800); send("act", "tada"); setTimeout(() => H && H.open(s.id), 900); });
+  }
+  const spot = (id) => SPOTS.find((s) => s.id === id);
 
-  // ---------- Tocar a Eko: su menú ----------
-  const MENU = [
-    ["🍪", "Galleta", () => { send("eat"); H && H.give("feed"); }],
-    ["⚽", "Jugar", () => { send("spin"); H && H.give("play"); }],
-    ["👒", "Ropa", () => openWard()],
-    ["💤", "Siesta", () => nap()],
+  // ---------- Botones de abajo ----------
+  const DOCK = [
+    ["art/cookie.webp", "Comer", () => { if (E.mode === "sleep") wake(); send("eat"); H && H.give("feed"); setTimeout(needs, 300); }],
+    ["⚽", "Jugar", () => { if (E.mode === "sleep") wake(); send("spin"); H && H.give("play"); setTimeout(needs, 300); }],
+    ["👒", "Ropa", () => use(spot("wardrobe"))],
+    ["👣", "Paseos", () => use(spot("walks"))],
+    ["📔", "Álbum", () => use(spot("album"))],
+    ["✏️", "Diario", () => use(spot("diary"))],
   ];
-  $("menu").querySelector(".grid").innerHTML = MENU.map((m, i) => `<button data-i="${i}"><span>${m[0]}</span>${m[1]}</button>`).join("");
-  $("menu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); MENU[+b.dataset.i][2](); });
+  $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}">${d[0].startsWith("art/") ? `<img src="${d[0]}" alt="">` : `<span>${d[0]}</span>`}${d[1]}</button>`).join("");
+  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); DOCK[+b.dataset.i][2](); });
+
+  // ---------- Tocar a Eko: mimos ----------
   hit.addEventListener("click", () => {
-    hideHint();
     if (E.mode === "sleep") { wake(); say("¡No estaba dormido!", 2000); return; }
-    send("tap"); H && H.give("pet");
-    E.hold = performance.now() + 2500;
-    const m = $("menu"); const on = !m.classList.contains("on"); closePanels(); if (on) m.classList.add("on");
+    send("tap"); H && H.give("pet"); E.hold = performance.now() + 2500; setTimeout(needs, 300);
   });
 
   // ---------- Ropa ----------
@@ -295,24 +298,19 @@
     closePanels(); $("ward").classList.add("on");
   }
   $("ward").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); H && H.setAcc(b.dataset.id); look(b.dataset.id); });
-
   function panelOpen() { return document.querySelector(".panel.on") !== null; }
   function closePanels() { document.querySelectorAll(".panel.on").forEach((p) => p.classList.remove("on")); }
-  view.addEventListener("click", (e) => { if (!e.target.closest(".spot") && !e.target.closest(".panel")) closePanels(); });
-  function hideHint() { $("hint").style.opacity = 0; }
-  setTimeout(hideHint, 6000);
+  document.addEventListener("click", (e) => { if (!e.target.closest(".panel") && !e.target.closest("#dock") && !e.target.closest(".spot")) closePanels(); });
 
   // ---------- Arranque ----------
-  frame.addEventListener("load", () => { send("set", "idle", 1); });
-  function refresh() { sky(); photo(); finds(); }
+  frame.addEventListener("load", () => send("set", "idle", 1));
+  function refresh() { sky(); photo(); finds(); needs(); }
   window.houseRefresh = refresh;
-  refresh(); setInterval(sky, 60000);
-  place(); requestAnimationFrame(frameLoop);
-  // empieza mirando a Eko
-  view.scrollLeft = (E.x * K) - innerWidth / 2;
-  // charla de vez en cuando
+  refresh(); setInterval(sky, 60000); setInterval(needs, 10000);
+  place(); requestAnimationFrame(loop);
   setInterval(() => { if (E.mode !== "sleep" && !panelOpen()) send("chatter"); }, 150000);
   if (isNight()) setTimeout(nap, 1500);
+  else setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 800);
 })();
 </script>
 </body></html>

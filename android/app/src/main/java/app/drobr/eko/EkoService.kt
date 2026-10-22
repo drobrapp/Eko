@@ -548,6 +548,8 @@ class EkoService : Service() {
     fun goldenSay() { handler.post { if (running && quiet()) talk("golden") } }
 
     // ---------- Su casa (HouseActivity): mientras estás dentro, Eko está allí y no en tu pantalla ----------
+    fun needsJson(): String = org.json.JSONObject().put("hunger", hunger.toDouble()).put("fun", fun_.toDouble())
+        .put("love", love.toDouble()).put("energy", energy.toDouble()).toString()
     fun homeVisit(home: Boolean) {
         handler.post {
             val v = if (home) View.GONE else View.VISIBLE

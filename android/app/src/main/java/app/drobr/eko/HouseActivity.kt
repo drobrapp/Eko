@@ -54,6 +54,10 @@ class HouseActivity : Activity() {
             return a.toString()
         }
         @JavascriptInterface fun sunsetMin(): Int = GoldenHour.sunset(this@HouseActivity)?.let { it.hour * 60 + it.minute } ?: -1
+        @JavascriptInterface fun needs(): String = EkoService.instance?.needsJson() ?: prefs().let { p ->
+            JSONObject().put("hunger", p.getFloat("hunger", 75f)).put("fun", p.getFloat("fun", 70f))
+                .put("love", p.getFloat("love", 70f)).put("energy", p.getFloat("energy", 85f)).toString()
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -68,6 +72,9 @@ class HouseActivity : Activity() {
             addJavascriptInterface(HouseBridge(), "House")
             loadUrl("file:///android_asset/eko/house.html")
         }
+        // Barras del sistema del color del techo y del suelo
+        window.statusBarColor = Color.parseColor("#C97739")
+        window.navigationBarColor = Color.parseColor("#DD9458")
         setContentView(web)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)

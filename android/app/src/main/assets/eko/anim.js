@@ -508,7 +508,7 @@
     spin() { act(TRICKS[Math.floor(Math.random() * TRICKS.length)]); },
     lowPower(v) { lowPower = !!v; },
     act, fx, blush, express,
-    talk(ev, chance) { if (window.ekoTalk) ekoTalk.talk(ev, chance); },
+    talk(ev, chance, arg) { if (window.ekoTalk) ekoTalk.talk(ev, chance, arg); },
     chatter() { if (window.ekoTalk) ekoTalk.chatter(); },
   };
 })();

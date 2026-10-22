@@ -26,7 +26,11 @@ class EkoAccess : AccessibilityService() {
     private val r = Rect()
 
     override fun onServiceConnected() { instance = this; EkoService.instance?.switchWindows(); check() }
-    override fun onAccessibilityEvent(e: AccessibilityEvent?) { check() }
+    override fun onAccessibilityEvent(e: AccessibilityEvent?) {
+        // App en primer plano: solo su nombre de paquete (para que Eko comente), nunca su contenido
+        if (e?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) e.packageName?.toString()?.let { EkoService.instance?.onApp(it) }
+        check()
+    }
 
     private fun check() {
         if (!EkoService.running) { kbTop = -1; return }

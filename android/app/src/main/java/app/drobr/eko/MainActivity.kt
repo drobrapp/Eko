@@ -121,7 +121,7 @@ class MainActivity : Activity() {
         if (EkoAccess.enabled(this)) { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return }
         AlertDialog.Builder(this)
             .setTitle("Teclado y toques")
-            .setMessage("Con el permiso de Accesibilidad, Eko se sube encima del teclado cuando lo abres, y los toques alrededor de él llegan a la app de debajo (sin él, Android los bloquea). Eko solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · teclado y toques» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
+            .setMessage("Con el permiso de Accesibilidad, Eko se sube encima del teclado cuando lo abres, y los toques alrededor de él llegan a la app de debajo (sin él, Android los bloquea). También sabe qué app tienes abierta (solo su nombre) para comentarla. Nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · teclado y toques» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
             .setPositiveButton("Ir a Accesibilidad") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             .setNeutralButton("Información de la app") { _, _ -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
             .setNegativeButton("Ahora no", null)

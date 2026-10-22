@@ -5,6 +5,29 @@
   const T = {
     costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
     noteHi: ["¡Me has leído!", "¡Has venido!", "Sabía que vendrías", "¡Hola, hola!"],
+    // Apps («{app}» = su nombre). Solo sabe qué app es, nunca lo que hay dentro
+    app_social: ["¿Qué se cuenta por {app}?", "Saluda a todos de mi parte", "Yo también quiero salir en las historias", "Un ratito de {app} y seguimos, ¿vale?"],
+    app_chat: ["¿Con quién hablas? No me lo digas, no miro", "Mándales un saludo mío", "Escribe, escribe, yo espero"],
+    app_camera: ["¡Sácame en la foto!", "¿Qué fotografiamos hoy?", "Busca buena luz, que salgo pálido", "Yo poso, tú disparas"],
+    app_gallery: ["¿Me enseñas las fotos?", "Esa me gusta. Bueno, todas", "¿Salgo yo en alguna?"],
+    app_edit: ["¡Hora de editar! Un poquito más de luz…", "Qué bien te quedan las fotos", "Si quieres, te digo qué filtro me favorece"],
+    app_music: ["¡Música! Pon algo que se pueda bailar", "¿Qué suena hoy?", "Mis piececitos ya se mueven"],
+    app_video: ["¿Palomitas?", "Me quedo quietecito mientras lo ves", "¿De qué va? No, no me lo cuentes"],
+    app_game: ["¿Echamos una partida? Yo animo", "¡Tú puedes!", "Si pierdes, no se lo digo a nadie"],
+    app_maps: ["¿A dónde vamos?", "Llévame contigo", "Yo me sé el camino. Mentira"],
+    app_mail: ["¿Muchos correos? Ánimo", "Que sean todos buenas noticias"],
+    app_shop: ["¿Me compras algo?", "Yo quiero un gorro nuevo", "Mira bien los precios, ¿eh?"],
+    app_settings: ["¿Tocando ajustes? Cuidado conmigo", "No me desactives, ¿vale?"],
+    app_calendar: ["¿Mucho lío esta semana?", "Apúntame en algún hueco"],
+    app_web: ["¿Qué buscas?", "Si encuentras algo de galletas, avísame"],
+    scroll: ["Llevas un buen rato en {app}… ¿estiramos un poco?", "¿Otro ratito en {app}? Yo me estoy aburriendo", "Pausa: mira lejos 20 segundos. Yo cuento"],
+    silent: ["Shhh… modo silencio. Yo también me callo un poco", "Silencio activado. Seré un ninja"],
+    vibrate: ["Modo vibración: bzzz", "Bzzz bzzz. Ya estoy en modo vibración yo también"],
+    ringOn: ["¡Ya vuelve a sonar todo!", "Volumen de vuelta"],
+    netLost: ["¡Uy! Nos hemos quedado sin internet", "Sin conexión… ¿jugamos mientras?"],
+    netBack: ["¡Internet de vuelta!", "Ya hay conexión otra vez"],
+    batteryFull: ["¡Batería llena! Ya puedes desenchufar", "Cargado al cien. Igual que yo de energía"],
+    lateNight: ["¿Qué haces despierto a estas horas?", "Es muy tarde… ¿seguro que no quieres dormir?", "Yo estaba soñando con galletas…"],
     keyboard: ["¡Subo, que vas a escribir!", "¡Hop! Desde aquí se ve mejor", "Escribe, escribe, que no miro", "Me pongo encima, que abajo no se ve nada"],
     kbGone: ["¡Eh, que me quitas el suelo!", "¡Aaay!", "Bajandooo…", "Avisa antes de cerrar el teclado"],
     hello: ["¡Holi!", "¡Ya estoy aquí!", "¿Qué hacemos hoy?", "¡Qué grande es tu pantalla!", "¡Allá voy!", "¿Me has echado de menos? Yo a ti sí"],
@@ -78,14 +101,17 @@
     drop: "orgulloso", shake: "asustado", dizzy: "confundido", wake: "cansado", hunger: "cansado",
     keyboard: "curioso", kbGone: "sorprendido", costume: "canalla", music: "emocionado", musicOff: "triste",
     lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",
+    app_camera: "emocionado", app_gallery: "curioso", app_edit: "orgulloso", app_music: "emocionado", app_game: "emocionado",
+    app_shop: "picaro", app_settings: "ansioso", app_chat: "timido", scroll: "esperanzado", silent: "timido",
+    netLost: "asustado", netBack: "contento", batteryFull: "orgulloso", lateNight: "cansado",
   };
-  function talk(ev, chance = 1) {
+  function talk(ev, chance = 1, arg = "") {
     if (Math.random() > chance) return;
     if (ev === "poke") {
       const now = Date.now(); pokes = pokes.filter((t) => now - t < 10000); pokes.push(now);
       if (pokes.length >= 6) { say(pick("pokeAnnoyed", T.pokeAnnoyed)); if (window.eko && eko.express) eko.express("molesto"); return; }
     }
-    const list = T[ev]; if (list) { say(pick(ev, list)); if (EXPR[ev] && window.eko && eko.express) eko.express(EXPR[ev]); }
+    const list = T[ev]; if (list) { say(pick(ev, list).replace(/\{app\}/g, arg || "esa app")); if (EXPR[ev] && window.eko && eko.express) eko.express(EXPR[ev]); }
   }
   function special(d) {
     const m = d.getMonth() + 1, day = d.getDate();

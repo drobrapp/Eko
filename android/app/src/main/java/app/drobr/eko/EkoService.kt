@@ -230,8 +230,10 @@ class EkoService : Service() {
             addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT)
             addAction(Intent.ACTION_SCREEN_ON); addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+            addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
         }
         ContextCompat.registerReceiver(this, sysReceiver, f, ContextCompat.RECEIVER_NOT_EXPORTED)
+        try { getSystemService(android.net.ConnectivityManager::class.java).registerDefaultNetworkCallback(netCb, handler) } catch (_: Exception) {}
         startSensors()
         getSystemService(AudioManager::class.java).registerAudioDeviceCallback(audioCb, handler)
         handler.postDelayed(updateCheck, 60_000)
@@ -424,8 +426,19 @@ class EkoService : Service() {
                     val plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
                     if (pct in 0..15 && !plugged && !lowSaid) { lowSaid = true; talk("lowBattery") }
                     if (pct > 30 || plugged) lowSaid = false
+                    if (batFirst) { batFirst = false; fullSaid = plugged && pct >= 100 }
+                    if (pct >= 100 && plugged && !fullSaid) { fullSaid = true; talk("batteryFull") }
+                    if (!plugged) fullSaid = false
+                }
+                AudioManager.RINGER_MODE_CHANGED_ACTION -> {
+                    when (getSystemService(AudioManager::class.java).ringerMode) {
+                        AudioManager.RINGER_MODE_SILENT -> talk("silent", 0.8)
+                        AudioManager.RINGER_MODE_VIBRATE -> talk("vibrate", 0.6)
+                        else -> talk("ringOn", 0.6)
+                    }
                 }
                 Intent.ACTION_SCREEN_OFF -> {
+                    apps.reset()
                     screenOffAt = now; closeMenu(); stopSensors()
                     if (st != St.DRAG && st != St.FALL) { st = St.SLEEP; until = Long.MAX_VALUE; js("set('sleep', $dir)") }
                     handler.postDelayed({ if (!getSystemService(android.os.PowerManager::class.java).isInteractive) pause(true) }, 300)
@@ -434,6 +447,12 @@ class EkoService : Service() {
                 android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> js("lowPower(${powerSave()})")
                 Intent.ACTION_USER_PRESENT -> {
                     EkoNotes.seen(this@EkoService)
+                    run {
+                        // De madrugada (0:30–5:00), una vez por noche
+                        val cal = Calendar.getInstance(); val hm = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+                        val day = cal.get(Calendar.DAY_OF_YEAR)
+                        if (hm in 30..300 && prefs().getInt("lateDay", -1) != day) { prefs().edit().putInt("lateDay", day).apply(); handler.postDelayed({ talk("lateNight") }, 2500) }
+                    }
                     pause(false)
                     startSensors()
                     if (st == St.SLEEP) { awakeUntil = now + 3 * 60_000; js("wake()"); idle(2000) }
@@ -566,6 +585,25 @@ class EkoService : Service() {
 
     // Lo que dice lo elige talk.js (frases del Eko de escritorio + las del móvil, sin repetir); aquí solo se pinta el bocadillo
     private fun talk(ev: String, chance: Double = 1.0) = js("talk('$ev', $chance)")
+    private fun talkArg(ev: String, arg: String) = js("talk('$ev', 1, ${org.json.JSONObject.quote(arg)})")
+
+    // ---------- Cosas del móvil que comenta ----------
+    private fun quiet() = (st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE
+    private val apps by lazy { AppSense(this, { ev, arg -> talkArg(ev, arg) }, { quiet() }) }
+    fun onApp(pkg: String) { apps.onApp(pkg) }
+    private var nextSense = 0L
+    private var fullSaid = false
+    private var batFirst = true      // si ya estaba lleno al arrancar, no lo dice
+    private var netDown = false
+    private val netCb = object : android.net.ConnectivityManager.NetworkCallback() {
+        override fun onLost(n: android.net.Network) {
+            handler.postDelayed({
+                val cm = getSystemService(android.net.ConnectivityManager::class.java)
+                if (cm.activeNetwork == null && !netDown) { netDown = true; if (quiet()) talk("netLost") }
+            }, 8000)
+        }
+        override fun onAvailable(n: android.net.Network) { handler.post { if (netDown) { netDown = false; if (quiet()) talk("netBack", 0.8) } } }
+    }
     inner class Bridge {
         @JavascriptInterface fun say(text: String, ms: Int) { handler.post { this@EkoService.say(text, ms.toLong()) } }
         // Saltos de los trucos (ta-chán, voltereta): la ventana sube y cae de verdad
@@ -611,6 +649,7 @@ class EkoService : Service() {
             if ((st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE && now > nextChat) {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
+            if (now > nextSense) { nextSense = now + 30_000; apps.tick() }
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
             last = now
@@ -712,6 +751,7 @@ class EkoService : Service() {
         Choreographer.getInstance().removeFrameCallback(tick)
         closeMenu()
         try { unregisterReceiver(sysReceiver) } catch (_: Exception) {}
+        try { getSystemService(android.net.ConnectivityManager::class.java).unregisterNetworkCallback(netCb) } catch (_: Exception) {}
         stopSensors()
         try { getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(audioCb) } catch (_: Exception) {}
         bubble?.let { try { wm.removeView(it) } catch (_: Exception) {} }

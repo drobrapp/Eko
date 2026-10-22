@@ -438,14 +438,13 @@
   }
 
   // ---------- Ahorro: fotogramas según lo que haga y ventana grande solo cuando hace falta ----------
-  // Andando, en el aire, cogido o haciendo un gesto: 60 fps. Quieto: 30. Dormido: 15. Con ahorro de batería, la mitad.
+  // Siempre a la velocidad de la pantalla (sin límite de fotogramas)
   let last = performance.now(), lowPower = false, big = false, bigUntil = 0;
   function busy() { return !!A.action || S.walking || S.dragging || S.airborne || A.dance || A.t < A.danceUntil || Math.abs(A.squashV) > 2; }
   function wantBig() { return !!A.action || S.dragging || S.airborne || A.dance || A.t < A.danceUntil; }
   function frame(now) {
     requestAnimationFrame(frame);
-    const fps = (busy() ? 60 : S.sleeping ? 15 : 30) / (lowPower ? 2 : 1);
-    if (now - last < 1000 / fps - 3) return;
+    // Moviéndose: todos los fotogramas de la pantalla (sin límite, también con ahorro de batería). Quieto: 30. Dormido: 15.
     const dt = Math.min(0.07, (now - last) / 1000); last = now;
     update(dt); render();
     const w = wantBig();

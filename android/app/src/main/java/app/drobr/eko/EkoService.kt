@@ -76,8 +76,9 @@ class EkoService : Service() {
 
     // ---------- Ahorro ----------
     // Ventana pequeña normalmente (tapa poco de la app de debajo) y grande solo para trucos, saltos y bailes
-    private val SMALL_W = 130
-    private val SMALL_H = 160
+    // Tamaño fijo: cambiar el tamaño de la ventana a mitad de un gesto hacía que el WebView se recolocara y diera tirones
+    private val SMALL_W = 160
+    private val SMALL_H = 200
     private val BIG_W = 160
     private val BIG_H = 200
     private fun resize(big: Boolean) {
@@ -517,7 +518,7 @@ class EkoService : Service() {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
-            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000) * (if (powerSave()) 3 else 1); antic() }
+            if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
             last = now
             when (st) {
                 St.WALK -> {

@@ -69,6 +69,7 @@ class EkoService : Service() {
     private var targetX = 0f
     private var st = St.IDLE
     private var until = 0L
+    private var awakeUntil = 0L  // tras tocarlo o despertarse, un rato sin siestas
     private var last = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -247,7 +248,10 @@ class EkoService : Service() {
     private fun placeAbove(v: View, p: WindowManager.LayoutParams) {
         v.measure(View.MeasureSpec.makeMeasureSpec(screenW(), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(screenH(), View.MeasureSpec.AT_MOST))
         val w = v.measuredWidth; val h = v.measuredHeight
-        p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(0, (screenW() - w).coerceAtLeast(0))
+        // Tamaño fijo = el medido (con WRAP_CONTENT Android lo recalculaba más ancho y se cortaba en el borde)
+        p.width = w; p.height = h
+        val m = (8 * dens).toInt()
+        p.x = (x + winW / 2f - w / 2f).toInt().coerceIn(m, (screenW() - w - m).coerceAtLeast(m))
         p.y = (y + winH - 150 * dens - h).toInt().coerceAtLeast(0)
         try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
     }
@@ -340,7 +344,7 @@ class EkoService : Service() {
                 Intent.ACTION_USER_PRESENT -> {
                     pause(false)
                     startSensors()
-                    if (st == St.SLEEP) { js("wake()"); idle(2000) }
+                    if (st == St.SLEEP) { awakeUntil = now + 3 * 60_000; js("wake()"); idle(2000) }
                     if (screenOffAt > 0 && now - screenOffAt > 5 * 60_000) talk("missed")
                 }
             }
@@ -525,9 +529,9 @@ class EkoService : Service() {
                 }
                 St.IDLE -> {
                     y = ground()
-                    if (now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
+                    if (now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (now < awakeUntil) 0f else if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
                 }
-                St.SLEEP -> { y = ground(); if (now > until) { js("wake()"); idle(1500) } }
+                St.SLEEP -> { y = ground(); if (now > until) { awakeUntil = now + 2 * 60_000; js("wake()"); idle(1500) } }
                 St.FALL -> {
                     vy += 2400 * dens * dt
                     y += vy * dt
@@ -570,6 +574,7 @@ class EkoService : Service() {
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = e.rawX; downY = e.rawY; startX = x; startY = y
+                awakeUntil = SystemClock.uptimeMillis() + 3 * 60_000
                 dragging = false; longDone = false
                 handler.postDelayed(longPress, 650)
             }

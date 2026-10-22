@@ -29,7 +29,11 @@
   // Van rotando cada 2 horas
   const COSTUMES = { halloween: ["witch", "pumpkin", "vampire", "ghost"], xmas: ["santa", "reindeer", "elf", "scarf"], party: ["party", "crown"] };
   const TALL = new Set(["witch", "pumpkin", "santa", "elf", "reindeer", "party", "crown"]);
+  // «auto» = según la fecha; si no, el que hayas elegido en «Ropa» (lo guarda Android)
+  let mode = "auto";
+  try { if (AND && AND.accMode) mode = AND.accMode() || "auto"; } catch (_) {}
   function currentAcc() {
+    if (mode !== "auto") return mode;
     const s = anniversary() ? "party" : season();
     if (!s) return "none";
     const list = COSTUMES[s];
@@ -64,5 +68,5 @@
     if (!sprStage || !sprout || sprout.style.display === "none" || !window.EkoArt) return;
     EkoArt.pose(sprout, { stage: sprStage, pop: 1, sway: sway || 0, swayV: 0, bloom: 1, wilt: 0, season: EkoArt.seasonOf(), t });
   }
-  window.ekoLook = { pose, days, acc: () => shown };
+  window.ekoLook = { pose, days, acc: () => shown, setMode(m) { mode = m || "auto"; apply(true); } };
 })();

@@ -323,26 +323,32 @@ class EkoService : Service() {
             background = card("#FFF4E8")
             setPadding((8 * dens).toInt(), (8 * dens).toInt(), (8 * dens).toInt(), (6 * dens).toInt())
         }
-        fun item(icon: Int, label: String, action: () -> Unit) {
-            val col = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                setPadding((6 * dens).toInt(), 0, (6 * dens).toInt(), 0)
-                setOnClickListener { closeMenu(); action() }
-            }
-            col.addView(ImageView(this).apply {
-                setImageResource(icon)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                layoutParams = LinearLayout.LayoutParams((44 * dens).toInt(), (44 * dens).toInt())
-            })
-            col.addView(TextView(this).apply { text = label; textSize = 11f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER })
-            m.addView(col)
+        m.addView(cell(R.drawable.eko_cookie, null, "Galleta") { feed() })
+        m.addView(cell(R.drawable.eko_ball, null, "Jugar") { play() })
+        m.addView(cell(R.drawable.eko_acc_party, null, "Ropa") { handler.post { openWardrobe() } })
+        m.addView(cell(R.drawable.eko_bed, null, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) })
+        m.addView(cell(R.drawable.ic_eko, null, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) })
+        m.addView(cell(R.drawable.eko_bye, null, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() })
+        showMenu(m)
+    }
+
+    // Una casilla del menú: dibujo (o emoji) y nombre debajo
+    private fun cell(icon: Int, emoji: String?, label: String, on: Boolean = false, action: () -> Unit): View {
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding((6 * dens).toInt(), (2 * dens).toInt(), (6 * dens).toInt(), (2 * dens).toInt())
+            if (on) background = GradientDrawable().apply { cornerRadius = 12 * dens; setColor(Color.parseColor("#F3DCC6")) }
+            setOnClickListener { closeMenu(); action() }
         }
-        item(R.drawable.eko_cookie, "Galleta") { feed() }
-        item(R.drawable.eko_ball, "Jugar") { play() }
-        item(R.drawable.eko_bed, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) }
-        item(R.drawable.ic_eko, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) }
-        item(R.drawable.eko_bye, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() }
+        val size = (44 * dens).toInt()
+        if (emoji != null) col.addView(TextView(this).apply { text = emoji; textSize = 26f; gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(size, size) })
+        else col.addView(ImageView(this).apply { setImageResource(icon); scaleType = ImageView.ScaleType.FIT_CENTER; layoutParams = LinearLayout.LayoutParams(size, size) })
+        col.addView(TextView(this).apply { text = label; textSize = 11f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER })
+        return col
+    }
+
+    private fun showMenu(m: LinearLayout) {
         menuLp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -353,6 +359,38 @@ class EkoService : Service() {
         wm.addView(m, menuLp)
         menu = m
         placeAbove(m, menuLp)
+    }
+
+    // ---------- Ropa: «Según la fecha» (disfraces de temporada) o uno fijo ----------
+    private fun accMode() = prefs().getString("acc", "auto") ?: "auto"
+    @SuppressLint("ClickableViewAccessibility")
+    private fun openWardrobe() {
+        if (menu != null) return
+        st = St.IDLE; until = Long.MAX_VALUE; js("set('idle', $dir)")
+        val opts = listOf(
+            Triple("auto", 0, "Según fecha"), Triple("witch", R.drawable.eko_acc_witch, "Bruja"), Triple("pumpkin", R.drawable.eko_acc_pumpkin, "Calabaza"),
+            Triple("vampire", R.drawable.eko_acc_cape_vampire, "Vampiro"), Triple("ghost", 0, "Fantasma"), Triple("santa", R.drawable.eko_acc_santa, "Papá Noel"),
+            Triple("reindeer", R.drawable.eko_acc_antler, "Reno"), Triple("elf", R.drawable.eko_acc_elf, "Elfo"), Triple("scarf", R.drawable.eko_acc_scarf, "Bufanda"),
+            Triple("party", R.drawable.eko_acc_party, "Fiesta"), Triple("crown", R.drawable.eko_acc_crown, "Corona"), Triple("none", 0, "Nada"),
+        )
+        val emoji = mapOf("auto" to "📅", "ghost" to "👻", "none" to "✖")
+        val cur = accMode()
+        val m = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = card("#FFF4E8")
+            setPadding((8 * dens).toInt(), (8 * dens).toInt(), (8 * dens).toInt(), (6 * dens).toInt())
+        }
+        opts.chunked(4).forEach { row ->
+            val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            row.forEach { (id, icon, label) ->
+                r.addView(cell(icon, emoji[id], label, id == cur) {
+                    prefs().edit().putString("acc", id).apply()
+                    js("if(window.ekoLook)ekoLook.setMode('$id')"); idle(2500)
+                })
+            }
+            m.addView(r)
+        }
+        showMenu(m)
     }
 
     private fun closeMenu() {
@@ -538,6 +576,7 @@ class EkoService : Service() {
         @JavascriptInterface fun big(on: Boolean) { handler.post { resize(on) } }
         @JavascriptInterface fun hit(l: Int, t: Int, r: Int, b: Int) { handler.post { setHit(l, t, r, b) } }
         @JavascriptInterface fun tall(on: Boolean) { handler.post { if (tallHat != on) { tallHat = on; resize(false) } } }
+        @JavascriptInterface fun accMode(): String = this@EkoService.accMode()
         // Que no se ponga a andar en mitad de un gesto
         @JavascriptInterface fun hold(ms: Int) { handler.post { if (st == St.IDLE || st == St.WALK) idle(ms.toLong()) } }
     }

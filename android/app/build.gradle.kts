@@ -43,6 +43,16 @@ android {
     buildFeatures { buildConfig = true }
     // Arte y catálogos compartidos con el Eko de escritorio (src/): se copian al compilar, sin duplicarlos en el repo
     sourceSets["main"].assets.srcDir(layout.buildDirectory.get().asFile.resolve("pcAssets"))
+    sourceSets["main"].res.srcDir(layout.buildDirectory.get().asFile.resolve("pcRes"))
+}
+
+// Iconos del menú «Ropa»: los mismos gorros del PC, con nombre de recurso de Android (hat-witch.webp → eko_acc_witch)
+val pcRes = tasks.register<Copy>("pcRes") {
+    from(rootProject.file("../src/art")) {
+        include("hat-*.webp", "cape-vampire.webp", "scarf.webp")
+        rename { "eko_acc_" + it.removeSuffix(".webp").removePrefix("hat-").replace("-", "_") + ".webp" }
+    }
+    into(layout.buildDirectory.get().asFile.resolve("pcRes/drawable-nodpi"))
 }
 
 val pcAssets = tasks.register<Copy>("pcAssets") {
@@ -56,7 +66,7 @@ val pcAssets = tasks.register<Copy>("pcAssets") {
     }
     into(layout.buildDirectory.get().asFile.resolve("pcAssets"))
 }
-tasks.named("preBuild") { dependsOn(pcAssets) }
+tasks.named("preBuild") { dependsOn(pcAssets, pcRes) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

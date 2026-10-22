@@ -3,6 +3,8 @@
 (() => {
   "use strict";
   const T = {
+    keyboard: ["¡Subo, que vas a escribir!", "¡Hop! Desde aquí se ve mejor", "Escribe, escribe, que no miro", "Me pongo encima, que abajo no se ve nada"],
+    kbGone: ["¡Eh, que me quitas el suelo!", "¡Aaay!", "Bajandooo…", "Avisa antes de cerrar el teclado"],
     hello: ["¡Holi!", "¡Ya estoy aquí!", "¿Qué hacemos hoy?", "¡Qué grande es tu pantalla!", "¡Allá voy!", "¿Me has echado de menos? Yo a ti sí"],
     poke: ["¿Me llamabas?", "¡Presente!", "¿Qué pasa?", "¡Aquí!", "¡Hop!", "¡Cosquillas no!", "¿Jugamos?", "¡Boing!", "Mantenme pulsado y te enseño mis cosas", "¡Jiji!", "Me gusta tu móvil", "¿Eso era un toque o un mimo?"],
     pokeAnnoyed: ["¡Vale ya!", "¿Otra vez?", "Me vas a gastar", "¡Que no soy un botón!", "Como sigas, me escondo", "Uf… ¿no tienes nada mejor que hacer?"],

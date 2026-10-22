@@ -157,7 +157,24 @@ class EkoService : Service() {
         if (Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.windowInsets
             .getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()).bottom
         else navBar()
-    private fun ground(): Float = (screenH() - bottomInset() - winH - yOffset - (6 * dens).toInt()).toFloat()
+    // Suelo: la barra de abajo o, si hay teclado (EkoAccess), el borde de arriba del teclado
+    private fun ground(): Float {
+        val floor = (screenH() - bottomInset() - winH - yOffset - (6 * dens).toInt()).toFloat()
+        val k = EkoAccess.kbTop
+        if (k <= 0) return floor
+        val onKb = (k - winH - yOffset + (4 * dens).toInt()).toFloat()
+        return if (onKb < floor && onKb > screenH() * 0.15f) onKb else floor
+    }
+    // Si el suelo se mueve (se abre o cierra el teclado): salta a él o se cae
+    private fun settle(): Boolean {
+        val g = ground(); val d = y - g
+        if (abs(d) <= 2 * dens) { y = g; return false }
+        st = St.FALL; hopping = true
+        if (d < 0) { vy = 0f; talk("kbGone", 0.4) }
+        else { vy = -sqrt(2f * 2400 * dens * (d + 30 * dens)); talk("keyboard", 0.35) }
+        js("set('fall', $dir)")
+        return true
+    }
     private fun calibrate() {
         val w = web ?: return
         val loc = IntArray(2)
@@ -526,22 +543,21 @@ class EkoService : Service() {
                     if ((dir > 0 && x >= targetX) || (dir < 0 && x <= targetX) || x <= 0f || x >= maxX()) {
                         x = x.coerceIn(0f, maxX()); idle(Random.nextLong(1500, 6000))
                     }
-                    y = ground()
+                    settle()
                 }
                 St.IDLE -> {
-                    y = ground()
-                    if (now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (now < awakeUntil) 0f else if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
+                    if (!settle() && now > until) { val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); val nap = if (now < awakeUntil) 0f else if (h >= 23 || h < 7) 0.45f else 0.12f; val r = Random.nextFloat(); if (r < nap) sleep() else if (r < nap + 0.15f) idle(Random.nextLong(2000, 5000)) else walk() }
                 }
-                St.SLEEP -> { y = ground(); if (now > until) { awakeUntil = now + 2 * 60_000; js("wake()"); idle(1500) } }
+                St.SLEEP -> { if (!settle() && now > until) { awakeUntil = now + 2 * 60_000; js("wake()"); idle(1500) } }
                 St.FALL -> {
                     vy += 2400 * dens * dt
                     y += vy * dt
                     js("v(0, ${(vy / dens).toInt()})")
-                    if (y >= ground()) { if (vy > 1200 * dens) buzz(true); y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
+                    if (vy >= 0 && y >= ground()) { if (vy > 1200 * dens) buzz(true); y = ground(); vy = 0f; js("land()"); idle(1800); if (!hopping) talk("drop", 0.6); hopping = false }
                 }
                 St.DRAG -> {}
                 St.PEEK -> {
-                    y = ground()
+                    settle()
                     if (until == 0L) {
                         x += dir * 72 * dens * dt
                         if ((dir < 0 && x <= targetX) || (dir > 0 && x >= targetX)) { x = targetX; until = now + 6000; js("set('idle', ${-dir})") }

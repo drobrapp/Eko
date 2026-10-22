@@ -2,6 +2,7 @@ package app.drobr.eko
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -22,6 +23,7 @@ class MainActivity : Activity() {
 
     private lateinit var status: TextView
     private lateinit var upd: TextView
+    private lateinit var kb: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +59,8 @@ class MainActivity : Activity() {
         root.addView(status)
         root.addView(button("Sacar a Eko a la pantalla", "#5FA88E") { bringOut() })
         root.addView(button("Guardar a Eko", "#D0795A") { putAway() })
+        kb = button("", "#9B85CC") { askAccess() }
+        root.addView(kb)
         upd = TextView(this).apply {
             textSize = 14f
             setTextColor(Color.parseColor("#9A8478"))
@@ -75,6 +79,7 @@ class MainActivity : Activity() {
             else -> "Eko está aquí dentro, esperando a salir."
         }
         upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
+        kb.text = if (EkoAccess.enabled(this)) "Se sube al teclado ✓" else "Que se suba al teclado"
         Updater.check(this) { msg ->
             runOnUiThread {
                 when (msg) {
@@ -100,6 +105,18 @@ class MainActivity : Activity() {
         }
         startForegroundService(Intent(this, EkoService::class.java))
         moveTaskToBack(true)
+    }
+
+    // Permiso de accesibilidad (opcional): solo para saber dónde está el teclado
+    private fun askAccess() {
+        if (EkoAccess.enabled(this)) { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return }
+        AlertDialog.Builder(this)
+            .setTitle("Que Eko se suba al teclado")
+            .setMessage("Para saber cuándo abres el teclado, Eko necesita el permiso de Accesibilidad. Solo mira dónde está el teclado: nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · subirse al teclado» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
+            .setPositiveButton("Ir a Accesibilidad") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            .setNeutralButton("Información de la app") { _, _ -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
+            .setNegativeButton("Ahora no", null)
+            .show()
     }
 
     private fun putAway() {

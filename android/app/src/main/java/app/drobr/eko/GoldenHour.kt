@@ -87,7 +87,7 @@ object GoldenHour {
         if (Build.VERSION.SDK_INT >= 33 && c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         val nm = c.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH, "Hora dorada", NotificationManager.IMPORTANCE_DEFAULT))
-        val open = PendingIntent.getActivity(c, 10, Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        val open = PendingIntent.getActivity(c, 10, Intent(c, HouseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         nm.notify(3, Notification.Builder(c, CH)
             .setSmallIcon(Icon.createWithResource(c, R.drawable.ic_eko))
             .setContentTitle("Eko · hora dorada")

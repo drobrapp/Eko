@@ -133,7 +133,7 @@ class EkoService : Service() {
     private fun goForeground() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("eko", "Eko en tu pantalla", NotificationManager.IMPORTANCE_LOW))
-        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val open = PendingIntent.getActivity(this, 0, Intent(this, HouseActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 1, Intent(this, EkoService::class.java).setAction("STOP"), PendingIntent.FLAG_IMMUTABLE)
         val icon = Icon.createWithResource(this, R.drawable.ic_eko)
         val n = Notification.Builder(this, "eko")
@@ -277,6 +277,7 @@ class EkoService : Service() {
     private fun card(color: String) = GradientDrawable().apply { cornerRadius = 18 * dens; setColor(Color.parseColor(color)); setStroke((1 * dens).toInt(), Color.parseColor("#E8D8C8")) }
 
     private fun say(text: String, ms: Long = 2600) {
+        if (web?.visibility == View.GONE) return     // está en su casa
         if (menu != null) return
         val b = bubble ?: TextView(this).also { t ->
             t.setTextColor(Color.parseColor("#3B2F2A"))
@@ -330,7 +331,7 @@ class EkoService : Service() {
         m.addView(cell(R.drawable.eko_acc_party, null, "Ropa") { handler.post { openWardrobe() } })
         if (Walks.has(this)) m.addView(cell(0, if (SystemClock.elapsedRealtime() < photoUntil) "🏁" else "📷", if (SystemClock.elapsedRealtime() < photoUntil) "Terminar" else "Paseo foto") { photoWalk() })
         m.addView(cell(R.drawable.eko_bed, null, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) })
-        m.addView(cell(R.drawable.ic_eko, null, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) })
+        m.addView(cell(R.drawable.ic_eko, null, "Su casa") { startActivity(Intent(this, HouseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) })
         m.addView(cell(R.drawable.eko_bye, null, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() })
         showMenu(m)
     }
@@ -545,6 +546,21 @@ class EkoService : Service() {
         if (now > nextChallenge && quiet()) { nextChallenge = now + kotlin.random.Random.nextLong(8, 13) * 60_000; talk("challenge") }
     }
     fun goldenSay() { handler.post { if (running && quiet()) talk("golden") } }
+
+    // ---------- Su casa (HouseActivity): mientras estás dentro, Eko está allí y no en tu pantalla ----------
+    fun homeVisit(home: Boolean) {
+        handler.post {
+            val v = if (home) View.GONE else View.VISIBLE
+            if (home) { closeMenu(); bubble?.visibility = View.GONE }
+            web?.visibility = v
+            if (!home) web?.evaluateJavascript("window.ekoLook && ekoLook.setMode('${accMode()}')", null)
+        }
+    }
+    fun houseGive(kind: String) {
+        handler.post {
+            when (kind) { "feed" -> give(h = 35f, l = 3f); "play" -> give(f = 30f, l = 4f, e = -3f); "pet" -> give(l = 4f) }
+        }
+    }
 
     // ---------- Álbum y diario ----------
     // Durante un rato, tocar a Eko abre algo (el álbum tras un paseo de fotos, el diario por la noche)

@@ -41,8 +41,8 @@ class MainActivity : Activity() {
             setPadding((28 * d).toInt(), (28 * d).toInt(), (28 * d).toInt(), (28 * d).toInt())
         }
         val title = TextView(this).apply {
-            text = "Eko"
-            textSize = 40f
+            text = "Ajustes de Eko"
+            textSize = 30f
             setTextColor(Color.parseColor("#5A463D"))
             gravity = Gravity.CENTER
         }

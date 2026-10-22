@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+  /* Casa de Eko en el móvil: su salón (art/casa-movil.webp, de Aitor) es el menú.
+     Todo se coloca en píxeles de la imagen (1536 × 1024) y la habitación entera se escala a la altura de la pantalla. */
+  :root { --ink: #5A463D; --ink2: #7A6458; --cream: #FFF4E8; --coral: #D0795A; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; background: #e9c9a2; overflow: hidden; font-family: system-ui, sans-serif; color: var(--ink); }
+  #view { position: absolute; inset: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  #view::-webkit-scrollbar { display: none; }
+  #wrap { position: relative; }
+  #room { position: absolute; left: 0; top: 0; width: 1536px; height: 1024px; transform-origin: 0 0; }
+  #room > * { position: absolute; }
+
+  /* Lo que se ve por la ventana (detrás de la habitación) */
+  #sky { left: 612px; top: 262px; width: 300px; height: 272px; overflow: hidden; background: linear-gradient(#8fc2ec, #d3ebf8); transition: background 3s; }
+  #sky img { position: absolute; pointer-events: none; }
+  #sun { left: 64%; top: 8%; width: 26%; filter: drop-shadow(0 0 10px rgba(255,214,120,.6)); animation: bob 60s ease-in-out infinite; }
+  #moon { left: 62%; top: 10%; width: 22%; display: none; filter: drop-shadow(0 0 8px rgba(255,250,220,.5)); }
+  .cloud { width: 42%; opacity: .9; animation: drift 40s ease-in-out infinite alternate; }
+  #far, #mid { position: absolute; left: -6%; right: -6%; bottom: 0; background-repeat: repeat-x; background-position: center bottom; background-size: auto 100%; }
+  #far { bottom: 16%; height: 44%; background-image: url(art/valley/hills-far.webp); opacity: .85; }
+  #mid { height: 40%; background-image: url(art/valley/hills-mid.webp); }
+  #stars { position: absolute; inset: 0; display: none; background-image: radial-gradient(1.5px 1.5px at 20% 20%, #fff, transparent), radial-gradient(1.5px 1.5px at 70% 35%, #fff, transparent), radial-gradient(1px 1px at 40% 12%, #fff, transparent), radial-gradient(1px 1px at 85% 15%, #fff, transparent), radial-gradient(1.5px 1.5px at 30% 42%, #fff, transparent); }
+  body.night #stars, body.night #moon { display: block; }
+  body.night #sun, body.night .cloud { display: none; }
+  body.night #far, body.night #mid { filter: brightness(.45) saturate(.7); }
+  body.gold #far, body.gold #mid { filter: sepia(.35) saturate(1.2); }
+  @keyframes bob { 50% { transform: translate(-6px, 6px); } }
+  @keyframes drift { to { transform: translateX(28px); } }
+
+  /* Tu última foto, colgada en el cuadro de la pared (en perspectiva) */
+  #photo { left: 0; top: 0; width: 100px; height: 100px; transform-origin: 0 0; background: #F3DCC6 center / cover no-repeat; }
+  #bg { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; }
+
+  /* Cosas encima de los muebles */
+  .find { font-size: 34px; line-height: 1; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgba(90,70,61,.3)); pointer-events: none; }
+  #libreta { left: 788px; top: 548px; width: 96px; transform: rotate(-8deg); filter: drop-shadow(0 4px 4px rgba(70,45,25,.25)); pointer-events: none; }
+
+  /* Luz: de noche se oscurece y las lámparas iluminan */
+  #night { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; mix-blend-mode: multiply; background: rgba(40,48,96,.6); opacity: 0; transition: opacity 2s; }
+  #glow { left: 0; top: 0; width: 1536px; height: 1024px; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity .6s; }
+  #glow i { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(255,205,130,.75), rgba(255,190,110,.25) 55%, transparent); }
+
+  /* Zonas que se tocan */
+  .spot { position: absolute; border-radius: 18px; }
+  .spot:active { background: rgba(255,244,232,.18); }
+
+  /* Eko: el mismo Eko de la pantalla, dentro de un marco */
+  #eko { left: 0; top: 0; width: 160px; height: 250px; border: 0; background: transparent; pointer-events: none; transform-origin: 50% 100%; }
+  #ekoHit { width: 150px; height: 210px; border-radius: 40%; }
+  #bub { max-width: 360px; padding: 12px 18px; border-radius: 22px; background: #fffaf3; color: var(--ink); font-size: 26px; line-height: 1.2;
+         box-shadow: 0 4px 12px rgba(90,70,61,.2); transform: translate(-50%, -100%); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: normal; text-align: center; }
+  #bub.on { opacity: 1; }
+
+  /* Paneles (menú de Eko, ropa) */
+  .panel { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--cream); border-radius: 22px; padding: 12px; box-shadow: 0 8px 24px rgba(90,70,61,.3); display: none; z-index: 20; max-width: 94vw; }
+  .panel.on { display: block; }
+  .panel .grid { display: grid; grid-template-columns: repeat(4, 74px); gap: 6px; }
+  .panel button { border: 0; background: transparent; border-radius: 14px; padding: 6px 2px; font-size: 12px; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .panel button.cur { background: #F3DCC6; }
+  .panel button span { font-size: 30px; line-height: 44px; height: 44px; }
+  .panel button img { width: 44px; height: 44px; object-fit: contain; }
+  .panel h3 { margin: 2px 6px 8px; font-size: 15px; font-weight: 600; }
+  #hint { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: rgba(255,244,232,.92); color: var(--ink); border-radius: 16px; padding: 8px 14px; font-size: 14px; z-index: 10; transition: opacity .8s; pointer-events: none; text-align: center; }
+</style>
+</head><body>
+<div id="view"><div id="wrap"><div id="room">
+  <div id="sky">
+    <div id="stars"></div>
+    <img id="sun" src="art/valley/sun.webp" alt=""><img id="moon" src="art/valley/moon.webp" alt="">
+    <img class="cloud" src="art/valley/cloud.webp" style="left:2%;top:12%" alt="">
+    <img class="cloud" src="art/valley/cloud.webp" style="left:40%;top:30%;width:30%;animation-duration:55s" alt="">
+    <div id="far"></div><div id="mid"></div>
+  </div>
+  <div id="photo"></div>
+  <img id="bg" src="art/casa-movil.webp" alt="">
+  <img id="libreta" src="art/movil-portada.webp" alt="">
+  <div id="finds"></div>
+  <div id="spots"></div>
+  <iframe id="eko" src="overlay.html?house" title="Eko"></iframe>
+  <div id="ekoHit" class="spot"></div>
+  <div id="night"></div>
+  <div id="glow"><i id="g1" style="left:768px;top:170px;width:900px;height:900px"></i><i id="g2" style="left:1440px;top:520px;width:520px;height:520px"></i></div>
+  <div id="bub"></div>
+</div></div></div>
+<div id="hint">Esta es mi casa. Toca las cosas 🙂</div>
+<div id="menu" class="panel"><div class="grid"></div></div>
+<div id="ward" class="panel"><h3>¿Qué me pongo?</h3><div class="grid"></div></div>
+<script>
+(() => {
+  "use strict";
+  const H = window.House;               // puente con Android
+  const $ = (id) => document.getElementById(id);
+  const view = $("view"), wrap = $("wrap"), room = $("room"), frame = $("eko"), hit = $("ekoHit"), bub = $("bub");
+  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
+
+  // ---------- Escala: la habitación ocupa todo el alto y se recorre deslizando ----------
+  let K = 1;
+  function fit() {
+    K = Math.max(innerHeight / 1024, innerWidth / 1536);
+    room.style.transform = `scale(${K})`;
+    wrap.style.width = 1536 * K + "px"; wrap.style.height = 1024 * K + "px";
+  }
+  addEventListener("resize", fit); fit();
+
+  // ---------- Eko dentro de casa (overlay.html en un marco; se le habla con postMessage) ----------
+  const S = 1.35;                        // tamaño de Eko en la habitación
+  const FLOOR = 868;                     // donde pisa
+  const E = { x: 640, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null };
+  const send = (fn, ...args) => frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
+  const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
+  function place() {
+    const y = E.y - E.hop;
+    frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px";
+    frame.style.transform = `scale(${S})`;
+    hit.style.left = E.x - 75 + "px"; hit.style.top = y - 220 + "px";
+    bub.style.left = Math.min(1536 - 190, Math.max(190, E.x)) + "px"; bub.style.top = y - 300 + "px";
+  }
+  function walkTo(x, then) {
+    if (E.mode === "sleep") { wake(); setTimeout(() => walkTo(x, then), 1700); return; }
+    if (jump || E.mode === "busy") { setTimeout(() => walkTo(x, then), 400); return; }
+    E.target = Math.max(130, Math.min(1420, x)); E.onArrive = then || null;
+    E.mode = "walk"; E.dir = E.target > E.x ? 1 : -1; send("set", "walk", E.dir);
+  }
+  function idle(ms) { E.mode = "idle"; E.target = null; E.next = performance.now() + (ms || 4000 + Math.random() * 6000); send("set", "idle", E.dir); }
+
+  // Saltitos que pide el propio Eko (trucos) y subir/bajar del sillón
+  let jump = null;
+  function hopTo(x, y, then) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
+  window.house = {
+    hop(v) { E.vy = Math.min(1100, v * 1.2); },
+    hold(ms) { E.hold = performance.now() + ms; },
+    say(t, ms) { say(t, ms); },
+  };
+
+  let bubT = 0;
+  function say(t, ms = 2800) { bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
+
+  // ---------- Siesta en el sillón ----------
+  const SEAT = { x: 1195, y: 650 };
+  function nap() {
+    walkTo(SEAT.x - 20, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); }));
+  }
+  function wake() {
+    if (E.mode !== "sleep") return;
+    send("wake"); E.mode = "busy";
+    setTimeout(() => hopTo(SEAT.x - 60, FLOOR, () => idle(2500)), 900);
+  }
+
+  // ---------- Bucle ----------
+  let last = performance.now();
+  function frameLoop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (jump) {
+      jump.t = Math.min(1, jump.t + dt / 0.55);
+      const k = jump.t;
+      E.x = jump.x0 + (jump.x1 - jump.x0) * k;
+      E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 110;
+      if (k >= 1) { const t = jump.then; jump = null; send("land"); t && t(); }
+    } else if (E.mode === "walk" && now > E.hold) {
+      const step = 150 * dt * E.dir;
+      if (Math.abs(E.target - E.x) <= Math.abs(step)) {
+        E.x = E.target; const t = E.onArrive; E.onArrive = null; idle(); t && t();
+      } else { E.x += step; send("v", 150 * E.dir, 0); }
+    } else if (E.mode === "idle" && now > E.next && now > E.hold && !panelOpen()) {
+      roam();
+    }
+    // saltitos de los trucos
+    if (E.vy || E.hop) {
+      E.hop += E.vy * dt; E.vy -= 2600 * dt;
+      if (E.hop <= 0) { E.hop = 0; if (E.vy < -50) send("land"); E.vy = 0; }
+    }
+    place();
+    requestAnimationFrame(frameLoop);
+  }
+
+  // Lo que hace solo: pasear, asomarse a la ventana, y de noche irse a dormir al sillón
+  function isNight() { const h = new Date().getHours(); return h >= 23 || h < 7; }
+  function roam() {
+    if (isNight() && Math.random() < 0.6) { nap(); return; }
+    const r = Math.random();
+    if (r < 0.15) walkTo(760, () => { say(pick(WINDOW_LINES), 2600); idle(); });
+    else if (r < 0.22) nap();
+    else walkTo(150 + Math.random() * 1250);
+  }
+
+  // ---------- Hora del día: cielo, noche y lámparas ----------
+  const SUNSET = H && H.sunsetMin ? H.sunsetMin() : -1;   // minutos del día (si eligió ciudad en «Hora dorada»)
+  function sky() {
+    const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+    const set = SUNSET > 0 ? SUNSET : 19 * 60 + 30;
+    const night = m >= set + 40 || m < 7 * 60 + 30;
+    const gold = !night && m >= set - 70;
+    document.body.classList.toggle("night", night);
+    document.body.classList.toggle("gold", gold);
+    $("sky").style.background = night ? "linear-gradient(#1d2650, #3b4479)" : gold ? "linear-gradient(#f2b27c, #fbd9a6)" : "linear-gradient(#8fc2ec, #d3ebf8)";
+    $("night").style.opacity = night ? 1 : gold ? .25 : 0;
+    // luces: de noche empiezan encendidas; si las tocas, se recuerda hasta el día siguiente
+    const day = d.toDateString();
+    const saved = ls.get("eko-house-lights", "");
+    const on = saved.startsWith(day) ? saved.endsWith(":1") : night;
+    $("glow").style.opacity = on ? 1 : 0;
+    $("night").style.background = on ? "rgba(70,62,96,.5)" : "rgba(40,48,96,.6)";
+    return on;
+  }
+  function toggleLights() {
+    const on = $("glow").style.opacity !== "1";
+    ls.set("eko-house-lights", new Date().toDateString() + (on ? ":1" : ":0"));
+    sky();
+    return on;
+  }
+
+  // ---------- Tu última foto en el cuadro (perspectiva exacta del hueco de la pared) ----------
+  function adj(m) { return [m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4], m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5], m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]]; }
+  function mul(a, b) { const c = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { let s = 0; for (let k = 0; k < 3; k++) s += a[3*i+k] * b[3*k+j]; c[3*i+j] = s; } return c; }
+  function mulv(m, v) { return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]]; }
+  function basis(p) { const m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1]; const v = mulv(adj(m), [p[6], p[7], 1]); return mul(m, [v[0],0,0, 0,v[1],0, 0,0,v[2]]); }
+  function warp(el, w, h, quad) {
+    const t = mul(basis(quad), adj(basis([0, 0, w, 0, 0, h, w, h])));
+    for (let i = 0; i < 9; i++) t[i] /= t[8];
+    el.style.transform = `matrix3d(${t[0]},${t[3]},0,${t[6]},${t[1]},${t[4]},0,${t[7]},0,0,1,0,${t[2]},${t[5]},0,${t[8]})`;
+  }
+  // esquinas del hueco (arriba izq., arriba der., abajo izq., abajo der.), con 3 px de margen bajo el marco
+  warp($("photo"), 100, 100, [1435, 319, 1471, 314, 1435, 392, 1471, 390]);
+  function photo() {
+    const u = H && H.lastPhoto ? H.lastPhoto() : "";
+    $("photo").style.backgroundImage = u ? `url("${u}")` : "none";
+  }
+
+  // ---------- Lo que ha encontrado paseando, en las baldas ----------
+  const SHELF = [[1084, 292], [1118, 292], [1152, 292], [1206, 402], [1240, 402], [1274, 402], [1306, 402]];
+  function finds() {
+    const list = JSON.parse(H && H.finds ? H.finds() : "[]");
+    $("finds").innerHTML = list.slice(-SHELF.length).map((e, i) => `<span class="find" style="position:absolute;left:${SHELF[i][0]}px;top:${SHELF[i][1] - 34}px">${e}</span>`).join("");
+  }
+
+  // ---------- Las cosas de la casa (el menú viviente) ----------
+  const pick = (l) => l[Math.floor(Math.random() * l.length)];
+  const WINDOW_LINES = ["¡Qué día hace!", "Mira, ¡las colinas!", "Me encanta esta ventana", "¿Salimos luego?"];
+  const SPOTS = [
+    { id: "door", r: [31, 292, 169, 737], at: 230, say: ["¡Me voy contigo a la pantalla!", "¡A la calle! Bueno, a tu pantalla"] },
+    { id: "wardrobe", r: [215, 276, 438, 492], at: 330, say: ["¿Qué me pongo hoy?", "Vamos a ver mi ropa"] },
+    { id: "settings", r: [253, 515, 492, 694], at: 370, say: ["En estos cajones guardo mis cosas", "Aquí están mis ajustes"] },
+    { id: "walks", r: [584, 230, 945, 561], at: 760, say: ["Mira nuestros paseos", "¿Cuánto hemos andado?"] },
+    { id: "album", r: [770, 520, 900, 670], at: 830, say: ["¡Mi álbum! ¿Lo vemos?", "Vamos a ver las fotos"] },
+    { id: "diary", r: [1085, 350, 1185, 412], at: 1130, say: ["Mi diario… ¿me cuentas algo?", "Vamos a escribir"] },
+    { id: "finds", r: [1060, 200, 1330, 350], at: 1190, say: ["Mira mi colección", "Todo lo que hemos encontrado"] },
+    { id: "photo", r: [1405, 230, 1505, 420], at: 1360, say: ["Mi foto favorita", "Esa la colgué yo"] },
+    { id: "nap", r: [1026, 461, 1390, 737], at: 1180 },
+    { id: "lamp", r: [1390, 479, 1502, 602], at: 1380 },
+    { id: "lamp", r: [688, 23, 845, 192], at: 760 },
+  ];
+  $("spots").innerHTML = SPOTS.map((s, i) => `<div class="spot" data-i="${i}" style="left:${s.r[0]}px;top:${s.r[1]}px;width:${s.r[2]-s.r[0]}px;height:${s.r[3]-s.r[1]}px"></div>`).join("");
+  $("spots").addEventListener("click", (e) => {
+    const el = e.target.closest(".spot"); if (!el) return;
+    closePanels(); hideHint();
+    const s = SPOTS[+el.dataset.i];
+    if (s.id === "lamp") { const on = toggleLights(); say(on ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
+    if (s.id === "nap") { if (E.mode === "sleep") wake(); else { say("Una siestecita…", 1800); nap(); } return; }
+    if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 500); }); return; }
+    walkTo(s.at, () => {
+      say(pick(s.say), 1800);
+      send("act", "tada");
+      setTimeout(() => H && H.open(s.id), 900);
+    });
+  });
+
+  // ---------- Tocar a Eko: su menú ----------
+  const MENU = [
+    ["🍪", "Galleta", () => { send("eat"); H && H.give("feed"); }],
+    ["⚽", "Jugar", () => { send("spin"); H && H.give("play"); }],
+    ["👒", "Ropa", () => openWard()],
+    ["💤", "Siesta", () => nap()],
+  ];
+  $("menu").querySelector(".grid").innerHTML = MENU.map((m, i) => `<button data-i="${i}"><span>${m[0]}</span>${m[1]}</button>`).join("");
+  $("menu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); MENU[+b.dataset.i][2](); });
+  hit.addEventListener("click", () => {
+    hideHint();
+    if (E.mode === "sleep") { wake(); say("¡No estaba dormido!", 2000); return; }
+    send("tap"); H && H.give("pet");
+    E.hold = performance.now() + 2500;
+    const m = $("menu"); const on = !m.classList.contains("on"); closePanels(); if (on) m.classList.add("on");
+  });
+
+  // ---------- Ropa ----------
+  const WARD = [["auto", "📅", "Según fecha"], ["witch", "art/hat-witch.webp", "Bruja"], ["pumpkin", "art/hat-pumpkin.webp", "Calabaza"], ["vampire", "art/cape-vampire.webp", "Vampiro"],
+    ["ghost", "👻", "Fantasma"], ["santa", "art/hat-santa.webp", "Papá Noel"], ["reindeer", "art/hat-antler.webp", "Reno"], ["elf", "art/hat-elf.webp", "Elfo"],
+    ["scarf", "art/scarf.webp", "Bufanda"], ["party", "art/hat-party.webp", "Fiesta"], ["crown", "art/hat-crown.webp", "Corona"], ["none", "✖", "Nada"]];
+  function openWard() {
+    const cur = H && H.accMode ? H.accMode() : "auto";
+    $("ward").querySelector(".grid").innerHTML = WARD.map((w) => `<button data-id="${w[0]}" class="${w[0] === cur ? "cur" : ""}">${w[1].startsWith("art/") ? `<img src="${w[1]}" alt="">` : `<span>${w[1]}</span>`}${w[2]}</button>`).join("");
+    closePanels(); $("ward").classList.add("on");
+  }
+  $("ward").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); H && H.setAcc(b.dataset.id); look(b.dataset.id); });
+
+  function panelOpen() { return document.querySelector(".panel.on") !== null; }
+  function closePanels() { document.querySelectorAll(".panel.on").forEach((p) => p.classList.remove("on")); }
+  view.addEventListener("click", (e) => { if (!e.target.closest(".spot") && !e.target.closest(".panel")) closePanels(); });
+  function hideHint() { $("hint").style.opacity = 0; }
+  setTimeout(hideHint, 6000);
+
+  // ---------- Arranque ----------
+  frame.addEventListener("load", () => { send("set", "idle", 1); });
+  function refresh() { sky(); photo(); finds(); }
+  window.houseRefresh = refresh;
+  refresh(); setInterval(sky, 60000);
+  place(); requestAnimationFrame(frameLoop);
+  // empieza mirando a Eko
+  view.scrollLeft = (E.x * K) - innerWidth / 2;
+  // charla de vez en cuando
+  setInterval(() => { if (E.mode !== "sleep" && !panelOpen()) send("chatter"); }, 150000);
+  if (isNight()) setTimeout(nap, 1500);
+})();
+</script>
+</body></html>

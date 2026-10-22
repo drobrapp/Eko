@@ -64,6 +64,11 @@ val pcAssets = tasks.register<Copy>("pcAssets") {
         include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp")
         into("eko/art")
     }
+    // Lo que se ve por la ventana de su casa (cielo del valle del PC)
+    from(rootProject.file("../src/art/valley")) {
+        include("hills-far.webp", "hills-mid.webp", "cloud.webp", "sun.webp", "moon.webp")
+        into("eko/art/valley")
+    }
     into(layout.buildDirectory.get().asFile.resolve("pcAssets"))
 }
 tasks.named("preBuild") { dependsOn(pcAssets, pcRes) }

@@ -72,7 +72,7 @@ object EkoNotes {
         // Al tocarla, Eko sale a la pantalla y te saluda (si aún no tiene permiso para salir, se abre su casa)
         val open = if (Settings.canDrawOverlays(c))
             PendingIntent.getForegroundService(c, 8, Intent(c, EkoService::class.java).setAction("NOTE"), PendingIntent.FLAG_IMMUTABLE)
-        else PendingIntent.getActivity(c, 8, Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        else PendingIntent.getActivity(c, 8, Intent(c, HouseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         val n = Notification.Builder(c, CH)
             .setSmallIcon(Icon.createWithResource(c, R.drawable.ic_eko))
             .setContentTitle("Eko")

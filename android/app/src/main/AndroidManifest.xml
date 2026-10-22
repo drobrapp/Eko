@@ -35,14 +35,19 @@
         android:supportsRtl="true">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".HouseActivity"
             android:exported="true"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Ajustes (se abre desde los cajones de la cómoda) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
 
         <!-- Álbum: también aparece al compartir fotos («Compartir → Eko») -->
         <activity

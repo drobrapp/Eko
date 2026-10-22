@@ -121,6 +121,7 @@ class InstallReceiver : BroadcastReceiver() {
 class UpdatedReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        EkoNotes.schedule(ctx, force = true)
         val out = ctx.getSharedPreferences("eko", Context.MODE_PRIVATE).getBoolean("out", false)
         if (out && Settings.canDrawOverlays(ctx)) {
             try { ctx.startForegroundService(Intent(ctx, EkoService::class.java)) } catch (_: Exception) {}

@@ -125,6 +125,8 @@ class EkoService : Service() {
         goForeground()
         if (web == null) addOverlay()
         running = true; instance = this
+        EkoNotes.schedule(this); EkoNotes.seen(this)
+        if (intent?.action == "NOTE") handler.postDelayed({ talk("noteHi") }, 1500)
         return START_STICKY
     }
 
@@ -393,6 +395,7 @@ class EkoService : Service() {
                 Intent.ACTION_SCREEN_ON -> pause(false)
                 android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> js("lowPower(${powerSave()})")
                 Intent.ACTION_USER_PRESENT -> {
+                    EkoNotes.seen(this@EkoService)
                     pause(false)
                     startSensors()
                     if (st == St.SLEEP) { awakeUntil = now + 3 * 60_000; js("wake()"); idle(2000) }
@@ -627,6 +630,7 @@ class EkoService : Service() {
             MotionEvent.ACTION_DOWN -> {
                 downX = e.rawX; downY = e.rawY; startX = x; startY = y
                 awakeUntil = SystemClock.uptimeMillis() + 3 * 60_000
+                EkoNotes.seen(this)
                 dragging = false; longDone = false
                 handler.postDelayed(longPress, 650)
             }

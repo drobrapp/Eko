@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var upd: TextView
     private lateinit var kb: Button
+    private lateinit var notes: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +62,10 @@ class MainActivity : Activity() {
         root.addView(button("Guardar a Eko", "#D0795A") { putAway() })
         kb = button("", "#9B85CC") { askAccess() }
         root.addView(kb)
+        notes = button("", "#6F94C2") { EkoNotes.setEnabled(this, !EkoNotes.enabled(this)); showNotes() }
+        root.addView(notes)
+        // Mantener pulsado: manda una de prueba ahora (sin esperar ni mirar las reglas)
+        notes.setOnLongClickListener { EkoNotes.fire(this, test = true); Toast.makeText(this, "Eko te ha escrito", Toast.LENGTH_SHORT).show(); true }
         upd = TextView(this).apply {
             textSize = 14f
             setTextColor(Color.parseColor("#9A8478"))
@@ -80,6 +85,8 @@ class MainActivity : Activity() {
         }
         upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
         kb.text = if (EkoAccess.enabled(this)) "Teclado y toques ✓" else "Teclado y toques"
+        showNotes()
+        EkoNotes.seen(this); EkoNotes.schedule(this)
         Updater.check(this) { msg ->
             runOnUiThread {
                 when (msg) {
@@ -106,6 +113,8 @@ class MainActivity : Activity() {
         startForegroundService(Intent(this, EkoService::class.java))
         moveTaskToBack(true)
     }
+
+    private fun showNotes() { notes.text = if (EkoNotes.enabled(this)) "Eko te escribe ✓" else "Eko te escribe: no" }
 
     // Permiso de accesibilidad (opcional): solo para saber dónde está el teclado
     private fun askAccess() {

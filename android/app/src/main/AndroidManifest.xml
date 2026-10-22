@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:label="Eko"
@@ -35,6 +36,11 @@
                 android:value="Mascota virtual que se muestra sobre otras apps mientras el usuario lo elige" />
         </service>
         <receiver android:name=".InstallReceiver" android:exported="false" />
+        <receiver android:name=".NoteReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".EkoAccess"
             android:exported="true"

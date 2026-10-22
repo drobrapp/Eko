@@ -3,6 +3,21 @@
 (() => {
   "use strict";
   const T = {
+    stepsGoal: ["¡Meta cumplida: {app} pasos! Qué piernas tenemos", "¡Ya llevamos {app} pasos! Me he ganado un premio, ¿no?", "{app} pasos… ¡meta conseguida!", "¡Toma ya, {app} pasos! Meta del día hecha"],
+    goalStreak: ["¡Meta cumplida! Llevamos {app} días seguidos", "¡{app} días seguidos cumpliendo! Somos imparables", "Racha de {app} días. ¡No la rompamos!", "¡Otro día más! Ya van {app}"],
+    stepsHalf: ["¡Ya vamos por la mitad! {app} pasos", "Medio camino hecho: {app} pasos", "{app} pasos. ¡Vamos, que se puede!"],
+    stepsBeyond: ["¡{app} pasos! Esto ya es de campeones", "Hemos superado la meta de largo: {app} pasos", "¡{app}! Mis piernecitas no se lo creen"],
+    find: ["¡Mira lo que he encontrado: {app}!", "Por el camino me he encontrado {app}. Lo guardo en mi colección", "¡Ooh! {app}. Para mi colección", "Me lo quedo: {app}"],
+    findMany: ["¡Cuántas cosas he encontrado! {app}", "Paseo productivo, he encontrado {app}"],
+    longWalk: ["¡Qué paseo más largo! Estoy cansado… pero feliz", "Uf, menuda caminata. Me voy a echar una siestecita", "Me duelen los piececitos. ¡Ha merecido la pena!"],
+    streakLost: ["Ayer no salimos… Adiós a nuestra racha de {app} días. Bueno, ¡empezamos otra!", "Se nos rompió la racha de {app} días. Snif. Hoy volvemos a la carga", "Racha de {app} días… perdida. Yo ya la echo de menos"],
+    lazy: ["Llevamos dos días casi sin salir. ¿Hoy damos una vuelta?", "Me estoy aburriendo de mirar la pared… ¿salimos hoy?", "¿Y si hoy salimos aunque sea un ratito?"],
+    sedentary: ["Llevamos mucho rato quietos. ¿Damos una vuelta?", "¿Un paseo corto? Aunque sea a por agua", "Mis piernas se están durmiendo. ¿Y las tuyas?", "Cinco minutos andando y volvemos, ¿trato?"],
+    photoWalkStart: ["¡Paseo de fotos! Te iré poniendo retos", "¡Vamos a hacer fotos! Yo te digo qué buscar", "Modo cazador de fotos: ¡activado!"],
+    photoWalkEnd: ["Fin del paseo de fotos. ¿Has cazado alguna buena?", "¡Qué buen paseo de fotos! Me lo he pasado genial", "Paseo terminado. Ya me enseñarás las fotos"],
+    challenge: ["Reto: algo rojo", "Reto: una sombra curiosa", "Reto: un reflejo", "Reto: algo redondo", "Reto: una textura bonita", "Reto: algo que parezca una cara", "Reto: líneas que lleven la mirada", "Reto: algo muy pequeño, de cerca", "Reto: una ventana", "Reto: algo amarillo", "Reto: una escalera", "Reto: un contraluz", "Reto: algo que se mueva", "Reto: una puerta bonita", "Reto: el cielo de ahora mismo", "Reto: una planta en un sitio raro", "Reto: algo simétrico", "Reto: tres cosas iguales", "Reto: un detalle que nadie mira", "Reto: una letra escondida en la calle", "Reto: algo viejo y bonito", "Reto: un color que combine con otro", "Reto: un charco o algo que brille", "Reto: una foto desde muy abajo", "Reto: una foto desde muy arriba", "Reto: algo azul", "Reto: un gato. Si lo encuentras, me lo presentas", "Reto: algo que te haga gracia"],
+    golden: ["¡Se acerca la hora dorada! ¿Salimos a hacer fotos?", "La luz se va a poner preciosa dentro de nada", "Hora dorada a la vista. ¡Coge la cámara!"],
+    walking: ["¡Vamos de paseo!", "¿A dónde vamos? Yo voy contigo", "Un, dos, un, dos…", "Me encanta pasear contigo", "¡Qué bien se está andando!", "No corras, que tengo las piernas cortas"],
     costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
     noteHi: ["¡Me has leído!", "¡Has venido!", "Sabía que vendrías", "¡Hola, hola!"],
     // Apps («{app}» = su nombre). Solo sabe qué app es, nunca lo que hay dentro. Se mezclan con las de cada app concreta (APP) y las de la hora (appTime)
@@ -104,7 +119,9 @@
     lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",
     app_camera: "emocionado", app_gallery: "curioso", app_edit: "orgulloso", app_music: "emocionado", app_game: "emocionado",
     app_shop: "picaro", app_settings: "ansioso", app_chat: "timido", scroll: "esperanzado", silent: "timido",
-    netLost: "asustado", netBack: "contento", batteryFull: "orgulloso", lateNight: "cansado",
+    netLost: "asustado", netBack: "contento", batteryFull: "orgulloso", lateNight: "cansado", stepsGoal: "orgulloso", walking: "emocionado",
+    goalStreak: "orgulloso", stepsHalf: "contento", stepsBeyond: "emocionado", find: "sorprendido", findMany: "emocionado", longWalk: "cansado",
+    streakLost: "triste", lazy: "esperanzado", sedentary: "esperanzado", photoWalkStart: "emocionado", photoWalkEnd: "contento", challenge: "curioso", golden: "emocionado",
   };
   // Frases para apps concretas (se mezclan con las de su tipo)
   const APP = {

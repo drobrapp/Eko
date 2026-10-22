@@ -328,6 +328,7 @@ class EkoService : Service() {
         m.addView(cell(R.drawable.eko_cookie, null, "Galleta") { feed() })
         m.addView(cell(R.drawable.eko_ball, null, "Jugar") { play() })
         m.addView(cell(R.drawable.eko_acc_party, null, "Ropa") { handler.post { openWardrobe() } })
+        if (Walks.has(this)) m.addView(cell(0, if (SystemClock.elapsedRealtime() < photoUntil) "🏁" else "📷", if (SystemClock.elapsedRealtime() < photoUntil) "Terminar" else "Paseo foto") { photoWalk() })
         m.addView(cell(R.drawable.eko_bed, null, "Dormir") { talk("sleep"); handler.postDelayed({ sleep() }, 1200) })
         m.addView(cell(R.drawable.ic_eko, null, "Su casa") { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); idle(2000) })
         m.addView(cell(R.drawable.eko_bye, null, "Guardar") { prefs().edit().putBoolean("out", false).apply(); stopSelf() })
@@ -339,7 +340,7 @@ class EkoService : Service() {
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding((6 * dens).toInt(), (2 * dens).toInt(), (6 * dens).toInt(), (2 * dens).toInt())
+            setPadding((4 * dens).toInt(), (2 * dens).toInt(), (4 * dens).toInt(), (2 * dens).toInt())
             if (on) background = GradientDrawable().apply { cornerRadius = 12 * dens; setColor(Color.parseColor("#F3DCC6")) }
             setOnClickListener { closeMenu(); action() }
         }
@@ -487,8 +488,63 @@ class EkoService : Service() {
     }
     private fun startSensors() {
         sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensors.registerListener(motion, it, SensorManager.SENSOR_DELAY_UI) }
+        walks.start()
     }
-    private fun stopSensors() { sensors.unregisterListener(motion) }
+    private fun stopSensors() { sensors.unregisterListener(motion); walks.stop() }
+    fun walksOn() { walks.start() }
+
+    // Paseos: metas, racha, cosas encontradas, vuelta de un paseo largo… (si llegan varias a la vez, van seguidas)
+    private var walkQ = 0L
+    private fun fmtN(n: Int) = String.format(java.util.Locale("es", "ES"), "%,d", n)
+    private val walks by lazy {
+        Walks(this) { ev, n, s ->
+            val at = maxOf(SystemClock.uptimeMillis() + 1200, walkQ); walkQ = at + 3800
+            handler.postAtTime({
+                when (ev) {
+                    "half" -> talkArg("stepsHalf", fmtN(n))
+                    "goal" -> {
+                        give(f = 15f, l = 10f, e = 10f); js("act('tada')")
+                        val k = Walks.streak(this)
+                        if (k >= 2) talkArg("goalStreak", k.toString()) else talkArg("stepsGoal", fmtN(n))
+                    }
+                    "beyond" -> { give(f = 10f, l = 5f); js("dance(5)"); idle(5000); talkArg("stepsBeyond", fmtN(n)) }
+                    "find" -> { js("act('tada')"); talkArg("find", s) }
+                    "findMany" -> { js("act('tada')"); talkArg("findMany", "$n: $s") }
+                    "longWalk" -> { give(f = 10f, l = 10f); talk("longWalk"); handler.postDelayed({ if (quiet()) sleep() }, 4500) }
+                    "streakLost" -> talkArg("streakLost", n.toString())
+                    "lazy" -> talk("lazy")
+                    "walking" -> if (quiet()) talk("walking")
+                }
+            }, at)
+        }
+    }
+
+    // «¿Damos una vuelta?»: 3 horas de día sin pasos (una vez cada 3 horas)
+    private var sedSaid = 0L
+    private fun checkSedentary() {
+        if (!Walks.allowed(this) || !quiet()) return
+        val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); if (h < 10 || h >= 21) return
+        val now = System.currentTimeMillis(); val last = Walks.lastStepAt(this)
+        if (last == 0L || now - last < 3 * 3600_000L || now - sedSaid < 3 * 3600_000L) return
+        sedSaid = now; talk("sedentary")
+    }
+
+    // Paseo fotográfico: 1 hora con retos de foto cada 8–12 minutos
+    private var photoUntil = 0L
+    private var nextChallenge = 0L
+    private fun photoWalk() {
+        val now = SystemClock.elapsedRealtime()   // sigue contando con la pantalla apagada
+        if (now < photoUntil) { photoUntil = 0L; talk("photoWalkEnd"); return }
+        photoUntil = now + 60 * 60_000L; nextChallenge = now + 4000
+        js("act('tada')"); talk("photoWalkStart")
+    }
+    private fun checkPhotoWalk() {
+        if (photoUntil == 0L) return
+        val now = SystemClock.elapsedRealtime()
+        if (now > photoUntil) { photoUntil = 0L; if (quiet()) talk("photoWalkEnd"); return }
+        if (now > nextChallenge && quiet()) { nextChallenge = now + kotlin.random.Random.nextLong(8, 13) * 60_000; talk("challenge") }
+    }
+    fun goldenSay() { handler.post { if (running && quiet()) talk("golden") } }
     private fun dizzy() {
         if (st == St.DRAG || st == St.FALL) return
         if (st == St.SLEEP) js("wake()")
@@ -649,7 +705,8 @@ class EkoService : Service() {
             if ((st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE && now > nextChat) {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
-            if (now > nextSense) { nextSense = now + 30_000; apps.tick() }
+            if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary() }
+            checkPhotoWalk()
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
             last = now

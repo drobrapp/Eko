@@ -66,7 +66,8 @@ object EkoNotes {
         }
         if (Build.VERSION.SDK_INT >= 33 && c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
 
-        val text = pickText(cal, away, p.getFloat("hunger", 80f), p.getString("lastNote", "") ?: "")
+        val text = pickText(cal, away, p.getFloat("hunger", 80f), p.getString("lastNote", "") ?: "", Walks.todaySteps(c),
+            if (Walks.allowed(c)) Walks.week(c).sumOf { it.second } else 0)
         nm.createNotificationChannel(NotificationChannel(CH, "Eko te escribe", NotificationManager.IMPORTANCE_DEFAULT))
         // Al tocarla, Eko sale a la pantalla y te saluda (si aún no tiene permiso para salir, se abre su casa)
         val open = if (Settings.canDrawOverlays(c))
@@ -84,7 +85,7 @@ object EkoNotes {
         p.edit().putInt("noteCount", count + (if (test) 0 else 1)).putString("lastNote", text).apply()
     }
 
-    private fun pickText(cal: Calendar, away: Long, hunger: Float, last: String): String {
+    private fun pickText(cal: Calendar, away: Long, hunger: Float, last: String, steps: Int, week: Int): String {
         val h = cal.get(Calendar.HOUR_OF_DAY); val wd = cal.get(Calendar.DAY_OF_WEEK)
         val m = cal.get(Calendar.MONTH) + 1; val d = cal.get(Calendar.DAY_OF_MONTH)
         val l = mutableListOf<String>()
@@ -105,6 +106,15 @@ object EkoNotes {
             if (wd == Calendar.SATURDAY || wd == Calendar.SUNDAY) l += "¡Es fin de semana! ¿Hacemos algo?"
             if (wd == Calendar.FRIDAY && h >= 16) l += "¡Por fin viernes!"
             if (wd == Calendar.MONDAY && h < 13) l += "Lunes… vamos con calma, ¿vale?"
+            if (h >= 19 && steps >= 3000) {
+                val n = String.format(java.util.Locale("es", "ES"), "%,d", steps)
+                l += listOf("Hoy hemos dado $n pasos. ¡Buen paseo!", "$n pasos hoy… mis piernecitas están orgullosas")
+            }
+            // Domingo por la tarde: resumen de la semana de paseos (sale seguro si hay datos)
+            if (wd == Calendar.SUNDAY && h >= 18 && week >= 5000 && !last.contains("semana")) {
+                val n = String.format(java.util.Locale("es", "ES"), "%,d", week)
+                return listOf("Esta semana hemos andado $n pasos juntos. ¿Lo vemos en mi casa?", "Resumen de la semana: $n pasos. ¡Menudo equipo!").random()
+            }
         }
         val pool = l.filter { it != last }.ifEmpty { l }
         return pool[Random.nextInt(pool.size)]
@@ -113,6 +123,10 @@ object EkoNotes {
 
 class NoteReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        if (i.action == Intent.ACTION_BOOT_COMPLETED) EkoNotes.schedule(c, force = true) else EkoNotes.fire(c)
+        when (i.action) {
+            Intent.ACTION_BOOT_COMPLETED -> { EkoNotes.schedule(c, force = true); GoldenHour.schedule(c) }
+            "GOLDEN" -> GoldenHour.fire(c)
+            else -> EkoNotes.fire(c)
+        }
     }
 }

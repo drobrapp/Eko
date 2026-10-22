@@ -69,6 +69,11 @@ val pcAssets = tasks.register<Copy>("pcAssets") {
         include("hills-far.webp", "hills-mid.webp", "cloud.webp", "sun.webp", "moon.webp")
         into("eko/art/valley")
     }
+    // Iconos de arcilla del PC para la casa (barra de necesidades y botones)
+    from(rootProject.file("../src/art")) {
+        include("cat-care.webp", "cat-play.webp", "cat-wardrobe.webp", "ic-hand.webp", "ic-note.webp", "ic-settings.webp")
+        into("eko/art/ui")
+    }
     into(layout.buildDirectory.get().asFile.resolve("pcAssets"))
 }
 tasks.named("preBuild") { dependsOn(pcAssets, pcRes) }

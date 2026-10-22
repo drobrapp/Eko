@@ -28,6 +28,7 @@
     </queries>
 
     <application
+        android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
         android:label="Eko"
         android:icon="@drawable/ic_eko"
         android:roundIcon="@drawable/ic_eko"

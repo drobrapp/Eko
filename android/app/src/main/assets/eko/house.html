@@ -3,14 +3,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
 <style>
-  /* Casa de Eko en el móvil: una pantalla fija tipo Tamagotchi.
-     Arriba sus necesidades, en el centro su salón (art/casa-vertical.webp, de Aitor) y abajo los botones.
-     Todo lo de la habitación se coloca en píxeles de la imagen (1024 × 1536) y se escala para que quepa entera. */
-  :root { --ink: #5A463D; --ink2: #7A6458; --cream: #FFF4E8; --coral: #D0795A; }
+  /* Casa de Eko en el móvil: pantalla fija tipo Tamagotchi.
+     Fondo: la propia habitación desenfocada; centro: la habitación nítida (art/casa-vertical.webp, de Aitor);
+     arriba una tarjeta con sus necesidades y abajo una barra flotante. Iconos: arte de arcilla del PC (art/ui).
+     Las barras del sistema se respetan con --top / --bottom, que pone Android. */
+  :root { --ink: #4E3B33; --ink2: #8A7266; --cream: #FFF7EE; --glass: rgba(255, 247, 238, .78); --line: rgba(255, 255, 255, .7);
+          --top: 24px; --bottom: 16px; --shadow: 0 10px 30px rgba(74, 44, 24, .18), 0 2px 6px rgba(74, 44, 24, .12); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-  html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; color: var(--ink);
-               background: linear-gradient(#c97739 0 50%, #dd9458 50% 100%); }
-  #room { position: absolute; left: 0; top: 0; width: 1024px; height: 1536px; transform-origin: 0 0; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d99a63; color: var(--ink);
+               font-family: "Google Sans", "Product Sans", Roboto, system-ui, sans-serif; letter-spacing: .01em; }
+
+  /* Fondo: la habitación ampliada y desenfocada, para que no haya franjas de color plano */
+  #backdrop { position: fixed; inset: -40px; background: url(art/casa-vertical.webp) center / cover no-repeat; filter: blur(26px) saturate(1.05) brightness(.92); transform: scale(1.08); }
+  #shade { position: fixed; inset: 0; background: linear-gradient(rgba(60,34,18,.18), transparent 22%, transparent 78%, rgba(60,34,18,.22)); pointer-events: none; }
+
+  #room { position: absolute; left: 0; top: 0; width: 1024px; height: 1536px; transform-origin: 0 0;
+          -webkit-mask-image: linear-gradient(transparent 0, #000 4%, #000 95%, transparent 100%); mask-image: linear-gradient(transparent 0, #000 4%, #000 95%, transparent 100%); }
   #room > * { position: absolute; }
 
   /* Lo que se ve por la ventana (detrás de la habitación) */
@@ -27,61 +35,73 @@
   body.night #sun, body.night .cloud { display: none; }
   body.night #far, body.night #mid { filter: brightness(.45) saturate(.7); }
   body.gold #far, body.gold #mid { filter: sepia(.35) saturate(1.2); }
+  body.night #backdrop { filter: blur(26px) brightness(.55) saturate(.8); }
   @keyframes bob { 50% { transform: translate(-6px, 6px); } }
   @keyframes drift { to { transform: translateX(30px); } }
 
-  /* Tu última foto, dentro del cuadro */
   #photo { left: 818px; top: 597px; width: 67px; height: 86px; background: #F3DCC6 center / cover no-repeat; }
   #bg { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; }
-
-  /* Cosas encima de los muebles */
   .find { position: absolute; font-size: 46px; line-height: 1; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgba(90,70,61,.3)); pointer-events: none; }
   #libreta { left: 508px; top: 858px; width: 92px; transform: rotate(-8deg); filter: drop-shadow(0 4px 4px rgba(70,45,25,.25)); pointer-events: none; }
 
-  /* Luz: de noche se oscurece y las lámparas iluminan */
   #night { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; mix-blend-mode: multiply; background: rgba(40,48,96,.6); opacity: 0; transition: opacity 2s; }
   #glow { left: 0; top: 0; width: 1024px; height: 1536px; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity .6s; }
   #glow i { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(255,205,130,.75), rgba(255,190,110,.25) 55%, transparent); }
 
-  .spot { position: absolute; border-radius: 22px; }
-  .spot:active { background: rgba(255,244,232,.22); }
+  .spot { position: absolute; border-radius: 26px; transition: background .15s; }
+  .spot:active { background: rgba(255,247,238,.22); }
 
-  /* Eko: el mismo Eko de la pantalla, dentro de un marco */
   #eko { left: 0; top: 0; width: 160px; height: 250px; border: 0; background: transparent; pointer-events: none; transform-origin: 50% 100%; }
   #ekoHit { width: 230px; height: 300px; border-radius: 40%; }
-  #bub { max-width: 560px; padding: 18px 26px; border-radius: 30px; background: #fffaf3; color: var(--ink); font-size: 40px; line-height: 1.2;
-         box-shadow: 0 6px 16px rgba(90,70,61,.22); transform: translate(-50%, -100%); opacity: 0; transition: opacity .25s; pointer-events: none; text-align: center; }
-  #bub.on { opacity: 1; }
 
-  /* Barra de arriba: necesidades */
-  #hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; display: flex; align-items: center; gap: 10px; z-index: 10; }
-  .need { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
-          background: conic-gradient(var(--c) calc(var(--v) * 1%), rgba(255,244,232,.35) 0); box-shadow: 0 2px 6px rgba(90,70,61,.25); position: relative; }
-  .need::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--cream); }
-  .need span { position: relative; }
-  .need.low { animation: low 1.2s ease-in-out infinite; }
-  @keyframes low { 50% { transform: scale(1.08); } }
-  #days { margin-left: auto; background: rgba(255,244,232,.9); border-radius: 16px; padding: 6px 12px; font-size: 13px; color: var(--ink2); text-align: right; line-height: 1.25; }
-  #days b { color: var(--ink); font-size: 15px; }
+  /* Bocadillo de Eko */
+  #bub { max-width: 600px; padding: 20px 30px; border-radius: 34px; background: var(--cream); color: var(--ink); font-size: 38px; font-weight: 500; line-height: 1.25;
+         box-shadow: 0 10px 26px rgba(74,44,24,.22); transform: translate(-50%, -100%) scale(.92); opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.3,1.4,.5,1); pointer-events: none; text-align: center; }
+  #bub::after { content: ""; position: absolute; left: 50%; bottom: -14px; width: 30px; height: 30px; background: var(--cream); transform: translateX(-50%) rotate(45deg); border-radius: 0 0 8px 0; }
+  #bub.on { opacity: 1; transform: translate(-50%, -100%) scale(1); }
 
-  /* Barra de abajo: botones */
-  #dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 12px); display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; z-index: 10; }
-  #dock button { border: 0; border-radius: 18px; background: var(--cream); color: var(--ink); font-size: 11px; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 3px 8px rgba(90,70,61,.25); }
-  #dock button:active { transform: translateY(2px); box-shadow: 0 1px 4px rgba(90,70,61,.25); }
-  #dock span { font-size: 24px; line-height: 30px; height: 30px; }
-  #dock img { width: 30px; height: 30px; object-fit: contain; }
+  /* ---------- Tarjeta de arriba ---------- */
+  .glass { background: var(--glass); -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
+           border: 1px solid var(--line); box-shadow: var(--shadow); }
+  #hud { position: fixed; left: 14px; right: 14px; top: calc(var(--top) + 10px); border-radius: 26px; padding: 12px 14px 14px; z-index: 10; }
+  #hudTop { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  #name { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  #day { font-size: 13px; color: var(--ink2); font-weight: 500; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.55); }
+  #gear { margin-left: auto; width: 38px; height: 38px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); display: grid; place-items: center; padding: 0; }
+  #gear img { width: 26px; height: 26px; }
+  #needs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .need { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .need img { width: 28px; height: 28px; object-fit: contain; flex: none; filter: drop-shadow(0 1px 1px rgba(74,44,24,.2)); }
+  .bar { flex: 1; height: 8px; border-radius: 999px; background: rgba(78,59,51,.12); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: calc(var(--v, 50) * 1%); border-radius: inherit; background: var(--c); transition: width .6s ease; }
+  .need.low .bar i { animation: low 1.1s ease-in-out infinite; }
+  @keyframes low { 50% { opacity: .45; } }
 
-  /* Ropa */
-  .panel { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); transform: translateX(-50%); background: var(--cream); border-radius: 22px; padding: 12px; box-shadow: 0 8px 24px rgba(90,70,61,.3); display: none; z-index: 20; max-width: 94vw; }
-  .panel.on { display: block; }
-  .panel .grid { display: grid; grid-template-columns: repeat(4, 74px); gap: 6px; }
-  .panel button { border: 0; background: transparent; border-radius: 14px; padding: 6px 2px; font-size: 12px; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .panel button.cur { background: #F3DCC6; }
-  .panel button span { font-size: 30px; line-height: 44px; height: 44px; }
-  .panel button img { width: 44px; height: 44px; object-fit: contain; }
-  .panel h3 { margin: 2px 6px 8px; font-size: 15px; font-weight: 600; }
+  /* ---------- Barra de abajo ---------- */
+  #dock { position: fixed; left: 12px; right: 12px; bottom: calc(var(--bottom) + 10px); border-radius: 28px; padding: 8px 6px; display: grid; grid-template-columns: repeat(6, 1fr); z-index: 10; }
+  #dock button { border: 0; background: transparent; color: var(--ink); font: 600 11px/1.1 inherit; padding: 6px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; border-radius: 20px; transition: transform .12s, background .12s; }
+  #dock button:active { transform: scale(.9); background: rgba(255,255,255,.5); }
+  #dock img { width: 38px; height: 38px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(74,44,24,.18)); }
+
+  /* ---------- Hoja de ropa ---------- */
+  #ward { position: fixed; left: 0; right: 0; bottom: 0; border-radius: 30px 30px 0 0; padding: 10px 16px calc(var(--bottom) + 18px); z-index: 20;
+          transform: translateY(105%); transition: transform .32s cubic-bezier(.2,.9,.3,1); }
+  #ward.on { transform: none; }
+  #ward .handle { width: 40px; height: 5px; border-radius: 3px; background: rgba(78,59,51,.2); margin: 0 auto 12px; }
+  #ward h3 { margin: 0 4px 12px; font-size: 18px; font-weight: 700; }
+  #ward .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  #ward button { border: 0; background: rgba(255,255,255,.6); border-radius: 18px; padding: 10px 2px 8px; font: 500 12px/1.1 inherit; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #ward button.cur { background: #fff; box-shadow: inset 0 0 0 2px #E9A93B; }
+  #ward button span { font-size: 30px; line-height: 44px; height: 44px; }
+  #ward button img { width: 44px; height: 44px; object-fit: contain; }
+  #scrim { position: fixed; inset: 0; background: rgba(40,24,14,.25); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 15; }
+  #scrim.on { opacity: 1; pointer-events: auto; }
+
+  /* Aviso si Eko no consigue cargar (para poder ver qué pasa en una captura) */
+  #diag { position: fixed; left: 16px; right: 16px; top: 45%; padding: 12px 14px; border-radius: 16px; background: rgba(255,247,238,.95); font-size: 13px; color: #8a3b2a; display: none; z-index: 30; white-space: pre-wrap; }
 </style>
 </head><body>
+<div id="backdrop"></div><div id="shade"></div>
 <div id="room">
   <div id="sky">
     <div id="stars"></div>
@@ -101,45 +121,53 @@
   <div id="glow"><i style="left:512px;top:200px;width:900px;height:900px"></i><i style="left:968px;top:800px;width:520px;height:520px"></i></div>
   <div id="bub"></div>
 </div>
-<div id="hud">
-  <div class="need" id="n-hunger" style="--c:#E9A93B"><span>🍪</span></div>
-  <div class="need" id="n-fun" style="--c:#5FA88E"><span>⚽</span></div>
-  <div class="need" id="n-love" style="--c:#D0795A"><span>💗</span></div>
-  <div class="need" id="n-energy" style="--c:#6F94C2"><span>⚡</span></div>
-  <div id="days"></div>
+
+<div id="hud" class="glass">
+  <div id="hudTop"><div id="name">Eko</div><div id="day"></div><button id="gear" aria-label="Ajustes"><img src="art/ui/ic-settings.webp" alt=""></button></div>
+  <div id="needs">
+    <div class="need" id="n-hunger" style="--c:#E9A93B"><img src="art/ui/cat-care.webp" alt="Hambre"><div class="bar"><i></i></div></div>
+    <div class="need" id="n-fun" style="--c:#5FA88E"><img src="art/ui/cat-play.webp" alt="Diversión"><div class="bar"><i></i></div></div>
+    <div class="need" id="n-love" style="--c:#D0795A"><img src="art/ui/ic-hand.webp" alt="Cariño"><div class="bar"><i></i></div></div>
+    <div class="need" id="n-energy" style="--c:#6F94C2"><img src="art/valley/moon.webp" alt="Energía"><div class="bar"><i></i></div></div>
+  </div>
 </div>
-<div id="dock"></div>
-<div id="ward" class="panel"><h3>¿Qué me pongo?</h3><div class="grid"></div></div>
+<div id="dock" class="glass"></div>
+<div id="scrim"></div>
+<div id="ward" class="glass"><div class="handle"></div><h3>¿Qué me pongo?</h3><div class="grid"></div></div>
+<div id="diag"></div>
+
 <script>
 (() => {
   "use strict";
-  const H = window.House;               // puente con Android
+  const H = window.House;
   const $ = (id) => document.getElementById(id);
   const room = $("room"), frame = $("eko"), hit = $("ekoHit"), bub = $("bub");
   const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
   const pick = (l) => l[Math.floor(Math.random() * l.length)];
 
-  // ---------- Escala: la habitación entera, centrada, sin recorrerla ----------
+  // ---------- Escala: la habitación entera, entre la tarjeta de arriba y la barra de abajo ----------
   function fit() {
-    const k = Math.min(innerWidth / 1024, innerHeight / 1536);
-    const x = (innerWidth - 1024 * k) / 2, y = (innerHeight - 1536 * k) / 2;
+    const cs = getComputedStyle(document.documentElement);
+    const top = parseFloat(cs.getPropertyValue("--top")) || 0, bottom = parseFloat(cs.getPropertyValue("--bottom")) || 0;
+    const hudH = $("hud").offsetHeight + 10, dockH = $("dock").offsetHeight + 10;
+    const availTop = top + hudH * 0.55, availBot = innerHeight - bottom - dockH * 0.35;   // la habitación asoma un poco por detrás de las barras
+    const k = Math.min(innerWidth / 1024, (availBot - availTop) / 1536);
+    const x = (innerWidth - 1024 * k) / 2, y = availTop + ((availBot - availTop) - 1536 * k) / 2;
     room.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
   }
-  addEventListener("resize", fit); fit();
+  window.setInsets = (t, b) => { document.documentElement.style.setProperty("--top", t + "px"); document.documentElement.style.setProperty("--bottom", b + "px"); fit(); };
+  addEventListener("resize", fit);
 
   // ---------- Eko dentro de casa (overlay.html en un marco; se le habla con postMessage) ----------
-  const S = 1.75;                        // tamaño de Eko en la habitación
-  const FLOOR = 1330;                    // donde pisa
-  const XMIN = 120, XMAX = 920;
+  const S = 1.75, FLOOR = 1330, XMIN = 120, XMAX = 920;
   const E = { x: 300, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null };
   const send = (fn, ...args) => frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
   const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
   function place() {
     const y = E.y - E.hop;
-    frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px";
-    frame.style.transform = `scale(${S})`;
+    frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px"; frame.style.transform = `scale(${S})`;
     hit.style.left = E.x - 115 + "px"; hit.style.top = y - 290 + "px";
-    bub.style.left = Math.min(1024 - 290, Math.max(290, E.x)) + "px"; bub.style.top = y - 330 + "px";
+    bub.style.left = Math.min(1024 - 300, Math.max(300, E.x)) + "px"; bub.style.top = y - 330 + "px";
   }
   function walkTo(x, then) {
     if (E.mode === "sleep") { wake(); setTimeout(() => walkTo(x, then), 1700); return; }
@@ -149,50 +177,32 @@
     E.mode = "walk"; E.dir = E.target > E.x ? 1 : -1; send("set", "walk", E.dir);
   }
   function idle(ms) { E.mode = "idle"; E.target = null; E.next = performance.now() + (ms || 4000 + Math.random() * 6000); send("set", "idle", E.dir); }
-
   let jump = null;
   function hopTo(x, y, then) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
-  window.house = {
-    hop(v) { E.vy = Math.min(1400, v * 1.5); },
-    hold(ms) { E.hold = performance.now() + ms; },
-    say(t, ms) { say(t, ms); },
-  };
+  window.house = { hop(v) { E.vy = Math.min(1400, v * 1.5); }, hold(ms) { E.hold = performance.now() + ms; }, say(t, ms) { say(t, ms); } };
   let bubT = 0;
   function say(t, ms = 2800) { bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
 
-  // ---------- Siesta en el sillón ----------
   const SEAT = { x: 752, y: 945 };
   function nap() { walkTo(SEAT.x - 60, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); })); }
-  function wake() {
-    if (E.mode !== "sleep") return;
-    send("wake"); E.mode = "busy";
-    setTimeout(() => hopTo(SEAT.x - 120, FLOOR, () => idle(2500)), 900);
-  }
+  function wake() { if (E.mode !== "sleep") return; send("wake"); E.mode = "busy"; setTimeout(() => hopTo(SEAT.x - 120, FLOOR, () => idle(2500)), 900); }
 
-  // ---------- Bucle ----------
   let last = performance.now();
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (jump) {
-      jump.t = Math.min(1, jump.t + dt / 0.55);
-      const k = jump.t;
-      E.x = jump.x0 + (jump.x1 - jump.x0) * k;
-      E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 130;
+      jump.t = Math.min(1, jump.t + dt / 0.55); const k = jump.t;
+      E.x = jump.x0 + (jump.x1 - jump.x0) * k; E.y = jump.y0 + (jump.y1 - jump.y0) * k - Math.sin(Math.PI * k) * 130;
       if (k >= 1) { const t = jump.then; jump = null; send("land"); t && t(); }
     } else if (E.mode === "walk" && now > E.hold) {
       const step = 170 * dt * E.dir;
       if (Math.abs(E.target - E.x) <= Math.abs(step)) { E.x = E.target; const t = E.onArrive; E.onArrive = null; idle(); t && t(); }
       else { E.x += step; send("v", 170 * E.dir, 0); }
-    } else if (E.mode === "idle" && now > E.next && now > E.hold && !panelOpen()) roam();
-    if (E.vy || E.hop) {
-      E.hop += E.vy * dt; E.vy -= 3000 * dt;
-      if (E.hop <= 0) { E.hop = 0; if (E.vy < -50) send("land"); E.vy = 0; }
-    }
+    } else if (E.mode === "idle" && now > E.next && now > E.hold && !wardOpen()) roam();
+    if (E.vy || E.hop) { E.hop += E.vy * dt; E.vy -= 3000 * dt; if (E.hop <= 0) { E.hop = 0; if (E.vy < -50) send("land"); E.vy = 0; } }
     place();
     requestAnimationFrame(loop);
   }
-
-  // Lo que hace solo: pasear, asomarse a la ventana y, de noche, dormir en el sillón
   const WINDOW_LINES = ["¡Qué día hace!", "Mira, ¡las colinas!", "Me encanta esta ventana", "¿Salimos luego?"];
   function isNight() { const h = new Date().getHours(); return h >= 23 || h < 7; }
   function roam() {
@@ -203,15 +213,13 @@
     else walkTo(XMIN + Math.random() * (XMAX - XMIN));
   }
 
-  // ---------- Hora del día: cielo, noche y lámparas ----------
+  // ---------- Hora del día ----------
   const SUNSET = H && H.sunsetMin ? H.sunsetMin() : -1;
   function sky() {
     const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
     const set = SUNSET > 0 ? SUNSET : 19 * 60 + 30;
-    const night = m >= set + 40 || m < 7 * 60 + 30;
-    const gold = !night && m >= set - 70;
-    document.body.classList.toggle("night", night);
-    document.body.classList.toggle("gold", gold);
+    const night = m >= set + 40 || m < 7 * 60 + 30, gold = !night && m >= set - 70;
+    document.body.classList.toggle("night", night); document.body.classList.toggle("gold", gold);
     $("sky").style.background = night ? "linear-gradient(#1d2650, #3b4479)" : gold ? "linear-gradient(#f2b27c, #fbd9a6)" : "linear-gradient(#8fc2ec, #d3ebf8)";
     $("night").style.opacity = night ? 1 : gold ? .25 : 0;
     const day = d.toDateString(), saved = ls.get("eko-house-lights", "");
@@ -219,13 +227,9 @@
     $("glow").style.opacity = on ? 1 : 0;
     $("night").style.background = on ? "rgba(70,62,96,.5)" : "rgba(40,48,96,.6)";
   }
-  function toggleLights() {
-    const on = $("glow").style.opacity !== "1";
-    ls.set("eko-house-lights", new Date().toDateString() + (on ? ":1" : ":0"));
-    sky(); return on;
-  }
+  function toggleLights() { const on = $("glow").style.opacity !== "1"; ls.set("eko-house-lights", new Date().toDateString() + (on ? ":1" : ":0")); sky(); return on; }
 
-  // ---------- Tu última foto, lo que ha encontrado (en las baldas) y sus necesidades ----------
+  // ---------- Foto, colección y necesidades ----------
   function photo() { const u = H && H.lastPhoto ? H.lastPhoto() : ""; $("photo").style.backgroundImage = u ? `url("${u}")` : "none"; }
   const SHELF = [[756, 396], [796, 396], [868, 498], [908, 498], [948, 498]];
   function finds() {
@@ -234,16 +238,13 @@
   }
   function needs() {
     const n = JSON.parse(H && H.needs ? H.needs() : '{"hunger":80,"fun":70,"love":70,"energy":85}');
-    for (const k of ["hunger", "fun", "love", "energy"]) {
-      const el = $("n-" + k); el.style.setProperty("--v", Math.round(n[k])); el.classList.toggle("low", n[k] < 25);
-    }
-    // días juntos: los cuenta look.js (mismo almacenamiento que el Eko de la pantalla)
+    for (const k of ["hunger", "fun", "love", "energy"]) { const el = $("n-" + k); el.style.setProperty("--v", Math.round(n[k])); el.classList.toggle("low", n[k] < 25); }
     const born = new Date(ls.get("eko-born", new Date().toISOString()));
-    const days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 864e5));
-    $("days").innerHTML = `<b>${days} ${days === 1 ? "día" : "días"}</b><br>juntos`;
+    const days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 864e5)) + 1;
+    $("day").textContent = `Día ${days}`;
   }
 
-  // ---------- Las cosas de la casa (el menú viviente) ----------
+  // ---------- Las cosas de la casa ----------
   const SPOTS = [
     { id: "door", r: [31, 427, 140, 1015], at: 150, say: ["¡Me voy contigo a la pantalla!", "¡A la calle! Bueno, a tu pantalla"] },
     { id: "wardrobe", r: [128, 401, 307, 631], at: 220, say: ["¿Qué me pongo hoy?", "Vamos a ver mi ropa"] },
@@ -258,59 +259,63 @@
     { id: "lamp", r: [427, 26, 597, 230], at: 512 },
   ];
   $("spots").innerHTML = SPOTS.map((s, i) => `<div class="spot" data-i="${i}" style="left:${s.r[0]}px;top:${s.r[1]}px;width:${s.r[2]-s.r[0]}px;height:${s.r[3]-s.r[1]}px"></div>`).join("");
-  $("spots").addEventListener("click", (e) => {
-    const el = e.target.closest(".spot"); if (!el) return;
-    closePanels(); use(SPOTS[+el.dataset.i]);
-  });
+  $("spots").addEventListener("click", (e) => { const el = e.target.closest(".spot"); if (el) use(SPOTS[+el.dataset.i]); });
   function use(s) {
+    closeWard();
     if (s.id === "lamp") { say(toggleLights() ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
     if (s.id === "nap") { if (E.mode === "sleep") wake(); else { say("Una siestecita…", 1800); nap(); } return; }
-    if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 500); }); return; }
+    if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 450); }); return; }
     walkTo(s.at, () => { say(pick(s.say), 1800); send("act", "tada"); setTimeout(() => H && H.open(s.id), 900); });
   }
   const spot = (id) => SPOTS.find((s) => s.id === id);
+  $("gear").onclick = () => use(spot("settings"));
 
-  // ---------- Botones de abajo ----------
+  // ---------- Barra de abajo ----------
   const DOCK = [
     ["art/cookie.webp", "Comer", () => { if (E.mode === "sleep") wake(); send("eat"); H && H.give("feed"); setTimeout(needs, 300); }],
-    ["⚽", "Jugar", () => { if (E.mode === "sleep") wake(); send("spin"); H && H.give("play"); setTimeout(needs, 300); }],
-    ["👒", "Ropa", () => use(spot("wardrobe"))],
-    ["👣", "Paseos", () => use(spot("walks"))],
-    ["📔", "Álbum", () => use(spot("album"))],
-    ["✏️", "Diario", () => use(spot("diary"))],
+    ["art/ui/cat-play.webp", "Jugar", () => { if (E.mode === "sleep") wake(); send("spin"); H && H.give("play"); setTimeout(needs, 300); }],
+    ["art/ui/cat-wardrobe.webp", "Ropa", () => use(spot("wardrobe"))],
+    ["art/valley/sun.webp", "Paseos", () => use(spot("walks"))],
+    ["art/movil-portada.webp", "Álbum", () => use(spot("album"))],
+    ["art/ui/ic-note.webp", "Diario", () => use(spot("diary"))],
   ];
-  $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}">${d[0].startsWith("art/") ? `<img src="${d[0]}" alt="">` : `<span>${d[0]}</span>`}${d[1]}</button>`).join("");
-  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); DOCK[+b.dataset.i][2](); });
+  $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}"><img src="${d[0]}" alt="">${d[1]}</button>`).join("");
+  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); DOCK[+b.dataset.i][2](); });
 
-  // ---------- Tocar a Eko: mimos ----------
   hit.addEventListener("click", () => {
     if (E.mode === "sleep") { wake(); say("¡No estaba dormido!", 2000); return; }
     send("tap"); H && H.give("pet"); E.hold = performance.now() + 2500; setTimeout(needs, 300);
   });
 
-  // ---------- Ropa ----------
+  // ---------- Ropa (hoja que sube desde abajo) ----------
   const WARD = [["auto", "📅", "Según fecha"], ["witch", "art/hat-witch.webp", "Bruja"], ["pumpkin", "art/hat-pumpkin.webp", "Calabaza"], ["vampire", "art/cape-vampire.webp", "Vampiro"],
     ["ghost", "👻", "Fantasma"], ["santa", "art/hat-santa.webp", "Papá Noel"], ["reindeer", "art/hat-antler.webp", "Reno"], ["elf", "art/hat-elf.webp", "Elfo"],
-    ["scarf", "art/scarf.webp", "Bufanda"], ["party", "art/hat-party.webp", "Fiesta"], ["crown", "art/hat-crown.webp", "Corona"], ["none", "✖", "Nada"]];
+    ["scarf", "art/scarf.webp", "Bufanda"], ["party", "art/hat-party.webp", "Fiesta"], ["crown", "art/hat-crown.webp", "Corona"], ["none", "✕", "Nada"]];
   function openWard() {
     const cur = H && H.accMode ? H.accMode() : "auto";
     $("ward").querySelector(".grid").innerHTML = WARD.map((w) => `<button data-id="${w[0]}" class="${w[0] === cur ? "cur" : ""}">${w[1].startsWith("art/") ? `<img src="${w[1]}" alt="">` : `<span>${w[1]}</span>`}${w[2]}</button>`).join("");
-    closePanels(); $("ward").classList.add("on");
+    $("ward").classList.add("on"); $("scrim").classList.add("on");
   }
-  $("ward").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closePanels(); H && H.setAcc(b.dataset.id); look(b.dataset.id); });
-  function panelOpen() { return document.querySelector(".panel.on") !== null; }
-  function closePanels() { document.querySelectorAll(".panel.on").forEach((p) => p.classList.remove("on")); }
-  document.addEventListener("click", (e) => { if (!e.target.closest(".panel") && !e.target.closest("#dock") && !e.target.closest(".spot")) closePanels(); });
+  function closeWard() { $("ward").classList.remove("on"); $("scrim").classList.remove("on"); }
+  function wardOpen() { return $("ward").classList.contains("on"); }
+  $("scrim").onclick = closeWard;
+  $("ward").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); H && H.setAcc(b.dataset.id); look(b.dataset.id); });
 
-  // ---------- Arranque ----------
-  frame.addEventListener("load", () => send("set", "idle", 1));
+  // ---------- Arranque (y aviso si Eko no carga) ----------
+  let ekoReady = false;
+  addEventListener("message", (e) => {
+    const d = e.data || {};
+    if (d.ready) { ekoReady = true; send("set", "idle", 1); }
+    if (d.error) { $("diag").style.display = "block"; $("diag").textContent += "Eko: " + d.error + "\n"; }
+  });
+  setTimeout(() => { if (!ekoReady) { $("diag").style.display = "block"; $("diag").textContent += "Eko no ha cargado en su casa (sin respuesta del marco).\n"; } }, 6000);
   function refresh() { sky(); photo(); finds(); needs(); }
   window.houseRefresh = refresh;
-  refresh(); setInterval(sky, 60000); setInterval(needs, 10000);
+  fit(); refresh(); setInterval(sky, 60000); setInterval(needs, 10000);
   place(); requestAnimationFrame(loop);
-  setInterval(() => { if (E.mode !== "sleep" && !panelOpen()) send("chatter"); }, 150000);
+  setInterval(() => { if (E.mode !== "sleep" && !wardOpen()) send("chatter"); }, 150000);
   if (isNight()) setTimeout(nap, 1500);
-  else setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 800);
+  else setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 900);
 })();
 </script>
 </body></html>

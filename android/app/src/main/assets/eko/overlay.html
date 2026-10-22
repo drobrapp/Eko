@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <link rel="stylesheet" href="style.css">
+<script>
+// Dentro de su casa: si algo falla al cargar, se lo cuenta a la casa (sale en pantalla para poder verlo)
+if (window.self !== window.top) addEventListener("error", (e) => parent.postMessage({ error: (e.message || "error") + " " + String(e.filename || "").split("/").pop() + ":" + (e.lineno || "") }, "*"));
+</script>
 <style>
 html,body{margin:0;width:100%;height:100%;background:transparent!important;overflow:hidden}
 #eko{position:absolute;left:0;right:0;bottom:0;top:0;pointer-events:none}
@@ -289,6 +293,7 @@ if (window.self !== window.top) {
     if (d.eko && window.eko && typeof eko[d.eko] === "function") eko[d.eko].apply(null, d.args || []);
     if (d.look && window.ekoLook) ekoLook.setMode(d.look);
   });
+  parent.postMessage({ ready: !!window.eko }, "*");
 }
 </script>
 </body></html>

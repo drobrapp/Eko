@@ -13,9 +13,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
+import android.view.WindowInsets
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.widget.Button
+import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -27,6 +28,9 @@ import java.time.format.DateTimeFormatter
 // Mientras estás en casa, el Eko de la pantalla se esconde (ha vuelto a casa).
 class HouseActivity : Activity() {
     private lateinit var web: WebView
+    private var loaded = false
+    private var insetTop = 24f
+    private var insetBottom = 16f
     private fun prefs() = getSharedPreferences("eko", Context.MODE_PRIVATE)
     private fun js(code: String) = runOnUiThread { web.evaluateJavascript(code, null) }
 
@@ -63,22 +67,43 @@ class HouseActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        WebView.setWebContentsDebuggingEnabled(true)   // para poder inspeccionar la casa desde Chrome del PC si algo falla
         web = WebView(this).apply {
-            setBackgroundColor(Color.parseColor("#E9C9A2"))
+            setBackgroundColor(Color.parseColor("#D99A63"))
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true            // la última foto del álbum (carpeta privada de la app)
             addJavascriptInterface(EkoBridge(), "Android")
             addJavascriptInterface(HouseBridge(), "House")
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(v: WebView, url: String) { loaded = true; sendInsets() }
+            }
             loadUrl("file:///android_asset/eko/house.html")
         }
-        // Barras del sistema del color del techo y del suelo
-        window.statusBarColor = Color.parseColor("#C97739")
-        window.navigationBarColor = Color.parseColor("#DD9458")
+        // De borde a borde: la casa se pinta también bajo las barras del sistema (la página deja hueco con --top/--bottom)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+            window.isNavigationBarContrastEnforced = false
+        }
+        web.setOnApplyWindowInsetsListener { v, ins ->
+            val d = resources.displayMetrics.density
+            if (Build.VERSION.SDK_INT >= 30) {
+                val i = ins.getInsets(WindowInsets.Type.systemBars())
+                insetTop = i.top / d; insetBottom = i.bottom / d
+            } else {
+                @Suppress("DEPRECATION") run { insetTop = ins.systemWindowInsetTop / d; insetBottom = ins.systemWindowInsetBottom / d }
+            }
+            sendInsets()
+            v.onApplyWindowInsets(ins)
+        }
         setContentView(web)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
     }
+    private fun sendInsets() { if (loaded) js("window.setInsets && setInsets($insetTop, $insetBottom)") }
 
     override fun onResume() {
         super.onResume()

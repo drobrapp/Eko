@@ -5,21 +5,22 @@
   const T = {
     costume: ["¿Qué tal me queda?", "¡Cambio de look!", "¿A que estoy guapo?"],
     noteHi: ["¡Me has leído!", "¡Has venido!", "Sabía que vendrías", "¡Hola, hola!"],
-    // Apps («{app}» = su nombre). Solo sabe qué app es, nunca lo que hay dentro
-    app_social: ["¿Qué se cuenta por {app}?", "Saluda a todos de mi parte", "Yo también quiero salir en las historias", "Un ratito de {app} y seguimos, ¿vale?"],
-    app_chat: ["¿Con quién hablas? No me lo digas, no miro", "Mándales un saludo mío", "Escribe, escribe, yo espero"],
-    app_camera: ["¡Sácame en la foto!", "¿Qué fotografiamos hoy?", "Busca buena luz, que salgo pálido", "Yo poso, tú disparas"],
-    app_gallery: ["¿Me enseñas las fotos?", "Esa me gusta. Bueno, todas", "¿Salgo yo en alguna?"],
-    app_edit: ["¡Hora de editar! Un poquito más de luz…", "Qué bien te quedan las fotos", "Si quieres, te digo qué filtro me favorece"],
-    app_music: ["¡Música! Pon algo que se pueda bailar", "¿Qué suena hoy?", "Mis piececitos ya se mueven"],
-    app_video: ["¿Palomitas?", "Me quedo quietecito mientras lo ves", "¿De qué va? No, no me lo cuentes"],
-    app_game: ["¿Echamos una partida? Yo animo", "¡Tú puedes!", "Si pierdes, no se lo digo a nadie"],
-    app_maps: ["¿A dónde vamos?", "Llévame contigo", "Yo me sé el camino. Mentira"],
-    app_mail: ["¿Muchos correos? Ánimo", "Que sean todos buenas noticias"],
-    app_shop: ["¿Me compras algo?", "Yo quiero un gorro nuevo", "Mira bien los precios, ¿eh?"],
-    app_settings: ["¿Tocando ajustes? Cuidado conmigo", "No me desactives, ¿vale?"],
-    app_calendar: ["¿Mucho lío esta semana?", "Apúntame en algún hueco"],
-    app_web: ["¿Qué buscas?", "Si encuentras algo de galletas, avísame"],
+    // Apps («{app}» = su nombre). Solo sabe qué app es, nunca lo que hay dentro. Se mezclan con las de cada app concreta (APP) y las de la hora (appTime)
+    app_social: ["¿Qué se cuenta por {app}?", "Saluda a todos de mi parte", "Yo también quiero salir en las historias", "Un ratito de {app} y seguimos, ¿vale?", "Si ves algo gracioso, me lo cuentas", "¿Cuántos «me gusta» llevamos hoy?", "Dale like a algo bonito por mí", "Yo sería un influencer buenísimo. De plastilina", "Cotilleo rapidito y volvemos, ¿no?"],
+    app_chat: ["¿Con quién hablas? No me lo digas, no miro", "Mándales un saludo mío", "Escribe, escribe, yo espero", "Pon un emoji de los míos", "¿Buenas noticias?", "Yo me quedo aquí calladito", "Diles que tienes una mascota genial", "Si es para quedar, apúntame"],
+    app_camera: ["¡Sácame en la foto!", "¿Qué fotografiamos hoy?", "Busca buena luz, que salgo pálido", "Yo poso, tú disparas", "¡Patata!", "Encuadra bien, que te conozco", "Cuidado con el contraluz", "Hoy tengo mi lado bueno a la izquierda", "¿Ráfaga? ¡Ráfaga!"],
+    app_gallery: ["¿Me enseñas las fotos?", "Esa me gusta. Bueno, todas", "¿Salgo yo en alguna?", "Cuántos recuerdos aquí guardados", "Esa tiene buena luz", "¿Borramos las movidas?", "Yo elegiría esa para enmarcar"],
+    app_edit: ["¡Hora de editar! Un poquito más de luz…", "Qué bien te quedan las fotos", "Si quieres, te digo qué filtro me favorece", "Un pelín de calidez y lista", "No te pases con la saturación, ¿eh?", "Yo de mayor quiero ser preset", "Esa va a quedar preciosa", "Edita tranquilo, yo no toco nada"],
+    app_music: ["¡Música! Pon algo que se pueda bailar", "¿Qué suena hoy?", "Mis piececitos ya se mueven", "Sube un poquito, que no oigo", "Pon la mía. Bueno, no tengo", "¿Hacemos un concierto?", "Yo hago los coros"],
+    app_video: ["¿Palomitas?", "Me quedo quietecito mientras lo ves", "¿De qué va? No, no me lo cuentes", "Uno y a dormir, ¿eh?", "Avísame si sale un perrito", "Yo me pido el sitio del sofá", "Sin spoilers, por favor"],
+    app_game: ["¿Echamos una partida? Yo animo", "¡Tú puedes!", "Si pierdes, no se lo digo a nadie", "Modo concentración activado", "¿Puedo ser el jefe final?", "Yo te guardo las vidas", "¡A por el récord!"],
+    app_maps: ["¿A dónde vamos?", "Llévame contigo", "Yo me sé el camino. Mentira", "¿Hay galletas en el destino?", "Gira a la izquierda. O a la derecha. No sé", "Me apunto a la excursión"],
+    app_mail: ["¿Muchos correos? Ánimo", "Que sean todos buenas noticias", "Bandeja de entrada a cero. Tú puedes", "Si hay alguno aburrido, lo leo yo. Es broma", "Respira hondo antes de abrirlos"],
+    app_shop: ["¿Me compras algo?", "Yo quiero un gorro nuevo", "Mira bien los precios, ¿eh?", "¿Eso lo necesitas o lo quieres?", "Añade galletas al carrito", "Yo solo miro"],
+    app_settings: ["¿Tocando ajustes? Cuidado conmigo", "No me desactives, ¿vale?", "Pon el modo oscuro, que me favorece", "¿Qué estamos arreglando?"],
+    app_calendar: ["¿Mucho lío esta semana?", "Apúntame en algún hueco", "¿Algún cumpleaños pronto?", "Deja un hueco para descansar"],
+    app_web: ["¿Qué buscas?", "Si encuentras algo de galletas, avísame", "¿Investigando?", "Busca «mascotas adorables». Saldré yo", "Una pestaña más y ya, ¿eh?"],
+    app_other: ["¡Anda, {app}!", "¿Qué hacemos en {app}?", "{app}… interesante", "Yo también quiero probar {app}", "¿Para qué sirve {app}? Me lo enseñas luego", "Vale, {app}. Yo te espero aquí", "Uy, {app}. Esto no lo había visto"],
     scroll: ["Llevas un buen rato en {app}… ¿estiramos un poco?", "¿Otro ratito en {app}? Yo me estoy aburriendo", "Pausa: mira lejos 20 segundos. Yo cuento"],
     silent: ["Shhh… modo silencio. Yo también me callo un poco", "Silencio activado. Seré un ninja"],
     vibrate: ["Modo vibración: bzzz", "Bzzz bzzz. Ya estoy en modo vibración yo también"],
@@ -105,13 +106,42 @@
     app_shop: "picaro", app_settings: "ansioso", app_chat: "timido", scroll: "esperanzado", silent: "timido",
     netLost: "asustado", netBack: "contento", batteryFull: "orgulloso", lateNight: "cansado",
   };
-  function talk(ev, chance = 1, arg = "") {
+  // Frases para apps concretas (se mezclan con las de su tipo)
+  const APP = {
+    "com.instagram.android": ["¿Subimos una foto tuya buena? Tienes muchas", "Mira cómo va tu Instagram de fotos", "Algún día seré tu modelo en Instagram", "Historias, reels… yo prefiero galletas"],
+    "com.whatsapp": ["¿Muchos grupos hoy?", "Ese audio de 4 minutos… escúchalo a 2x", "Mándale un sticker mío a alguien"],
+    "com.google.android.youtube": ["Un vídeo y volvemos, ¿trato hecho?", "Busca vídeos de gatitos. Por investigar", "¿Tutoriales de fotografía hoy?"],
+    "com.spotify.music": ["¿Lista para bailar o para pensar?", "Ponme la de siempre", "Spotify y yo, mejores amigos"],
+    "com.adobe.lrmobile": ["¡Lightroom! Aquí es donde haces magia", "Curvas, tonos… yo solo entiendo de galletas", "Esa foto va a quedar de portada"],
+    "com.google.android.apps.maps": ["¿Hay aventura hoy?", "Busca un sitio bonito para hacer fotos"],
+    "com.google.android.GoogleCamera": ["Mira qué luz hay hoy", "Tú a la foto, yo al bocadillo"],
+    "com.google.android.apps.photos": ["¿Repasamos fotos antiguas?", "Seguro que hay alguna de comida"],
+    "com.zhiliaoapp.musically": ["TikTok… cuidado, que engancha", "Uno más y ya. Bueno, dos"],
+    "com.netflix.mediaclient": ["¿Serie nueva o la de siempre?", "Un capítulo. Solo uno"],
+  };
+  // Según la hora (sirven para cualquier app)
+  function appTime() {
+    const h = new Date().getHours();
+    if (h < 10) return ["¿{app} nada más despertar?", "Buenos días a ti y a {app}"];
+    if (h >= 23 || h < 5) return ["¿{app} a estas horas?", "Un ratito de {app} y a dormir, ¿vale?"];
+    if (h >= 14 && h < 16) return ["{app} para la sobremesa, buena idea"];
+    return [];
+  }
+  function talk(ev, chance = 1, arg = "", pkg = "") {
     if (Math.random() > chance) return;
     if (ev === "poke") {
       const now = Date.now(); pokes = pokes.filter((t) => now - t < 10000); pokes.push(now);
       if (pokes.length >= 6) { say(pick("pokeAnnoyed", T.pokeAnnoyed)); if (window.eko && eko.express) eko.express("molesto"); return; }
     }
-    const list = T[ev]; if (list) { say(pick(ev, list).replace(/\{app\}/g, arg || "esa app")); if (EXPR[ev] && window.eko && eko.express) eko.express(EXPR[ev]); }
+    let list = T[ev];
+    const exprKey = ev;
+    if (ev.startsWith("app_")) {
+      const own = APP[pkg] || [];
+      // Si la app tiene frases propias, la mitad de las veces sale una de ellas
+      list = own.length && Math.random() < 0.5 ? own : [...(list || []), ...appTime()];
+      if (own.length && list === own) ev = "p:" + pkg;
+    }
+    if (list) { say(pick(ev, list).replace(/\{app\}/g, arg || "esa app")); const e = EXPR[exprKey]; if (e && window.eko && eko.express) eko.express(e); }
   }
   function special(d) {
     const m = d.getMonth() + 1, day = d.getDate();

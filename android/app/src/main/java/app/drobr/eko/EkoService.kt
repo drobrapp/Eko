@@ -585,11 +585,11 @@ class EkoService : Service() {
 
     // Lo que dice lo elige talk.js (frases del Eko de escritorio + las del móvil, sin repetir); aquí solo se pinta el bocadillo
     private fun talk(ev: String, chance: Double = 1.0) = js("talk('$ev', $chance)")
-    private fun talkArg(ev: String, arg: String) = js("talk('$ev', 1, ${org.json.JSONObject.quote(arg)})")
+    private fun talkArg(ev: String, arg: String, pkg: String = "") = js("talk('$ev', 1, ${org.json.JSONObject.quote(arg)}, ${org.json.JSONObject.quote(pkg)})")
 
     // ---------- Cosas del móvil que comenta ----------
     private fun quiet() = (st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE
-    private val apps by lazy { AppSense(this, { ev, arg -> talkArg(ev, arg) }, { quiet() }) }
+    private val apps by lazy { AppSense(this, { ev, arg, pkg -> talkArg(ev, arg, pkg) }, { quiet() }) }
     fun onApp(pkg: String) { apps.onApp(pkg) }
     private var nextSense = 0L
     private var fullSaid = false

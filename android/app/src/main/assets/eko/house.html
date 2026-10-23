@@ -104,6 +104,16 @@
   #scrim { position: fixed; inset: 0; background: rgba(40,24,14,.25); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 15; }
   #scrim.on { opacity: 1; pointer-events: auto; }
 
+  /* Cuando Eko está en el PC: su notita y el botón para llamarlo */
+  #away { position: fixed; left: 50%; top: 50%; width: min(86vw, 340px); transform: translate(-50%, -50%) rotate(-1.5deg); border-radius: 24px; padding: 18px 18px 16px; text-align: center; z-index: 12; display: none; }
+  #away.on { display: block; animation: pop .35s cubic-bezier(.3,1.4,.5,1); }
+  #away .t { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  #away .s { font-size: 14px; color: var(--ink2); margin-bottom: 14px; line-height: 1.35; }
+  #away button { border: 0; border-radius: 999px; background: #D0795A; color: #fff; font: 700 16px/1 inherit; padding: 13px 26px; box-shadow: 0 4px 10px rgba(208,121,90,.35); }
+  #away button:active { transform: scale(.95); }
+  #away button[disabled] { opacity: .6; }
+  @keyframes pop { from { transform: translate(-50%, -50%) scale(.8); opacity: 0; } }
+  body.away #dock { opacity: .55; }
   /* Aviso si Eko no consigue cargar (para poder ver qué pasa en una captura) */
   #diag { position: fixed; left: 16px; right: 16px; top: 45%; padding: 12px 14px; border-radius: 16px; background: rgba(255,247,238,.95); font-size: 13px; color: #8a3b2a; display: none; z-index: 30; white-space: pre-wrap; }
 </style>
@@ -144,6 +154,7 @@
 <div id="scrim"></div>
 <div id="ward" class="glass"><div class="handle"></div><h3>¿Qué me pongo?</h3><div class="grid"></div></div>
 <div id="diag"></div>
+<div id="away" class="glass"><div class="t">Estoy en el PC contigo 💻</div><div class="s" id="awayS">Cuando me necesites aquí, llámame y vengo corriendo.</div><button id="comeBtn">¡Ven aquí!</button></div>
 
 <script>
 (() => {
@@ -203,8 +214,34 @@
   let jump = null;
   function hopTo(x, y, then, z) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, z0: E.z, z1: z === undefined ? E.z : z, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
   window.house = { hop(v) { E.vy = Math.min(1400, v * 1.5); }, hold(ms) { E.hold = performance.now() + ms; }, say(t, ms) { say(t, ms); } };
+
+  // ---------- Fase 2: cuando Eko está en el PC, la casa se queda sin él (con su notita y «¡Ven aquí!») ----------
+  let AWAY = !!(H && H.where && H.where() === "pc");
+  function showAway(on) {
+    AWAY = on;
+    document.body.classList.toggle("away", on);
+    $("away").classList.toggle("on", on);
+    for (const el of [frame, hit, $("shadowF")]) el.style.visibility = on ? "hidden" : "visible";
+    if (on) { bub.classList.remove("on"); $("comeBtn").disabled = false; $("comeBtn").textContent = "¡Ven aquí!"; $("awayS").textContent = "Cuando me necesites aquí, llámame y vengo corriendo."; }
+  }
+  $("comeBtn").onclick = () => { $("comeBtn").disabled = true; $("comeBtn").textContent = "Llamando…"; H && H.come(); };
+  window.house.setWhere = (w) => {
+    if (w === "pc" && !AWAY) {
+      // lo han llamado desde el PC: se despide y sale por la puerta
+      if (E.mode === "sleep") wake();
+      say(pick(["¡Me voy al PC contigo!", "¡Me llaman del PC! Ahora vuelvo", "¡Voy al ordenador!"]), 2000);
+      walkTo(XMIN, () => setTimeout(() => showAway(true), 300));
+    } else if (w === "phone" && AWAY) window.house.arrive();
+  };
+  // Llega del PC: entra por la puerta
+  window.house.arrive = () => {
+    showAway(false);
+    E.x = XMIN; E.y = FLOOR; E.z = 0; E.mode = "idle"; jump = null;
+    walkTo(XMIN + 260, () => { send("act", "tada"); say(pick(["¡Ya estoy aquí!", "¡Hola! He venido corriendo desde el PC", "¡Mudanza completada!"]), 2600); setTimeout(needs, 300); });
+  };
+  window.house.comeFailed = () => { $("comeBtn").disabled = false; $("comeBtn").textContent = "Probar otra vez"; $("awayS").textContent = "No encuentro el PC. ¿Estáis los dos en la misma Wi-Fi y el PC encendido?"; };
   let bubT = 0;
-  function say(t, ms = 2800) { bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
+  function say(t, ms = 2800) { if (AWAY) return; bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
 
   // Asiento del sillón: más al fondo (Eko se hace más pequeño) y metido entre los brazos
   const SEAT = { x: 717, y: 990 };
@@ -235,7 +272,7 @@
       const step = 170 * dt * E.dir;
       if (Math.abs(E.target - E.x) <= Math.abs(step)) { E.x = E.target; const t = E.onArrive; E.onArrive = null; idle(); t && t(); }
       else { E.x += step; send("v", 170 * E.dir, 0); }
-    } else if (E.mode === "idle" && now > E.next && now > E.hold && !wardOpen()) roam();
+    } else if (E.mode === "idle" && now > E.next && now > E.hold && !wardOpen() && !AWAY) roam();
     if (E.vy || E.hop) { E.hop += E.vy * dt; E.vy -= 3000 * dt; if (E.hop <= 0) { E.hop = 0; if (E.vy < -50) send("land"); E.vy = 0; } }
     place();
     requestAnimationFrame(loop);
@@ -302,6 +339,7 @@
   $("spots").addEventListener("click", (e) => { const el = e.target.closest(".spot"); if (el) use(SPOTS[+el.dataset.i]); });
   function use(s) {
     closeWard();
+    if (AWAY) { $("away").classList.remove("on"); void $("away").offsetWidth; $("away").classList.add("on"); return; }   // sin Eko en casa, la notita se mueve
     if (s.id === "lamp") { say(toggleLights() ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
     if (s.id === "nap") { if (E.mode === "sleep") wake(); else { say("Una siestecita…", 1800); nap(); } return; }
     if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 450); }); return; }
@@ -320,7 +358,7 @@
     ["art/ui/ic-note.webp", "Diario", () => use(spot("diary"))],
   ];
   $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}"><img src="${d[0]}" alt="">${d[1]}</button>`).join("");
-  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); DOCK[+b.dataset.i][2](); });
+  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); if (AWAY) { use({}); return; } DOCK[+b.dataset.i][2](); });
 
   // ---------- Tocarlo como fuera: toque, doble toque, caricia, cogerlo y soltarlo, mantener pulsado ----------
   //  toque: reacciona · doble toque: un truco · acariciar la cabeza (deslizar despacio por arriba): mimos
@@ -422,7 +460,7 @@
       ekoReady = true;
       frame.contentWindow.postMessage({ noShadow: true }, "*");
       sync();
-      if (firstReady) { firstReady = false; if (isNight() && E.mode === "idle") setTimeout(nap, 800); }
+      if (firstReady) { firstReady = false; if (isNight() && E.mode === "idle" && !AWAY) setTimeout(nap, 800); }
     }
     if (d.error) { $("diag").style.display = "block"; $("diag").textContent += "Eko: " + d.error + "\n"; }
   });
@@ -430,9 +468,10 @@
   function refresh() { sky(); photo(); finds(); needs(); }
   window.houseRefresh = refresh;
   fit(); refresh(); setInterval(sky, 60000); setInterval(needs, 10000);
+  if (AWAY) showAway(true);
   place(); requestAnimationFrame(loop);
   setInterval(() => { if (E.mode !== "sleep" && !wardOpen()) send("chatter"); }, 150000);
-  if (!isNight()) setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 900);
+  if (!isNight() && !AWAY) setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 900);
 })();
 </script>
 </body></html>

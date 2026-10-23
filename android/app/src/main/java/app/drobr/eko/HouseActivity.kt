@@ -51,6 +51,16 @@ class HouseActivity : Activity() {
     inner class HouseBridge {
         @JavascriptInterface fun name(): String = PcLink.petName(this@HouseActivity)
         @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
+        // Dónde está Eko: "pc" o "phone" (lo último que se sabe; se comprueba cada 10 s)
+        @JavascriptInterface fun where(): String = if (PcLink.paired(this@HouseActivity)) PcLink.where(this@HouseActivity) else "phone"
+        // «¡Ven aquí!»: lo trae del PC
+        @JavascriptInterface fun come() {
+            Thread {
+                val ok = PcLink.come(this@HouseActivity)
+                if (ok) EkoService.instance?.cameFromPc()
+                js(if (ok) "window.house && house.arrive()" else "window.house && house.comeFailed()")
+            }.start()
+        }
         @JavascriptInterface fun open(what: String) { runOnUiThread { openThing(what) } }
         @JavascriptInterface fun give(kind: String) { runOnUiThread { giveNeed(kind) } }
         @JavascriptInterface fun accMode(): String = prefs().getString("acc", "auto") ?: "auto"
@@ -109,8 +119,29 @@ class HouseActivity : Activity() {
     }
     private fun sendInsets() { if (loaded) js("window.setInsets && setInsets($insetTop, $insetBottom)") }
 
+    // Cada 10 s (con la casa abierta) se pregunta al PC dónde está Eko
+    private val whereTick = object : Runnable {
+        override fun run() { checkWhere(); web.postDelayed(this, 10_000) }
+    }
+    private var whereBusy = false
+    private fun checkWhere() {
+        if (!PcLink.paired(this) || whereBusy) return
+        whereBusy = true
+        Thread {
+            val w = PcLink.askWhere(this)
+            // Si no encuentra el PC, aquí tienes a Eko igualmente
+            val now = w ?: "phone"
+            if (w != null) PcLink.setWhere(this, w)
+            whereBusy = false
+            js("window.house && house.setWhere('$now')")
+        }.start()
+    }
+    override fun onStart() { super.onStart(); web.postDelayed(whereTick, 10_000) }
+    override fun onStop() { super.onStop(); web.removeCallbacks(whereTick) }
+
     override fun onResume() {
         super.onResume()
+        checkWhere()
         EkoService.instance?.homeVisit(true)          // Eko ha vuelto a casa
         EkoNotes.seen(this); EkoNotes.schedule(this); GoldenHour.schedule(this)
         js("window.houseRefresh && houseRefresh()")

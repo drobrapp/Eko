@@ -1,30 +1,35 @@
 // Eko en el móvil: el PC hace de «casa base» en tu Wi-Fi.
 // Un servidor HTTP mínimo, solo para la red de casa. El móvil se conecta una vez escaneando un QR
-// (ip, puerto y una clave secreta) y después pide el estado de Eko cuando lo necesita.
-// El estado viaja cifrado (AES-GCM): lo cifra la página con la clave del QR y aquí solo se guarda y se sirve.
-// Para pedirlo, el móvil manda un «token» (resumen SHA-256 de la clave), así la clave nunca viaja por la red.
+// (ip, puerto y una clave secreta) y después pregunta dónde está Eko, se lo lleva o lo devuelve.
+// El estado viaja cifrado (AES-GCM): lo cifran y descifran las páginas con la clave del QR; aquí solo se guarda y se pasa.
+// El móvil se identifica con un «token» (SHA-256 de la clave), así la clave nunca viaja por la red.
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream, UdpSocket};
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 pub const PORT: u16 = 47913;
 
 struct St {
-    token: String,    // token del móvil ya conectado
-    pending: String,  // token esperando a que el móvil escanee el QR
-    snapshot: String, // estado de Eko, ya cifrado por la página
+    token: String,     // token del móvil ya conectado
+    pending: String,   // token esperando a que el móvil escanee el QR
+    snapshot: String,  // estado de Eko, ya cifrado por la página
+    where_: String,    // dónde está Eko: "pc" o "phone"
+    seen: Option<Instant>, // última vez que el móvil dio señales
     started: bool,
 }
 static ST: OnceLock<Mutex<St>> = OnceLock::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
 fn st() -> &'static Mutex<St> {
-    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), started: false }))
+    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), where_: "pc".into(), seen: None, started: false }))
 }
 
 pub fn init(app: AppHandle) {
     let _ = APP.set(app);
+}
+fn emit<S: serde::Serialize + Clone>(ev: &str, payload: S) {
+    if let Some(a) = APP.get() { let _ = a.emit(ev, payload); }
 }
 
 // IP del PC en la red de casa (no envía nada: solo pregunta al sistema por qué interfaz saldría)
@@ -61,48 +66,71 @@ fn find(h: &[u8], n: &[u8]) -> Option<usize> { h.windows(n.len()).position(|w| w
 fn handle(mut c: TcpStream) -> std::io::Result<()> {
     c.set_read_timeout(Some(Duration::from_secs(5)))?;
     let mut buf: Vec<u8> = Vec::new();
-    let mut tmp = [0u8; 4096];
+    let mut tmp = [0u8; 8192];
+    let mut body_at = 0usize;
+    let mut len = 0usize;
     loop {
         let n = c.read(&mut tmp)?;
         if n == 0 { break; }
         buf.extend_from_slice(&tmp[..n]);
-        if let Some(p) = find(&buf, b"\r\n\r\n") {
-            let head = String::from_utf8_lossy(&buf[..p]).to_lowercase();
-            let len = head.lines().find_map(|l| l.strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0))).unwrap_or(0);
-            if buf.len() >= p + 4 + len { break; }
+        if body_at == 0 {
+            if let Some(p) = find(&buf, b"\r\n\r\n") {
+                body_at = p + 4;
+                let head = String::from_utf8_lossy(&buf[..p]).to_lowercase();
+                len = head.lines().find_map(|l| l.strip_prefix("content-length:").map(|v| v.trim().parse::<usize>().unwrap_or(0))).unwrap_or(0);
+            }
         }
-        if buf.len() > 2_000_000 { break; }
+        if body_at > 0 && buf.len() >= body_at + len { break; }
+        if buf.len() > 4_000_000 { break; }
     }
-    let text = String::from_utf8_lossy(&buf).to_string();
-    let head = text.split("\r\n\r\n").next().unwrap_or("");
+    let head = String::from_utf8_lossy(&buf[..body_at.saturating_sub(4).min(buf.len())]).to_string();
+    let body = if body_at > 0 && buf.len() >= body_at { String::from_utf8_lossy(&buf[body_at..]).to_string() } else { String::new() };
     let path = head.lines().next().unwrap_or("").split_whitespace().nth(1).unwrap_or("/").to_string();
     let token = head.lines().find_map(|l| {
         let (k, v) = l.split_once(':')?;
         if k.trim().eq_ignore_ascii_case("x-eko-token") { Some(v.trim().to_string()) } else { None }
     }).unwrap_or_default();
-    let (code, out) = route(&path, &token);
+    let (code, out) = route(&path, &token, body);
     let resp = format!("HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", code, out.len(), out);
     c.write_all(resp.as_bytes())
 }
 
-fn route(path: &str, token: &str) -> (&'static str, String) {
+fn route(path: &str, token: &str, body: String) -> (&'static str, String) {
     let mut s = st().lock().unwrap();
-    match path {
-        "/hello" => ("200 OK", r#"{"app":"eko"}"#.into()),
-        // El móvil acaba de escanear el QR
-        "/pair" => {
-            if !s.pending.is_empty() && token == s.pending {
-                s.token = s.pending.clone();
-                s.pending.clear();
-                if let Some(a) = APP.get() { let _ = a.emit("sync-paired", ()); }
-                ("200 OK", r#"{"ok":true}"#.into())
-            } else { ("403 Forbidden", r#"{"ok":false}"#.into()) }
+    if path == "/hello" { return ("200 OK", r#"{"app":"eko"}"#.into()); }
+    // El móvil acaba de escanear el QR
+    if path == "/pair" {
+        if !s.pending.is_empty() && token == s.pending {
+            s.token = s.pending.clone();
+            s.pending.clear();
+            s.seen = Some(Instant::now());
+            drop(s);
+            emit("sync-paired", ());
+            return ("200 OK", r#"{"ok":true}"#.into());
         }
-        // El móvil pide a Eko
-        "/state" => {
-            if !s.token.is_empty() && token == s.token {
-                ("200 OK", if s.snapshot.is_empty() { "{}".into() } else { s.snapshot.clone() })
-            } else { ("403 Forbidden", "{}".into()) }
+        return ("403 Forbidden", r#"{"ok":false}"#.into());
+    }
+    if s.token.is_empty() || token != s.token { return ("403 Forbidden", "{}".into()); }
+    s.seen = Some(Instant::now());
+    match path {
+        // ¿Dónde está Eko?
+        "/where" => ("200 OK", format!(r#"{{"where":"{}"}}"#, s.where_)),
+        // El estado de Eko (cifrado)
+        "/state" => ("200 OK", if s.snapshot.is_empty() { "{}".into() } else { s.snapshot.clone() }),
+        // El móvil le llama («¡Ven aquí!»): Eko se despide en el PC y el móvil recibe su estado
+        "/come" => {
+            let snap = if s.snapshot.is_empty() { "{}".to_string() } else { s.snapshot.clone() };
+            let was_here = s.where_ == "pc";
+            s.where_ = "phone".into();
+            drop(s);
+            if was_here { emit("sync-leave", ()); }
+            ("200 OK", snap)
+        }
+        // El móvil devuelve a Eko (o le cuenta cómo está): la página lo descifra y decide
+        "/give" => {
+            drop(s);
+            emit("sync-arrive", body);
+            ("200 OK", r#"{"ok":true}"#.into())
         }
         _ => ("404 Not Found", "{}".into()),
     }
@@ -133,4 +161,18 @@ pub fn sync_set_token(token: String) {
 #[tauri::command]
 pub fn sync_snapshot(data: String) {
     st().lock().unwrap().snapshot = data;
+}
+
+// Dónde está Eko (la página lo guarda y lo dice al arrancar y cuando cambia)
+#[tauri::command]
+pub fn sync_set_where(w: String) {
+    st().lock().unwrap().where_ = if w == "phone" { "phone".into() } else { "pc".into() };
+}
+
+// Para la página: dónde está y hace cuántos segundos dio señales el móvil (-1 = nunca desde que arrancó)
+#[tauri::command]
+pub fn sync_status() -> serde_json::Value {
+    let s = st().lock().unwrap();
+    let seen = s.seen.map(|t| t.elapsed().as_secs() as i64).unwrap_or(-1);
+    serde_json::json!({ "where": s.where_, "seen": seen })
 }

@@ -438,13 +438,14 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     let autostart_on = app.autolaunch().is_enabled().unwrap_or(false);
     let sleep = MenuItem::with_id(app, "sleep", "Dormir / Despertar", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "Ocultar / Mostrar   Ctrl+Alt+E", true, None::<&str>)?;
+    let come = MenuItem::with_id(app, "come", "¡Ven aquí! (si está en el móvil)", true, None::<&str>)?;
     let auto = CheckMenuItem::with_id(app, "autostart", "Arrancar con Windows", true, autostart_on, None::<&str>)?;
     let sound = CheckMenuItem::with_id(app, "sound", "Sonido", true, true, None::<&str>)?;
     let hat = MenuItem::with_id(app, "hat", "Probar complemento", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Ajustes…", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&settings, &sleep, &toggle, &sound, &hat, &auto, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&settings, &sleep, &toggle, &come, &sound, &hat, &auto, &sep, &quit])?;
     app.manage(SoundItem(sound.clone()));
 
     let auto_item = auto.clone();
@@ -457,6 +458,9 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
                 let _ = app.emit_to("main", "cmd", "sleep");
             }
             "toggle" => toggle_visible(app),
+            "come" => {
+                let _ = app.emit_to("main", "cmd", "sync-come");
+            }
             "autostart" => {
                 let al = app.autolaunch();
                 let on = al.is_enabled().unwrap_or(false);
@@ -557,7 +561,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, world_show, world_hide, wrapped_show, wrapped_hide, set_main_visible, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::latest_download, actions::open_download_named, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::find_apps, actions::open_app, actions::find_running_apps, actions::close_app, actions::lock_pc, actions::backup_save, actions::app_restart, sync::sync_start, sync::sync_set_token, sync::sync_snapshot])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, world_show, world_hide, wrapped_show, wrapped_hide, set_main_visible, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::latest_download, actions::open_download_named, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::find_apps, actions::open_app, actions::find_running_apps, actions::close_app, actions::lock_pc, actions::backup_save, actions::app_restart, sync::sync_start, sync::sync_set_token, sync::sync_snapshot, sync::sync_set_where, sync::sync_status])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;

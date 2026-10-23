@@ -48,6 +48,50 @@ window.EkoSync = (() => {
   }
 
   const isMain = !!window.Eko;   // la ventana de Eko (no la de ajustes)
+
+  // ---------- Fase 2: Eko se muda («¡Ven aquí!») ----------
+  // "pc" = está aquí; "phone" = se ha ido al móvil (aquí se esconde)
+  const WHERE = "eko-where";
+  const where = () => (localStorage.getItem(WHERE) === "phone" ? "phone" : "pc");
+  function setWhere(w) { localStorage.setItem(WHERE, w); invoke("sync_set_where", { w }).catch(() => {}); }
+  const ES = !window.Eko || window.Eko.LANG === "es";
+  const pickL = (a) => a[Math.floor(Math.random() * a.length)];
+
+  async function decrypt(body) {
+    const s = read(KEY); if (!s) return null;
+    const j = JSON.parse(body);
+    const bin = (x) => Uint8Array.from(atob(x), (c) => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey("raw", unhex(s.k), "AES-GCM", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bin(j.iv) }, key, bin(j.ct));
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+  // Lo que trae del móvil: sus necesidades (el último que las tocó manda)
+  function mergeFromPhone(p) {
+    const n = p && p.needs, N = window.EkoNeeds;
+    if (!n || !N) return;
+    for (const k of ["hunger", "fun", "love", "energy"]) if (typeof n[k] === "number") N.set(k, Math.max(0, Math.min(100, n[k])));
+    N.set("t", Date.now());
+  }
+  function leave() {
+    const E = window.Eko; if (!E || where() === "phone") { setWhere("phone"); return; }
+    setWhere("phone");
+    E.express && E.express("emocionado", 2.5);
+    E.act && E.act("wave");
+    E.say && E.say(pickL(ES ? ["¡Me voy contigo al móvil!", "¡Hasta luego, PC! Me voy al bolsillo", "¡Allá voy! Nos vemos en el móvil"] : ["Off to your phone!", "See you on the phone!"]), 2600, true);
+    setTimeout(() => { E.setHidden && E.setHidden(true); snapshot().catch(() => {}); }, 2400);
+  }
+  function arrive(line) {
+    const E = window.Eko;
+    setWhere("pc");
+    if (!E) return;
+    E.setHidden && E.setHidden(false);
+    setTimeout(() => {
+      E.act && E.act("tada");
+      E.express && E.express("emocionado", 2.5);
+      E.say && E.say(line || pickL(ES ? ["¡Ya he vuelto!", "¡Hola otra vez! Ya estoy en el PC", "¡Mudanza al PC completada!"] : ["I'm back!", "Hello again!"]), 2800, true);
+    }, 500);
+    snapshot().catch(() => {});
+  }
   T.event.listen("sync-paired", () => {
     const p = read(PENDING);
     if (p) { localStorage.setItem(KEY, JSON.stringify({ ...p, at: new Date().toISOString() })); localStorage.removeItem(PENDING); }
@@ -60,7 +104,31 @@ window.EkoSync = (() => {
       E.say && E.say(E.LANG === "es" ? "¡Ya estamos conectados! Ahora también vivo en tu móvil" : "We're connected! Now I live on your phone too", 3800, true);
     }, 400);
   });
-  if (isMain) setTimeout(startLoop, 3000);
+  if (isMain) setTimeout(() => {
+    startLoop();
+    if (!read(KEY)) return;
+    invoke("sync_set_where", { w: where() }).catch(() => {});
+    if (where() === "phone" && window.Eko && window.Eko.setHidden) window.Eko.setHidden(true);
+  }, 3000);
+  if (isMain) {
+    // El móvil le ha llamado: se despide aquí
+    T.event.listen("sync-leave", () => leave());
+    // El móvil lo devuelve (o cuenta cómo está): se juntan sus necesidades y, si estaba fuera, vuelve
+    T.event.listen("sync-arrive", async (e) => {
+      try { const p = await decrypt(e.payload); mergeFromPhone(p); } catch (_) {}
+      if (where() === "phone") arrive();
+    });
+    // Bandeja → «¡Ven aquí!»: vuelve al PC (el móvil se entera la próxima vez que pregunte)
+    T.event.listen("cmd", (e) => { if (e.payload === "sync-come" && read(KEY) && where() === "phone") arrive(); });
+    // Seguridad: si el móvil lleva 10 minutos sin dar señales, Eko vuelve solo (nunca te quedas sin él)
+    setInterval(async () => {
+      if (!read(KEY) || where() !== "phone") return;
+      try {
+        const st = await invoke("sync_status");
+        if (st.seen < 0 || st.seen > 600) arrive(ES ? "¡He vuelto! Tu móvil no daba señales" : "I'm back! Your phone went quiet");
+      } catch (_) {}
+    }, 60000);
+  }
 
   // ---------- Ventana de ajustes: botón «Conectar con mi móvil» y el QR ----------
   function wireSettings() {

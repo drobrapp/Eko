@@ -55,7 +55,7 @@ object PcLink {
         } catch (_: Exception) {
             return false to "No encuentro el PC. ¿Estáis los dos en la misma Wi-Fi? Si Windows preguntó por la red, hay que decirle que sí"
         }
-        prefs(c).edit().putString("pcIp", ip).putInt("pcPort", port).putString("pcKey", keyHex).putString("pcToken", token).apply()
+        prefs(c).edit().putString("pcIp", ip).putInt("pcPort", port).putString("pcKey", keyHex).putString("pcToken", token).putString("where", "phone").apply()
         // El PC prepara el estado de Eko en unos segundos: se espera un poco
         repeat(15) {
             try {
@@ -67,15 +67,70 @@ object PcLink {
         return true to "Conectados, pero el PC aún no me ha pasado a Eko. Lo intentaré más tarde"
     }
 
-    private fun http(url: String, token: String, method: String): Pair<Int, String> {
+    private fun http(url: String, token: String, method: String, send: String? = null): Pair<Int, String> {
         val k = URL(url).openConnection() as HttpURLConnection
         k.connectTimeout = 4000; k.readTimeout = 8000; k.requestMethod = method
         k.setRequestProperty("X-Eko-Token", token)
-        if (method == "POST") { k.doOutput = true; k.setFixedLengthStreamingMode(0); k.outputStream.close() }
+        if (method == "POST") {
+            val bytes = (send ?: "").toByteArray(Charsets.UTF_8)
+            k.doOutput = true; k.setRequestProperty("Content-Type", "application/json"); k.setFixedLengthStreamingMode(bytes.size)
+            k.outputStream.use { it.write(bytes) }
+        }
         val code = k.responseCode
         val body = (if (code < 400) k.inputStream else k.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
         k.disconnect()
         return code to body
+    }
+
+    // ---------- Fase 2: la mudanza ----------
+    // where: "pc" (está en el PC) o "phone" (está aquí). Si no se puede preguntar al PC, aquí tiene a Eko igualmente.
+    fun where(c: Context): String = prefs(c).getString("where", "phone") ?: "phone"
+    fun setWhere(c: Context, w: String) { prefs(c).edit().putString("where", w).apply() }
+    private fun base(c: Context): String? {
+        val p = prefs(c); val ip = p.getString("pcIp", null) ?: return null
+        return "http://$ip:${p.getInt("pcPort", 47913)}"
+    }
+    private fun token(c: Context) = prefs(c).getString("pcToken", "") ?: ""
+
+    // Pregunta al PC dónde está Eko. null = no lo encuentra (otra Wi-Fi, PC apagado…). No llamar en el hilo principal.
+    fun askWhere(c: Context): String? {
+        val b = base(c) ?: return null
+        return try {
+            val (code, body) = http("$b/where", token(c), "GET")
+            if (code == 200) JSONObject(body).optString("where", "pc") else null
+        } catch (_: Exception) { null }
+    }
+
+    // «¡Ven aquí!» desde el móvil: el PC lo deja ir y nos pasa su estado. No llamar en el hilo principal.
+    fun come(c: Context): Boolean {
+        val b = base(c) ?: return false
+        val key = prefs(c).getString("pcKey", null) ?: return false
+        return try {
+            val (code, body) = http("$b/come", token(c), "POST")
+            if (code != 200) return false
+            if (body.contains("\"ct\"")) adopt(c, decrypt(key, body), quiet = true)
+            setWhere(c, "phone")
+            true
+        } catch (_: Exception) { false }
+    }
+
+    // Eko se ha ido al PC: se le pasan sus necesidades de aquí. No llamar en el hilo principal.
+    fun giveBack(c: Context, needs: JSONObject): Boolean {
+        val b = base(c) ?: return false
+        val key = prefs(c).getString("pcKey", null) ?: return false
+        return try {
+            val plain = JSONObject().put("app", "eko").put("v", 1).put("from", "phone").put("at", System.currentTimeMillis()).put("needs", needs)
+            val (code, _) = http("$b/give", token(c), "POST", encrypt(key, plain.toString()))
+            code == 200
+        } catch (_: Exception) { false }
+    }
+
+    private fun encrypt(keyHex: String, plain: String): String {
+        val iv = ByteArray(12).also { java.security.SecureRandom().nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(unhex(keyHex), "AES"), GCMParameterSpec(128, iv))
+        val ct = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+        return JSONObject().put("iv", Base64.encodeToString(iv, Base64.NO_WRAP)).put("ct", Base64.encodeToString(ct, Base64.NO_WRAP)).toString()
     }
 
     private fun decrypt(keyHex: String, body: String): JSONObject {
@@ -89,7 +144,7 @@ object PcLink {
 
     // El móvil adopta al Eko del PC: nombre, día en que nació y necesidades.
     // Lo propio del móvil (pasos, colección, álbum, diario) no se toca. Se guarda todo para las próximas fases.
-    private fun adopt(c: Context, snap: JSONObject) {
+    private fun adopt(c: Context, snap: JSONObject, quiet: Boolean = false) {
         File(c.filesDir, "pc-eko.json").writeText(snap.toString())
         val d = snap.optJSONObject("data") ?: return
         val e = prefs(c).edit()
@@ -104,7 +159,7 @@ object PcLink {
             val l = n.optDouble("love", 70.0).toFloat(); val en = n.optDouble("energy", 85.0).toFloat()
             e.putFloat("hunger", h).putFloat("fun", f).putFloat("love", l).putFloat("energy", en)
             e.apply()
-            EkoService.instance?.adopted(h, f, l, en)
-        } else { e.apply(); EkoService.instance?.adopted(null, null, null, null) }
+            if (quiet) EkoService.instance?.setNeedsQuiet(h, f, l, en) else EkoService.instance?.adopted(h, f, l, en)
+        } else { e.apply(); if (!quiet) EkoService.instance?.adopted(null, null, null, null) }
     }
 }

@@ -125,6 +125,8 @@ class EkoService : Service() {
         goForeground()
         if (web == null) addOverlay()
         running = true; instance = this
+        // Si se había ido al PC, empieza escondido hasta que el PC confirme dónde está (lo pregunta enseguida)
+        away = PcLink.paired(this) && PcLink.where(this) == "pc"; applyVisible(); nextSync = 0L
         EkoNotes.schedule(this); EkoNotes.seen(this)
         if (intent?.action == "NOTE") handler.postDelayed({ talk("noteHi") }, 1500)
         return START_STICKY
@@ -560,12 +562,63 @@ class EkoService : Service() {
     }
     fun homeVisit(home: Boolean) {
         handler.post {
-            val v = if (home) View.GONE else View.VISIBLE
+            inHome = home
             if (home) { closeMenu(); bubble?.visibility = View.GONE }
-            web?.visibility = v
+            applyVisible()
             if (!home) web?.evaluateJavascript("window.ekoLook && ekoLook.setMode('${accMode()}')", null)
+            if (!home) nextSync = 0L   // al salir de casa, se pregunta enseguida dónde está
         }
     }
+    // Se ve en tu pantalla si no estás en su casa y no se ha ido al PC
+    private var inHome = false
+    private var away = false
+    private fun applyVisible() {
+        val show = !inHome && !away
+        web?.visibility = if (show) View.VISIBLE else View.GONE
+        if (!show) { closeMenu(); bubble?.visibility = View.GONE }
+    }
+    fun setNeedsQuiet(h: Float, f: Float, l: Float, e: Float) { handler.post { hunger = h; fun_ = f; love = l; energy = e; saveNeeds() } }
+
+    // ---------- Fase 2: ¿dónde está Eko? (se pregunta al PC cada 15 s con la pantalla encendida) ----------
+    private var nextSync = 0L
+    private var syncBusy = false
+    private var unreachable = 0
+    private fun pollPc() {
+        if (syncBusy || !PcLink.paired(this)) return
+        syncBusy = true
+        Thread {
+            val w = PcLink.askWhere(this)
+            handler.post { syncBusy = false; onWhere(w) }
+        }.start()
+    }
+    private fun onWhere(w: String?) {
+        when (w) {
+            "pc" -> {
+                unreachable = 0
+                if (!away) {
+                    // Lo han llamado desde el PC: se despide aquí y le cuenta al PC cómo está
+                    val visible = web?.visibility == View.VISIBLE
+                    PcLink.setWhere(this, "pc")
+                    val needs = org.json.JSONObject(needsJson())
+                    Thread { PcLink.giveBack(this, needs) }.start()
+                    if (visible) { talk("toPc"); js("act('wave')"); handler.postDelayed({ away = true; applyVisible() }, 2200) }
+                    else { away = true; applyVisible() }
+                }
+            }
+            "phone" -> {
+                unreachable = 0
+                PcLink.setWhere(this, "phone")
+                if (away) { away = false; applyVisible(); handler.postDelayed({ talk("fromPc"); js("act('tada')") }, 600) }
+            }
+            else -> {
+                // No encuentra el PC: si Eko «estaba en el PC», aquí lo tienes igualmente (nunca te quedas sin él)
+                unreachable++
+                if (away && unreachable >= 2) { away = false; applyVisible() }
+            }
+        }
+    }
+    // La casa lo ha traído con «¡Ven aquí!»
+    fun cameFromPc() { handler.post { away = false; unreachable = 0; applyVisible() } }
     fun houseGive(kind: String) {
         handler.post {
             when (kind) { "feed" -> give(h = 35f, l = 3f); "play" -> give(f = 30f, l = 4f, e = -3f); "pet" -> give(l = 4f) }
@@ -688,7 +741,7 @@ class EkoService : Service() {
     private fun talkArg(ev: String, arg: String, pkg: String = "") = js("talk('$ev', 1, ${org.json.JSONObject.quote(arg)}, ${org.json.JSONObject.quote(pkg)})")
 
     // ---------- Cosas del móvil que comenta ----------
-    private fun quiet() = (st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE
+    private fun quiet() = !away && (st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE
     private val apps by lazy { AppSense(this, { ev, arg, pkg -> talkArg(ev, arg, pkg) }, { quiet() }) }
     fun onApp(pkg: String) { apps.onApp(pkg) }
     private var nextSense = 0L
@@ -807,6 +860,7 @@ class EkoService : Service() {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
             if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary(); checkDiary() }
+            if (now > nextSync) { nextSync = now + 15_000; pollPc() }
             checkPhotoWalk()
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }

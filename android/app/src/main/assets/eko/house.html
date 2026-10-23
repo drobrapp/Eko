@@ -174,7 +174,9 @@
   // Tamaño de Eko acorde con los muebles (más o menos tan alto como el sillón)
   const S = 2.3, FLOOR = 1340, XMIN = 150, XMAX = 880;
   const E = { x: 300, y: FLOOR, dir: 1, target: null, mode: "idle", hold: 0, vy: 0, hop: 0, next: 0, onArrive: null, fx: 0, fy: 0, z: 0 };   // z: 0 = en el suelo de delante, 1 = sentado al fondo (sillón)
-  const send = (fn, ...args) => frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
+  // Mensajes a Eko: hasta que su marco no ha cargado se pierden, así que al cargar se le recuerda en qué estado está (ver sync)
+  let ekoReady = false;
+  const send = (fn, ...args) => ekoReady && frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
   const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
   const scale = () => S * (1 - 0.24 * E.z);              // más lejos = más pequeño
   function place() {
@@ -405,10 +407,20 @@
   $("ward").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); H && H.setAcc(b.dataset.id); look(b.dataset.id); });
 
   // ---------- Arranque (y aviso si Eko no carga) ----------
-  let ekoReady = false;
+  // Al cargar Eko se le pone en el estado en que ya está (si estaba durmiendo en el sillón, sigue durmiendo ahí)
+  function sync() {
+    const st = { sleep: "sleep", walk: "walk", drag: "drag", fall: "fall" }[E.mode] || (jump ? "fall" : "idle");
+    send("set", st, E.mode === "sleep" ? -1 : E.dir);
+  }
+  let firstReady = true;
   addEventListener("message", (e) => {
     const d = e.data || {};
-    if (d.ready) { ekoReady = true; send("set", "idle", 1); frame.contentWindow.postMessage({ noShadow: true }, "*"); }
+    if (d.ready) {
+      ekoReady = true;
+      frame.contentWindow.postMessage({ noShadow: true }, "*");
+      sync();
+      if (firstReady) { firstReady = false; if (isNight() && E.mode === "idle") setTimeout(nap, 800); }
+    }
     if (d.error) { $("diag").style.display = "block"; $("diag").textContent += "Eko: " + d.error + "\n"; }
   });
   setTimeout(() => { if (!ekoReady) { $("diag").style.display = "block"; $("diag").textContent += "Eko no ha cargado en su casa (sin respuesta del marco).\n"; } }, 6000);
@@ -417,8 +429,7 @@
   fit(); refresh(); setInterval(sky, 60000); setInterval(needs, 10000);
   place(); requestAnimationFrame(loop);
   setInterval(() => { if (E.mode !== "sleep" && !wardOpen()) send("chatter"); }, 150000);
-  if (isNight()) setTimeout(nap, 1500);
-  else setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 900);
+  if (!isNight()) setTimeout(() => say(pick(["¡Bienvenido a mi casa!", "¡Hola! Pasa, pasa", "Toca las cosas de mi casa"]), 3000), 900);
 })();
 </script>
 </body></html>

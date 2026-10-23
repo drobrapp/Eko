@@ -126,6 +126,7 @@ class NoteReceiver : BroadcastReceiver() {
         when (i.action) {
             Intent.ACTION_BOOT_COMPLETED -> { EkoNotes.schedule(c, force = true); GoldenHour.schedule(c) }
             "GOLDEN" -> GoldenHour.fire(c)
+            "REMIND" -> Reminders.fire(c, i.getLongExtra("at", 0), i.getStringExtra("text") ?: "")
             else -> EkoNotes.fire(c)
         }
     }

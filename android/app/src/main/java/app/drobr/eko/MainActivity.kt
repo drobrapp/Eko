@@ -25,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var upd: TextView
     private lateinit var kb: Button
     private lateinit var pcBtn: Button
+    private lateinit var followBtn: Button
     private lateinit var notes: Button
     private lateinit var walkBtn: Button
     private lateinit var golden: Button
@@ -71,6 +72,10 @@ class MainActivity : Activity() {
         kb = button("", "#9B85CC") { askAccess() }
         pcBtn = button("", "#6F94C2") { connectPc() }
         root.addView(pcBtn)
+        followBtn = button("", "#9B85CC") {
+            val p = getSharedPreferences("eko", MODE_PRIVATE); p.edit().putBoolean("followPc", !p.getBoolean("followPc", true)).apply(); showPc()
+        }
+        root.addView(followBtn)
         root.addView(kb)
         notes = button("", "#6F94C2") { EkoNotes.setEnabled(this, !EkoNotes.enabled(this)); showNotes() }
         root.addView(notes)
@@ -139,7 +144,11 @@ class MainActivity : Activity() {
     }
 
     // ---------- Conectar con el Eko del PC ----------
-    private fun showPc() { pcBtn.text = if (PcLink.paired(this)) "Conectado con tu PC ✓" else "Conectar con mi PC" }
+    private fun showPc() {
+        pcBtn.text = if (PcLink.paired(this)) "Conectado con tu PC ✓" else "Conectar con mi PC"
+        followBtn.visibility = if (PcLink.paired(this)) android.view.View.VISIBLE else android.view.View.GONE
+        followBtn.text = if (getSharedPreferences("eko", MODE_PRIVATE).getBoolean("followPc", true)) "Me sigue entre PC y móvil ✓" else "Me sigue entre PC y móvil: no"
+    }
     private fun connectPc() {
         AlertDialog.Builder(this)
             .setTitle("Conectar con mi PC")

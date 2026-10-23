@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.34.0": { important: true, lines: ["¡Ahora te sigo solo! Si dejas el PC y usas el móvil, me voy contigo, y al volver al PC vuelvo yo también", "Y si tienes un recordatorio mientras estoy en el móvil, te lo doy allí"] },
     "0.33.0": { important: true, lines: ["¡Ya puedo mudarme! Desde mi casa del móvil, pulsa «¡Ven aquí!» y me voy contigo al bolsillo", "Y para traerme de vuelta: clic derecho en mi icono de la bandeja → «¡Ven aquí!»"] },
     "0.32.0": { important: true, lines: ["¡Ahora puedo vivir también en tu móvil Android!", "En mis ajustes, «Eko y tú» → «Eko en tu móvil»: escanea el código con mi app del móvil y seré el mismo en los dos"] },
     "0.31.0": { important: true, lines: ["¡Novedad! Cada domingo por la tarde te preparo un resumen de nuestra semana", "Y si no puedes esperar, míralo en mi libreta: «Nuestra semana»"] },

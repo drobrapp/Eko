@@ -3,6 +3,7 @@
 (() => {
   "use strict";
   const T = {
+    followed: ["¡Te he seguido! El PC se había quedado solo", "Te vi irte del PC… ¡y aquí estoy!", "¿Me dejabas solo en el PC? Ni hablar", "¡Contigo a todas partes!"],
     // Teclado: antes de desaparecer con magia, y al volver
     kb_magic: ["¡Vas a escribir! Me esfumo para no molestar", "Tú escribe tranquilo, yo desaparezco un ratito", "Abracadabra… ¡te dejo sitio!", "Me voy de paseo mientras escribes", "¡Modo invisible! Vuelvo cuando termines", "Hago magia y te dejo la pantalla para ti"],
     kbBack: ["¡Ya estoy aquí! ¿Has terminado?", "¡Hola otra vez!", "¿Ya? Qué rápido escribes", "¡He vuelto! ¿Me echabas de menos?", "Listo, ya puedo volver, ¿no?"],
@@ -130,7 +131,7 @@
   let pokes = [];
   // Cara que pone con cada cosa (catálogo expr.js del PC)
   const EXPR = {
-    hello: "emocionado", noteHi: "enamorado", kb_magic: "picaro", kbBack: "contento", kbBackLong: "sorprendido", kbSouvenir: "divertido", kbFlower: "enamorado", pcArrived: "emocionado", toPc: "contento", fromPc: "emocionado", kb_side: "timido", kb_behind: "picaro", kb_corner: "contento", kbLong: "curioso", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
+    hello: "emocionado", noteHi: "enamorado", followed: "emocionado", kb_magic: "picaro", kbBack: "contento", kbBackLong: "sorprendido", kbSouvenir: "divertido", kbFlower: "enamorado", pcArrived: "emocionado", toPc: "contento", fromPc: "emocionado", kb_side: "timido", kb_behind: "picaro", kb_corner: "contento", kbLong: "curioso", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
     drop: "orgulloso", shake: "asustado", dizzy: "confundido", wake: "cansado", hunger: "cansado",
     keyboard: "curioso", kbGone: "sorprendido", costume: "canalla", music: "emocionado", musicOff: "triste",
     lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",

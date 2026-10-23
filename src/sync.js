@@ -31,7 +31,8 @@ window.EkoSync = (() => {
       const k = localStorage.key(i);
       if (k && k.startsWith("eko") && !k.startsWith("eko-sync")) data[k] = localStorage.getItem(k);
     }
-    const plain = new TextEncoder().encode(JSON.stringify({ app: "eko", v: 1, at: new Date().toISOString(), from: "pc", data }));
+    const plain = new TextEncoder().encode(JSON.stringify({ app: "eko", v: 1, at: new Date().toISOString(), from: "pc", data,
+      extra: { level: window.EkoProgress && EkoProgress.level ? EkoProgress.level() : null } }));
     const key = await crypto.subtle.importKey("raw", unhex(s.k), "AES-GCM", false, ["encrypt"]);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain);
@@ -67,6 +68,7 @@ window.EkoSync = (() => {
   }
   function backToPc() { invoke("set_main_visible", { on: true }).catch(() => {}); }
   const startedAt = Date.now();
+  let lastMove = 0;
 
   async function decrypt(body) {
     const s = read(KEY); if (!s) return null;
@@ -76,14 +78,39 @@ window.EkoSync = (() => {
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bin(j.iv) }, key, bin(j.ct));
     return JSON.parse(new TextDecoder().decode(plain));
   }
-  // Lo que trae del móvil: sus necesidades (el último que las tocó manda)
+  // Lo que trae del móvil: sus necesidades (el último que las tocó manda), los recordatorios que ya te dio allí
+  // y lo que ha pasado (pasos, fotos…) para comentarlo al llegar
+  let recap = null;
   function mergeFromPhone(p) {
     const n = p && p.needs, N = window.EkoNeeds;
-    if (!n || !N) return;
-    for (const k of ["hunger", "fun", "love", "energy"]) if (typeof n[k] === "number") N.set(k, Math.max(0, Math.min(100, n[k])));
-    N.set("t", Date.now());
+    if (n && N) {
+      for (const k of ["hunger", "fun", "love", "energy"]) if (typeof n[k] === "number") N.set(k, Math.max(0, Math.min(100, n[k])));
+      N.set("t", Date.now());
+    }
+    if (p && Array.isArray(p.done) && p.done.length) {
+      try {
+        const list = JSON.parse(localStorage.getItem("eko-reminders") || "[]").filter((r) => !p.done.includes(r.at));
+        localStorage.setItem("eko-reminders", JSON.stringify(list));
+      } catch (_) {}
+    }
+    if (p && p.recap) recap = p.recap;
   }
+  // Una frase sobre lo que ha pasado en el móvil (si hay algo que contar)
+  function recapLine(r) {
+    if (!r || !ES) return null;
+    const n = (x) => Number(x).toLocaleString("es-ES");
+    const opts = [];
+    if (r.photos > 0) opts.push(r.photos === 1 ? "¡En el móvil me diste una foto para mi álbum!" : `¡En el móvil me diste ${r.photos} fotos para mi álbum!`);
+    if (r.steps >= 3000) opts.push(r.goal && r.steps >= r.goal ? `¡Hoy hemos andado ${n(r.steps)} pasos! Meta cumplida` : `Hoy llevamos ${n(r.steps)} pasos juntos`);
+    if (r.finds && r.finds.length) opts.push(`Por el camino encontré ${r.finds.slice(0, 2).join(" y ")}`);
+    if (r.streak >= 2) opts.push(`¡Llevamos ${r.streak} días seguidos cumpliendo la meta de pasos!`);
+    if (r.diary) opts.push("Gracias por contarme tu día en el diario");
+    return opts.length ? pickL(opts) : null;
+  }
+  // ¿Está Eko en el móvil? (entonces los recordatorios los da el móvil, no el PC)
+  const isAway = () => !!read(KEY) && where() === "phone";
   function leave() {
+    lastMove = Date.now();
     const E = window.Eko; if (!E || where() === "phone") { setWhere("phone"); return; }
     setWhere("phone");
     E.express && E.express("emocionado", 2.5);
@@ -109,7 +136,11 @@ window.EkoSync = (() => {
     setTimeout(() => {
       E.express && E.express("emocionado", 2.5);
       E.say && E.say(line || pickL(ES ? ["¡Ya he vuelto!", "¡Hola otra vez! Ya estoy en el PC", "¡Mudanza al PC completada!"] : ["I'm back!", "Hello again!"]), 2800, true);
+      // y lo que ha pasado en el móvil, como si lo hubiera vivido contigo
+      const r = recapLine(recap); recap = null;
+      if (r) setTimeout(() => E.say && E.say(r, 3400, true), 3200);
     }, 1300);
+    lastMove = Date.now();
     snapshot().catch(() => {});
   }
   T.event.listen("sync-paired", () => {
@@ -133,6 +164,31 @@ window.EkoSync = (() => {
     if (where() === "phone") goneFromPc();
   }, 3000);
   if (isMain) {
+    // ---------- Fase 3: Eko te sigue ----------
+    // Cada 3 s: se dice al servidor cuánto llevas sin tocar el PC (el móvil se lleva a Eko si lo usas y el PC lleva un rato quieto)
+    // y, si Eko está en el móvil y vuelves al PC mientras el móvil está apagado o guardado, se le llama.
+    const follow = () => { try { const s = JSON.parse(localStorage.getItem("eko-settings") || "{}"); return s.followPhone !== false; } catch (_) { return true; } };
+    setInterval(async () => {
+      if (!read(KEY)) return;
+      const idle = window.Eko && window.Eko.lastSenses ? Math.round(window.Eko.lastSenses.idle || 0) : 0;
+      invoke("sync_idle", { secs: idle }).catch(() => {});
+      if (!follow() || where() !== "phone" || calling || Date.now() - lastMove < 60000 || idle > 3) return;
+      try {
+        const st = await invoke("sync_status");
+        // móvil sin pantalla encendida desde hace 20 s (no pregunta) y tú en el PC: Eko vuelve contigo
+        if (st.seen < 0 || st.seen > 20) startCall();
+      } catch (_) {}
+    }, 3000);
+  }
+  // El PC llama a Eko (bandeja o al volver al PC): no aparece hasta que el móvil lo suelte, o en 10 s si el móvil no contesta
+  function startCall() {
+    if (!read(KEY) || where() !== "phone" || calling) return;
+    calling = true;
+    invoke("sync_set_where", { w: "calling" }).catch(() => {});
+    clearTimeout(callT);
+    callT = setTimeout(() => { if (calling) arrive(); }, 10000);
+  }
+  if (isMain) {
     // El móvil le ha llamado: se despide aquí
     T.event.listen("sync-leave", () => leave());
     // El móvil lo devuelve (o cuenta cómo está): se juntan sus necesidades y, si estaba fuera, vuelve
@@ -142,13 +198,7 @@ window.EkoSync = (() => {
     });
     // Bandeja → «¡Ven aquí!»: el PC lo llama, pero no aparece hasta que el móvil lo haya soltado (hace su magia y avisa).
     // Si el móvil no contesta en 10 s (pantalla apagada, fuera de casa…), vuelve igualmente.
-    T.event.listen("cmd", (e) => {
-      if (e.payload !== "sync-come" || !read(KEY) || where() !== "phone" || calling) return;
-      calling = true;
-      invoke("sync_set_where", { w: "calling" }).catch(() => {});
-      clearTimeout(callT);
-      callT = setTimeout(() => { if (calling) arrive(); }, 10000);
-    });
+    T.event.listen("cmd", (e) => { if (e.payload === "sync-come") startCall(); });
     // Seguridad: si el móvil lleva 10 minutos sin dar señales (fuera de casa, apagado…) Y estás usando el PC,
     // Eko vuelve al PC. Con el móvil bloqueado en casa y tú sin tocar el PC, se queda donde estaba.
     setInterval(async () => {
@@ -184,6 +234,7 @@ window.EkoSync = (() => {
 
   return {
     paired: () => !!read(KEY),
+    isAway,
     // Ajustes: prepara un QR nuevo y devuelve { ip, port, svg }
     async pair() { const p = await newPair(); return invoke("sync_start", { token: p.t, secret: p.k }); },
     forget() { localStorage.removeItem(KEY); localStorage.removeItem(PENDING); },

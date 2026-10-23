@@ -968,6 +968,9 @@
     });
   }
   function checkReminders() {
+    // Si Eko está en el móvil, los recordatorios te los da el móvil (y al volver cuenta cuáles ya te dio)
+    if (window.EkoSync && EkoSync.isAway && EkoSync.isAway()) return;
+    reminders = store.get("eko-reminders", reminders);
     const now = Date.now();
     const due = reminders.filter((r) => r.at <= now);
     if (!due.length) return;

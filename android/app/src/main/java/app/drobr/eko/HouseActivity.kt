@@ -50,6 +50,7 @@ class HouseActivity : Activity() {
     // Lo que pide la casa
     inner class HouseBridge {
         @JavascriptInterface fun name(): String = PcLink.petName(this@HouseActivity)
+        @JavascriptInterface fun level(): Int = PcLink.level(this@HouseActivity)
         @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
         // Dónde está Eko: "pc" o "phone" (lo último que se sabe; se comprueba cada 10 s)
         @JavascriptInterface fun where(): String = if (PcLink.paired(this@HouseActivity)) PcLink.where(this@HouseActivity) else "phone"
@@ -124,6 +125,7 @@ class HouseActivity : Activity() {
         override fun run() { checkWhere(); web.postDelayed(this, 5_000) }
     }
     private var whereBusy = false
+    @Volatile private var lastFollow = 0L
     private fun checkWhere() {
         if (!PcLink.paired(this) || whereBusy) return
         whereBusy = true
@@ -135,6 +137,14 @@ class HouseActivity : Activity() {
             if (w != null) PcLink.setWhere(this, w)
             whereBusy = false
             js("window.house && house.setWhere('$now')")
+            // Eko te sigue: está en el PC, el PC lleva 5 min sin tocarse y tú estás en su casa del móvil → se viene
+            if (prev == "pc" && w == "pc" && PcLink.lastPcIdle >= 300 && prefs().getBoolean("followPc", true)
+                && System.currentTimeMillis() - lastFollow > 60_000) {
+                lastFollow = System.currentTimeMillis()
+                val ok = PcLink.come(this)
+                if (ok) EkoService.instance?.cameFromPc()
+                if (ok) js("window.house && house.arrive()")
+            }
             // El PC lo ha llamado: la casa hace la magia y, cuando ya ha desaparecido (≈ 2,1 s), se lo pasa al PC
             if (prev != "pc" && w == "pc") {
                 val needs = JSONObject(EkoService.instance?.needsJson() ?: prefs().let { p ->

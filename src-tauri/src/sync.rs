@@ -17,13 +17,14 @@ struct St {
     snapshot: String,  // estado de Eko, ya cifrado por la página
     where_: String,    // dónde está Eko: "pc", "phone" o "calling" (el PC lo ha llamado y espera a que el móvil lo suelte)
     left: bool,        // la página avisa cuando Eko ya ha desaparecido del PC (para que el móvil no lo enseñe antes)
+    pc_idle: u64,      // segundos sin tocar el PC (para que Eko te siga al móvil cuando dejas el PC)
     seen: Option<Instant>, // última vez que el móvil dio señales
     started: bool,
 }
 static ST: OnceLock<Mutex<St>> = OnceLock::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
 fn st() -> &'static Mutex<St> {
-    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), where_: "pc".into(), left: false, seen: None, started: false }))
+    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), where_: "pc".into(), left: false, pc_idle: 0, seen: None, started: false }))
 }
 
 pub fn init(app: AppHandle) {
@@ -115,7 +116,7 @@ fn route(path: &str, token: &str, body: String) -> (&'static str, String) {
     s.seen = Some(Instant::now());
     match path {
         // ¿Dónde está Eko? («calling» = el PC lo quiere de vuelta: para el móvil es como si ya estuviera en el PC)
-        "/where" => ("200 OK", format!(r#"{{"where":"{}"}}"#, if s.where_ == "phone" { "phone" } else { "pc" })),
+        "/where" => ("200 OK", format!(r#"{{"where":"{}","pcIdle":{}}}"#, if s.where_ == "phone" { "phone" } else { "pc" }, s.pc_idle)),
         // El estado de Eko (cifrado)
         "/state" => ("200 OK", if s.snapshot.is_empty() { "{}".into() } else { s.snapshot.clone() }),
         // El móvil le llama («¡Ven aquí!»): Eko hace la magia en el PC y, SOLO cuando ya ha desaparecido,
@@ -182,6 +183,12 @@ pub fn sync_set_where(w: String) {
 #[tauri::command]
 pub fn sync_left() {
     st().lock().unwrap().left = true;
+}
+
+// La página dice cuánto llevas sin tocar el PC (el móvil lo usa para decidir si Eko se va contigo)
+#[tauri::command]
+pub fn sync_idle(secs: u64) {
+    st().lock().unwrap().pc_idle = secs;
 }
 
 // Para la página: dónde está y hace cuántos segundos dio señales el móvil (-1 = nunca desde que arrancó)

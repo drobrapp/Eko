@@ -93,11 +93,13 @@ object PcLink {
     private fun token(c: Context) = prefs(c).getString("pcToken", "") ?: ""
 
     // Pregunta al PC dónde está Eko. null = no lo encuentra (otra Wi-Fi, PC apagado…). No llamar en el hilo principal.
+    // De paso apunta cuánto lleva el PC sin tocarse (lastPcIdle, en segundos), para que Eko te siga.
+    @Volatile var lastPcIdle = 0
     fun askWhere(c: Context): String? {
         val b = base(c) ?: return null
         return try {
             val (code, body) = http("$b/where", token(c), "GET")
-            if (code == 200) JSONObject(body).optString("where", "pc") else null
+            if (code == 200) { val j = JSONObject(body); lastPcIdle = j.optInt("pcIdle", 0); j.optString("where", "pc") } else null
         } catch (_: Exception) { null }
     }
 
@@ -119,11 +121,26 @@ object PcLink {
         val b = base(c) ?: return false
         val key = prefs(c).getString("pcKey", null) ?: return false
         return try {
+            Reminders.cancelAll(c)
             val plain = JSONObject().put("app", "eko").put("v", 1).put("from", "phone").put("at", System.currentTimeMillis()).put("needs", needs)
+                .put("done", Reminders.takeDone(c)).put("recap", recap(c))
             val (code, _) = http("$b/give", token(c), "POST", encrypt(key, plain.toString()))
             code == 200
         } catch (_: Exception) { false }
     }
+
+    // Lo que ha pasado en el móvil desde que llegó (para que el PC lo comente al volver)
+    private fun recap(c: Context): JSONObject {
+        val p = prefs(c)
+        val photos = (Album.list(c).size - p.getInt("adoptPhotos", 0)).coerceAtLeast(0)
+        val before = p.getString("adoptFinds", "") ?: ""
+        val now = Walks.finds(c)
+        val newFinds = org.json.JSONArray()
+        Walks.ITEMS.filter { (now[it.id] ?: 0) > 0 && !before.split(',').contains(it.id) }.take(3).forEach { newFinds.put(it.name.trim('¡', '!')) }
+        return JSONObject().put("steps", if (Walks.allowed(c)) Walks.todaySteps(c) else 0).put("goal", if (Walks.allowed(c)) Walks.todayGoal(c) else 0)
+            .put("streak", if (Walks.allowed(c)) Walks.streak(c) else 0).put("photos", photos).put("finds", newFinds).put("diary", Diary.writtenToday(c))
+    }
+    fun level(c: Context): Int = prefs(c).getInt("level", 0)
 
     private fun encrypt(keyHex: String, plain: String): String {
         val iv = ByteArray(12).also { java.security.SecureRandom().nextBytes(it) }
@@ -152,6 +169,12 @@ object PcLink {
         d.optString("eko-born", "").trim('"').takeIf { it.isNotBlank() }?.let { e.putString("born", it) }
         e.putString("pcProgress", d.optString("eko-progress", ""))
         e.putLong("adoptedAt", System.currentTimeMillis())
+        snap.optJSONObject("extra")?.optInt("level", 0)?.takeIf { it > 0 }?.let { e.putInt("level", it) }
+        // punto de partida para contar lo que pasa en el móvil (fotos y hallazgos nuevos)
+        e.putInt("adoptPhotos", Album.list(c).size)
+        e.putString("adoptFinds", Walks.finds(c).filter { it.value > 0 }.keys.joinToString(","))
+        // recordatorios del PC: mientras Eko esté aquí, te los da el móvil
+        try { Reminders.schedule(c, org.json.JSONArray(d.optString("eko-reminders", "[]"))) } catch (_: Exception) {}
         var n: JSONObject? = null
         try { n = JSONObject(d.optString("eko-needs", "{}")) } catch (_: Exception) {}
         if (n != null && n.has("hunger")) {

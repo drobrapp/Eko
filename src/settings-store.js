@@ -13,6 +13,7 @@ window.EkoSettings = (() => {
     walk: true,
     fly: true,
     follow: true,
+    followPhone: true,       // Eko te sigue entre el PC y el móvil (si están conectados)
     hideCall: true,          // esconderse en llamadas
     desktop: false,
     menuAsk: true,

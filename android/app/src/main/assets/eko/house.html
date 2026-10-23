@@ -327,7 +327,8 @@
     const b = H && H.born ? H.born() : "";
     const born = new Date(b || ls.get("eko-born", new Date().toISOString()));
     const days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 864e5)) + 1;
-    $("day").textContent = `Día ${days}`;
+    const lvl = H && H.level ? H.level() : 0;
+    $("day").textContent = `Día ${days}` + (lvl > 0 ? ` · Nivel ${lvl}` : "");
     if (H && H.name) $("name").textContent = H.name();
   }
 

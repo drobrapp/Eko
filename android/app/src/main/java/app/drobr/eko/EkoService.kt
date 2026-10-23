@@ -623,7 +623,7 @@ class EkoService : Service() {
                         handler.postDelayed({ give() }, 2100)
                         handler.postDelayed({ away = true; applyVisible() }, 2600)
                     } else { PcLink.setWhere(this, "pc"); give(); away = true; applyVisible() }
-                }
+                } else maybeFollow()
             }
             "phone" -> {
                 unreachable = 0
@@ -640,6 +640,34 @@ class EkoService : Service() {
     }
     // La casa lo ha traído con «¡Ven aquí!»
     fun cameFromPc() { handler.post { away = false; unreachable = 0; applyVisible() } }
+
+    // ---------- Fase 3: Eko te sigue ----------
+    // Si Eko está en el PC, el PC lleva 5 minutos sin tocarse y tú estás usando el móvil (desbloqueado), se viene contigo.
+    private var lastFollow = 0L
+    private fun followOn() = prefs().getBoolean("followPc", true)
+    private fun maybeFollow() {
+        val now = SystemClock.uptimeMillis()
+        if (!followOn() || inHome || syncBusy || now - lastFollow < 60_000 || PcLink.lastPcIdle < 300) return
+        if (getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked) return
+        lastFollow = now; syncBusy = true
+        Thread {
+            val ok = PcLink.come(this)
+            handler.post {
+                syncBusy = false
+                if (ok) { away = false; unreachable = 0; js("act('teleIn')"); applyVisible(); handler.postDelayed({ talk("followed") }, 1300) }
+            }
+        }.start()
+    }
+
+    // Un recordatorio del PC que toca ahora (Reminders): salta, se sorprende y te lo dice
+    fun remind(text: String) {
+        handler.post {
+            if (web?.visibility != View.VISIBLE) return@post
+            if (st == St.SLEEP) js("wake()")
+            js("act('surprise')"); js("fx('bang', 2)"); buzz(); idle(9000)
+            say("⏰ $text", 9000)
+        }
+    }
     fun houseGive(kind: String) {
         handler.post {
             when (kind) { "feed" -> give(h = 35f, l = 3f); "play" -> give(f = 30f, l = 4f, e = -3f); "pet" -> give(l = 4f) }

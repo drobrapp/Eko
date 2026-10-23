@@ -447,7 +447,11 @@ class EkoService : Service() {
                     if (st != St.DRAG && st != St.FALL) { st = St.SLEEP; until = Long.MAX_VALUE; js("set('sleep', $dir)") }
                     handler.postDelayed({ if (!getSystemService(android.os.PowerManager::class.java).isInteractive) pause(true) }, 300)
                 }
-                Intent.ACTION_SCREEN_ON -> pause(false)
+                Intent.ACTION_SCREEN_ON -> {
+                    pause(false)
+                    // Al encender la pantalla no se enseña hasta saber dónde está (si estuviera en el PC, no debe verse aquí)
+                    if (PcLink.paired(this@EkoService) && !away) { checking = true; checkFails = 0; applyVisible(); nextSync = 0L }
+                }
                 android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> js("lowPower(${powerSave()})")
                 Intent.ACTION_USER_PRESENT -> {
                     EkoNotes.seen(this@EkoService)
@@ -572,8 +576,10 @@ class EkoService : Service() {
     // Se ve en tu pantalla si no estás en su casa y no se ha ido al PC
     private var inHome = false
     private var away = false
+    private var checking = false   // pantalla recién encendida: esperando a saber si está aquí o en el PC
+    private var checkFails = 0
     private fun applyVisible() {
-        val show = !inHome && !away
+        val show = !inHome && !away && !checking && !kbGone
         web?.visibility = if (show) View.VISIBLE else View.GONE
         if (!show) { closeMenu(); bubble?.visibility = View.GONE }
     }
@@ -592,17 +598,31 @@ class EkoService : Service() {
         }.start()
     }
     private fun onWhere(w: String?) {
+        if (checking) {
+            if (w == null) {
+                // Al desbloquear, la Wi-Fi tarda un poco en despertar: se reintenta antes de enseñarlo (hasta ~6 s)
+                checkFails++
+                if (checkFails < 4) { nextSync = SystemClock.uptimeMillis() + 1500; return }
+            }
+            checking = false; checkFails = 0
+            if (w != "pc") applyVisible()
+        }
         when (w) {
             "pc" -> {
                 unreachable = 0
                 if (!away) {
-                    // Lo han llamado desde el PC: se despide aquí y le cuenta al PC cómo está
+                    // Lo han llamado desde el PC: hace la magia aquí y, cuando ya ha desaparecido, se lo dice al PC
+                    // (así en el PC no aparece hasta que aquí se ha ido). Si estás en su casa, la casa se encarga.
                     val visible = web?.visibility == View.VISIBLE
-                    PcLink.setWhere(this, "pc")
                     val needs = org.json.JSONObject(needsJson())
-                    Thread { PcLink.giveBack(this, needs) }.start()
-                    if (visible) { talk("toPc"); js("act('teleOut')"); handler.postDelayed({ away = true; applyVisible() }, 2600) }
-                    else { away = true; applyVisible() }
+                    val give = { Thread { PcLink.giveBack(this, needs) }.start() }
+                    if (inHome) { away = true }                       // la casa hace la magia y avisa al PC
+                    else if (visible) {
+                        PcLink.setWhere(this, "pc")
+                        talk("toPc"); js("act('teleOut')")
+                        handler.postDelayed({ give() }, 2100)
+                        handler.postDelayed({ away = true; applyVisible() }, 2600)
+                    } else { PcLink.setWhere(this, "pc"); give(); away = true; applyVisible() }
                 }
             }
             "phone" -> {
@@ -611,9 +631,10 @@ class EkoService : Service() {
                 if (away) { away = false; applyVisible(); js("act('teleIn')"); handler.postDelayed({ talk("fromPc") }, 1300) }
             }
             else -> {
-                // No encuentra el PC: si Eko «estaba en el PC», aquí lo tienes igualmente (nunca te quedas sin él)
+                // No encuentra el PC: si Eko «estaba en el PC», aquí lo tienes igualmente (nunca te quedas sin él).
+                // Solo tras varios intentos seguidos (así un fallo suelto de la Wi-Fi no lo duplica).
                 unreachable++
-                if (away && unreachable >= 2) { away = false; applyVisible(); js("act('teleIn')") }
+                if (away && unreachable >= 4) { away = false; applyVisible(); js("act('teleIn')") }
             }
         }
     }
@@ -776,29 +797,26 @@ class EkoService : Service() {
     private var nextChat = 0L
     private var hopping = false
 
-    // ---------- Con el teclado abierto: se quita de en medio (cada vez de una forma) ----------
-    //  side   = se esconde en el borde de la pantalla y solo asoma media cara
-    //  behind = se mete detrás del teclado y solo saca la cabeza
-    //  corner = se va a una esquina, encima del teclado
+    // ---------- Con el teclado abierto: sube, lo comenta y desaparece con magia; al cerrarlo vuelve abajo con magia ----------
+    //  wait  = acaba de subir al teclado (si lo cierras enseguida, vuelve a bajar sin más)
+    //  magic = haciendo la magia para irse · gone = no está (no molesta nada mientras escribes)
+    // Si abres el teclado varias veces seguidas (como en un chat), las siguientes veces solo hace un «¡puf!» rápido.
     private var pendingKb = false
-    private var kbMode = "side"
-    private var kbTarget = 0f
-    private var kbArrived = false
-    private var kbSink = 0f            // cuánto se ha hundido detrás del teclado (px)
+    private var kbPhase = ""
+    private var kbAt = 0L
+    private var kbStart = 0L
+    private var lastKbEnd = 0L
+    private var kbQuick = false
+    private var kbGone = false
+    private var kbSink = 0f
     private var kbClip = -1
-    private var kbNextTalk = 0L
     private fun enterKb() {
-        val r = Random.nextFloat()
-        kbMode = if (r < 0.4f) "side" else if (r < 0.8f) "behind" else "corner"
-        val left = x < maxX() / 2
-        kbTarget = when (kbMode) {
-            "side" -> if (left) -62 * dens else maxX() + 62 * dens       // asoma media cara, con los ojos a la vista
-            "corner" -> if (left) -20 * dens else maxX() + 20 * dens
-            else -> (if (left) 0.18f else 0.62f) * maxX() + Random.nextFloat() * 0.12f * maxX()
-        }
-        dir = if (kbTarget > x) 1 else -1
-        kbArrived = false; kbSink = 0f
-        st = St.KB; js("set('walk', $dir)")
+        val now = SystemClock.uptimeMillis()
+        kbStart = now; kbAt = now
+        kbQuick = now - lastKbEnd < 90_000
+        kbPhase = "wait"
+        st = St.KB; js("set('idle', $dir)")
+        if (!kbQuick) handler.postDelayed({ if (st == St.KB && kbPhase == "wait") talk("kb_magic", 0.85) }, 500)
     }
     private fun setClip(px: Int) { if (px != kbClip) { kbClip = px; js("clip($px)") } }
     private fun exitKb() {
@@ -807,28 +825,40 @@ class EkoService : Service() {
         st = St.FALL; vy = 0f; hopping = true; js("set('fall', $dir)")
     }
     private fun kbTick(dt: Float) {
-        if (EkoAccess.kbTop <= 0) { exitKb(); talk("kbGone", 0.4); return }
-        if (!kbArrived) {
-            x += dir * 95 * dens * dt
-            if ((dir > 0 && x >= kbTarget) || (dir < 0 && x <= kbTarget)) {
-                x = kbTarget; kbArrived = true
-                // mirando hacia dentro de la pantalla (hacia lo que escribes)
-                dir = if (kbMode == "behind") (if (x < maxX() / 2) 1 else -1) else (if (x < 0) 1 else if (x > maxX()) -1 else dir)
-                js("set('idle', $dir)")
-                // lo comenta al llegar a su escondite (y de vez en cuando si sigues escribiendo mucho rato)
-                talk("kb_$kbMode", 0.75)
-                kbNextTalk = SystemClock.uptimeMillis() + Random.nextLong(90_000, 180_000)
+        val now = SystemClock.uptimeMillis()
+        if (EkoAccess.kbTop <= 0) { kbClosed(now); return }
+        when (kbPhase) {
+            "wait" -> {
+                y = ground()
+                // espera un poco (por si el teclado era de un momento) y hace la magia
+                if (now - kbAt > (if (kbQuick) 300 else 2000)) { kbPhase = "magic"; kbAt = now; js("act('teleOut')") }
             }
-        } else if (SystemClock.uptimeMillis() > kbNextTalk) {
-            kbNextTalk = SystemClock.uptimeMillis() + Random.nextLong(120_000, 240_000)
-            talk("kbLong", 0.5)
+            "magic" -> { y = ground(); if (now - kbAt > 2150) { kbPhase = "gone"; kbGone = true; applyVisible() } }
         }
-        // detrás del teclado: se va hundiendo hasta que solo se le ven la cabeza y los ojos
-        // (los ojos están a ~68 dp del borde de abajo de su ventana; la línea del teclado queda justo por debajo)
-        val sinkMax = 54 * dens
-        if (kbMode == "behind" && kbArrived && kbSink < sinkMax) kbSink = (kbSink + 120 * dens * dt).coerceAtMost(sinkMax)
-        y = ground() + kbSink
-        setClip(((kbSink + 4 * dens) / dens).toInt().takeIf { kbSink > 0 } ?: 0)
+    }
+    private fun kbClosed(now: Long) {
+        lastKbEnd = now
+        val was = kbPhase; kbPhase = ""
+        if (was == "gone" || was == "magic") {
+            // vuelve abajo, donde estaba, entre nubecitas
+            kbGone = false
+            x = x.coerceIn(0f, maxX()); y = ground(); vy = 0f
+            st = St.IDLE; until = now + 3500
+            js("set('idle', $dir)"); js("act('teleIn')")
+            applyVisible()
+            val dur = now - kbStart
+            handler.postDelayed({ kbBack(dur) }, 1400)
+        } else exitKb()   // teclado de un momento: vuelve a bajar sin magia
+    }
+    // Al volver: a veces cuenta dónde ha estado o lo que has tardado, y muy de vez en cuando trae algo
+    private fun kbBack(dur: Long) {
+        val r = Random.nextFloat()
+        when {
+            r < 0.10f -> { js("eat()"); talk("kbSouvenir") }
+            r < 0.14f -> { js("fx('heart', 2)"); talk("kbFlower") }
+            dur > 120_000 && r < 0.6f -> talk("kbBackLong")
+            r < 0.45f -> talk("kbBack")
+        }
     }
     private var dragVx = 0f
     private var dragVy = 0f
@@ -860,7 +890,7 @@ class EkoService : Service() {
                 nextChat = now + Random.nextLong(2 * 60_000, 4 * 60_000); js("chatter()")
             }
             if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary(); checkDiary() }
-            if (now > nextSync) { nextSync = now + 15_000; pollPc() }
+            if (now > nextSync) { nextSync = now + 5_000; pollPc() }
             checkPhotoWalk()
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }

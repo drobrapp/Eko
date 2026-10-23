@@ -121,22 +121,32 @@ class HouseActivity : Activity() {
 
     // Cada 10 s (con la casa abierta) se pregunta al PC dónde está Eko
     private val whereTick = object : Runnable {
-        override fun run() { checkWhere(); web.postDelayed(this, 10_000) }
+        override fun run() { checkWhere(); web.postDelayed(this, 5_000) }
     }
     private var whereBusy = false
     private fun checkWhere() {
         if (!PcLink.paired(this) || whereBusy) return
         whereBusy = true
         Thread {
+            val prev = PcLink.where(this)
             val w = PcLink.askWhere(this)
             // Si no encuentra el PC, aquí tienes a Eko igualmente
             val now = w ?: "phone"
             if (w != null) PcLink.setWhere(this, w)
             whereBusy = false
             js("window.house && house.setWhere('$now')")
+            // El PC lo ha llamado: la casa hace la magia y, cuando ya ha desaparecido (≈ 2,1 s), se lo pasa al PC
+            if (prev != "pc" && w == "pc") {
+                val needs = JSONObject(EkoService.instance?.needsJson() ?: prefs().let { p ->
+                    JSONObject().put("hunger", p.getFloat("hunger", 75f).toDouble()).put("fun", p.getFloat("fun", 70f).toDouble())
+                        .put("love", p.getFloat("love", 70f).toDouble()).put("energy", p.getFloat("energy", 85f).toDouble()).toString()
+                })
+                Thread.sleep(2100)
+                PcLink.giveBack(this, needs)
+            }
         }.start()
     }
-    override fun onStart() { super.onStart(); web.postDelayed(whereTick, 10_000) }
+    override fun onStart() { super.onStart(); web.postDelayed(whereTick, 5_000) }
     override fun onStop() { super.onStop(); web.removeCallbacks(whereTick) }
 
     override fun onResume() {

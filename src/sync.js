@@ -56,6 +56,17 @@ window.EkoSync = (() => {
   function setWhere(w) { localStorage.setItem(WHERE, w); invoke("sync_set_where", { w }).catch(() => {}); }
   const ES = !window.Eko || window.Eko.LANG === "es";
   const pickL = (a) => a[Math.floor(Math.random() * a.length)];
+  let calling = false, callT = 0;   // el PC lo ha llamado y espera a que el móvil lo suelte
+  // Cuando Eko está en el móvil no puede quedar rastro en el PC: se esconde su ventana entera y las auxiliares
+  // (pelota, juegos, rincón, chat), así no quedan bocadillos, objetos ni reacciones a la vista.
+  function goneFromPc() {
+    const E = window.Eko;
+    E && E.setHidden && E.setHidden(true);
+    for (const c of ["ball_hide", "catch_hide", "corner_hide", "chatbar_hide", "world_hide", "wrapped_hide"]) invoke(c).catch(() => {});
+    invoke("set_main_visible", { on: false }).catch(() => {});
+  }
+  function backToPc() { invoke("set_main_visible", { on: true }).catch(() => {}); }
+  const startedAt = Date.now();
 
   async function decrypt(body) {
     const s = read(KEY); if (!s) return null;
@@ -79,14 +90,21 @@ window.EkoSync = (() => {
     E.say && E.say(pickL(ES ? ["¡Me voy contigo al móvil!", "¡Hasta luego, PC! Me voy al bolsillo", "¡Allá voy! Nos vemos en el móvil"] : ["Off to your phone!", "See you on the phone!"]), 2400, true);
     // Magia: saca la varita, conjuro y ¡puf! entre nubecitas (en el móvil aparece con la varita en la mano)
     if (window.EkoTricks && window.EkoTricks.tele) window.EkoTricks.tele("out");
-    setTimeout(() => { E.setHidden && E.setHidden(true); snapshot().catch(() => {}); }, 2600);
+    // Cuando ya se ha esfumado (≈ 2,1 s), se manda su estado al día y se avisa: solo entonces aparece en el móvil
+    setTimeout(async () => {
+      goneFromPc();
+      try { await snapshot(); } catch (_) {}
+      invoke("sync_left").catch(() => {});
+    }, 2150);
   }
   function arrive(line) {
     const E = window.Eko;
+    calling = false; clearTimeout(callT);
     setWhere("pc");
     if (!E) return;
+    backToPc();
     // Aparece entre nubecitas con la varita aún en alto y se la guarda
-    if (window.EkoTricks && window.EkoTricks.tele) window.EkoTricks.tele("in");
+    if (window.EkoTricks && window.EkoTricks.tele) setTimeout(() => window.EkoTricks.tele("in"), 120);
     else E.setHidden && E.setHidden(false);
     setTimeout(() => {
       E.express && E.express("emocionado", 2.5);
@@ -106,11 +124,13 @@ window.EkoSync = (() => {
       E.say && E.say(E.LANG === "es" ? "¡Ya estamos conectados! Ahora también vivo en tu móvil" : "We're connected! Now I live on your phone too", 3800, true);
     }, 400);
   });
+  // Al arrancar: si Eko está en el móvil, desaparece desde el primer momento (nada de verse dos)
+  if (isMain && read(KEY) && where() === "phone") { goneFromPc(); setTimeout(goneFromPc, 1200); setTimeout(goneFromPc, 3500); }
   if (isMain) setTimeout(() => {
     startLoop();
     if (!read(KEY)) return;
     invoke("sync_set_where", { w: where() }).catch(() => {});
-    if (where() === "phone" && window.Eko && window.Eko.setHidden) window.Eko.setHidden(true);
+    if (where() === "phone") goneFromPc();
   }, 3000);
   if (isMain) {
     // El móvil le ha llamado: se despide aquí
@@ -120,14 +140,25 @@ window.EkoSync = (() => {
       try { const p = await decrypt(e.payload); mergeFromPhone(p); } catch (_) {}
       if (where() === "phone") arrive();
     });
-    // Bandeja → «¡Ven aquí!»: vuelve al PC (el móvil se entera la próxima vez que pregunte)
-    T.event.listen("cmd", (e) => { if (e.payload === "sync-come" && read(KEY) && where() === "phone") arrive(); });
-    // Seguridad: si el móvil lleva 10 minutos sin dar señales, Eko vuelve solo (nunca te quedas sin él)
+    // Bandeja → «¡Ven aquí!»: el PC lo llama, pero no aparece hasta que el móvil lo haya soltado (hace su magia y avisa).
+    // Si el móvil no contesta en 10 s (pantalla apagada, fuera de casa…), vuelve igualmente.
+    T.event.listen("cmd", (e) => {
+      if (e.payload !== "sync-come" || !read(KEY) || where() !== "phone" || calling) return;
+      calling = true;
+      invoke("sync_set_where", { w: "calling" }).catch(() => {});
+      clearTimeout(callT);
+      callT = setTimeout(() => { if (calling) arrive(); }, 10000);
+    });
+    // Seguridad: si el móvil lleva 10 minutos sin dar señales (fuera de casa, apagado…) Y estás usando el PC,
+    // Eko vuelve al PC. Con el móvil bloqueado en casa y tú sin tocar el PC, se queda donde estaba.
     setInterval(async () => {
-      if (!read(KEY) || where() !== "phone") return;
+      if (!read(KEY) || where() !== "phone" || calling) return;
+      const idle = window.Eko && window.Eko.lastSenses ? window.Eko.lastSenses.idle : 9999;
+      if (idle > 30) return;                               // no estás en el PC: no hay prisa
       try {
         const st = await invoke("sync_status");
-        if (st.seen < 0 || st.seen > 600) arrive(ES ? "¡He vuelto! Tu móvil no daba señales" : "I'm back! Your phone went quiet");
+        const silent = st.seen < 0 ? (Date.now() - startedAt) / 1000 : st.seen;
+        if (silent > 600) arrive(ES ? "¡He vuelto! Tu móvil no daba señales" : "I'm back! Your phone went quiet");
       } catch (_) {}
     }, 60000);
   }

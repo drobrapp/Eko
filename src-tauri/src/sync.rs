@@ -15,14 +15,15 @@ struct St {
     token: String,     // token del móvil ya conectado
     pending: String,   // token esperando a que el móvil escanee el QR
     snapshot: String,  // estado de Eko, ya cifrado por la página
-    where_: String,    // dónde está Eko: "pc" o "phone"
+    where_: String,    // dónde está Eko: "pc", "phone" o "calling" (el PC lo ha llamado y espera a que el móvil lo suelte)
+    left: bool,        // la página avisa cuando Eko ya ha desaparecido del PC (para que el móvil no lo enseñe antes)
     seen: Option<Instant>, // última vez que el móvil dio señales
     started: bool,
 }
 static ST: OnceLock<Mutex<St>> = OnceLock::new();
 static APP: OnceLock<AppHandle> = OnceLock::new();
 fn st() -> &'static Mutex<St> {
-    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), where_: "pc".into(), seen: None, started: false }))
+    ST.get_or_init(|| Mutex::new(St { token: String::new(), pending: String::new(), snapshot: String::new(), where_: "pc".into(), left: false, seen: None, started: false }))
 }
 
 pub fn init(app: AppHandle) {
@@ -113,18 +114,26 @@ fn route(path: &str, token: &str, body: String) -> (&'static str, String) {
     if s.token.is_empty() || token != s.token { return ("403 Forbidden", "{}".into()); }
     s.seen = Some(Instant::now());
     match path {
-        // ¿Dónde está Eko?
-        "/where" => ("200 OK", format!(r#"{{"where":"{}"}}"#, s.where_)),
+        // ¿Dónde está Eko? («calling» = el PC lo quiere de vuelta: para el móvil es como si ya estuviera en el PC)
+        "/where" => ("200 OK", format!(r#"{{"where":"{}"}}"#, if s.where_ == "phone" { "phone" } else { "pc" })),
         // El estado de Eko (cifrado)
         "/state" => ("200 OK", if s.snapshot.is_empty() { "{}".into() } else { s.snapshot.clone() }),
-        // El móvil le llama («¡Ven aquí!»): Eko se despide en el PC y el móvil recibe su estado
+        // El móvil le llama («¡Ven aquí!»): Eko hace la magia en el PC y, SOLO cuando ya ha desaparecido,
+        // se responde al móvil con su estado (así nunca está en los dos a la vez)
         "/come" => {
-            let snap = if s.snapshot.is_empty() { "{}".to_string() } else { s.snapshot.clone() };
-            let was_here = s.where_ == "pc";
+            let was_here = s.where_ != "phone";
             s.where_ = "phone".into();
+            s.left = false;
             drop(s);
-            if was_here { emit("sync-leave", ()); }
-            ("200 OK", snap)
+            if was_here {
+                emit("sync-leave", ());
+                for _ in 0..50 {                         // hasta 5 s esperando a que se esfume
+                    std::thread::sleep(Duration::from_millis(100));
+                    if st().lock().unwrap().left { break; }
+                }
+            }
+            let s = st().lock().unwrap();
+            ("200 OK", if s.snapshot.is_empty() { "{}".to_string() } else { s.snapshot.clone() })
         }
         // El móvil devuelve a Eko (o le cuenta cómo está): la página lo descifra y decide
         "/give" => {
@@ -166,7 +175,13 @@ pub fn sync_snapshot(data: String) {
 // Dónde está Eko (la página lo guarda y lo dice al arrancar y cuando cambia)
 #[tauri::command]
 pub fn sync_set_where(w: String) {
-    st().lock().unwrap().where_ = if w == "phone" { "phone".into() } else { "pc".into() };
+    st().lock().unwrap().where_ = match w.as_str() { "phone" => "phone".into(), "calling" => "calling".into(), _ => "pc".into() };
+}
+
+// La página avisa: Eko ya ha desaparecido del PC (el móvil puede hacerlo aparecer)
+#[tauri::command]
+pub fn sync_left() {
+    st().lock().unwrap().left = true;
 }
 
 // Para la página: dónde está y hace cuántos segundos dio señales el móvil (-1 = nunca desde que arrancó)

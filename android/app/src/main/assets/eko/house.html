@@ -213,7 +213,14 @@
   function idle(ms) { E.mode = "idle"; E.target = null; E.next = performance.now() + (ms || 4000 + Math.random() * 6000); send("set", "idle", E.dir); }
   let jump = null;
   function hopTo(x, y, then, z) { jump = { x0: E.x, y0: E.y, x1: x, y1: y, z0: E.z, z1: z === undefined ? E.z : z, t: 0, then }; send("set", "fall", x > E.x ? 1 : -1); }
-  window.house = { hop(v) { E.vy = Math.min(1400, v * 1.5); }, hold(ms) { E.hold = performance.now() + ms; }, say(t, ms) { say(t, ms); } };
+  window.house = { hop(v) { E.vy = Math.min(1400, v * 1.5); }, hold(ms) { stopWalk(); E.hold = performance.now() + ms; }, say(t, ms) { say(t, ms); } };
+  // Si iba andando y le pasa algo (lo tocas, hace un gesto…), se para de verdad: nada de andar en el sitio
+  function stopWalk() {
+    if (E.mode !== "walk") return;
+    E.mode = "idle"; E.target = null; E.onArrive = null;
+    E.next = performance.now() + 2500 + Math.random() * 2000;
+    send("set", "idle", E.dir);
+  }
 
   // ---------- Fase 2: cuando Eko está en el PC, la casa se queda sin él (con su notita y «¡Ven aquí!») ----------
   let AWAY = !!(H && H.where && H.where() === "pc");
@@ -369,6 +376,7 @@
   let touch = null, lastTap = 0;
   hit.addEventListener("pointerdown", (e) => {
     if (E.mode === "fall" || jump) return;
+    stopWalk();
     hit.setPointerCapture(e.pointerId);
     const [rx, ry] = toRoom(e.clientX, e.clientY);
     const head = ry < (E.y - E.hop) - 190;          // la parte de arriba es la cabeza

@@ -1,229 +1,133 @@
 package app.drobr.eko
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.view.WindowInsets
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import org.json.JSONObject
 
-// Primera versión de la app: de momento solo sirve para sacar a Eko a la pantalla o guardarlo.
-// (Más adelante será su casa: salón, valle, libreta y ajustes.)
+// Ajustes de Eko (se abren desde los cajones de la cómoda de su casa). La página es assets/eko/settings.html,
+// con el mismo estilo que la casa; aquí solo están las acciones de Android.
 class MainActivity : Activity() {
+    private lateinit var web: WebView
+    private var loaded = false
+    private var insetTop = 24f
+    private var insetBottom = 16f
+    private var updMsg = ""
+    private fun prefs() = getSharedPreferences("eko", MODE_PRIVATE)
+    private fun js(code: String) = runOnUiThread { if (loaded) web.evaluateJavascript(code, null) }
+    private fun refresh() = js("window.render && render()")
 
-    private lateinit var status: TextView
-    private lateinit var upd: TextView
-    private lateinit var kb: Button
-    private lateinit var pcBtn: Button
-    private lateinit var followBtn: Button
-    private lateinit var notes: Button
-    private lateinit var walkBtn: Button
-    private lateinit var golden: Button
-    private var week: WeekView? = null
-    private var walkInfo: TextView? = null
-    private var findsBtn: Button? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val d = resources.displayMetrics.density
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#FFF4E8"))
-            setPadding((28 * d).toInt(), (28 * d).toInt(), (28 * d).toInt(), (28 * d).toInt())
+    inner class Bridge {
+        @JavascriptInterface fun state(): String {
+            val c = this@MainActivity
+            return JSONObject()
+                .put("name", PcLink.petName(c)).put("level", PcLink.level(c))
+                .put("overlay", Settings.canDrawOverlays(c)).put("out", EkoService.running)
+                .put("where", if (PcLink.paired(c)) PcLink.where(c) else "phone")
+                .put("paired", PcLink.paired(c)).put("follow", prefs().getBoolean("followPc", true))
+                .put("access", EkoAccess.enabled(c))
+                .put("notes", EkoNotes.enabled(c))
+                .put("notif", Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+                .put("version", Updater.versionName(c)).put("upd", updMsg)
+                .toString()
         }
-        val title = TextView(this).apply {
-            text = "Ajustes de Eko"
-            textSize = 30f
-            setTextColor(Color.parseColor("#5A463D"))
-            gravity = Gravity.CENTER
+        @JavascriptInterface fun toggleOut() { runOnUiThread { if (EkoService.running) putAway() else bringOut() } }
+        @JavascriptInterface fun overlayPerm() { runOnUiThread { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))) } }
+        @JavascriptInterface fun connectPc() {
+            runOnUiThread {
+                PcLink.pair(this@MainActivity) { ok, msg ->
+                    refresh()
+                    when {
+                        ok && msg.isEmpty() -> js("toast(${JSONObject.quote("¡${PcLink.petName(this@MainActivity)} ya está aquí!")})")
+                        msg.isNotEmpty() -> js("toast(${JSONObject.quote(msg)}, 6000)")
+                    }
+                }
+            }
         }
-        status = TextView(this).apply {
-            textSize = 16f
-            setTextColor(Color.parseColor("#7A6458"))
-            gravity = Gravity.CENTER
-            setPadding(0, (12 * d).toInt(), 0, (24 * d).toInt())
-        }
-        fun button(label: String, color: String, onClick: () -> Unit) = Button(this).apply {
-            text = label
-            isAllCaps = false
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { cornerRadius = 22 * d; setColor(Color.parseColor(color)) }
-            setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (56 * d).toInt()).apply { topMargin = (12 * d).toInt() }
-        }
-        root.addView(title)
-        root.addView(status)
-        root.addView(button("Sacar a Eko a la pantalla", "#5FA88E") { bringOut() })
-        root.addView(button("Guardar a Eko", "#D0795A") { putAway() })
-        root.addView(button("Su álbum de fotos", "#E9A93B") { startActivity(Intent(this, AlbumActivity::class.java)) })
-        root.addView(button("Diario con Eko", "#9B85CC") { startActivity(Intent(this, DiaryActivity::class.java)) })
-        kb = button("", "#9B85CC") { askAccess() }
-        pcBtn = button("", "#6F94C2") { connectPc() }
-        root.addView(pcBtn)
-        followBtn = button("", "#9B85CC") {
-            val p = getSharedPreferences("eko", MODE_PRIVATE); p.edit().putBoolean("followPc", !p.getBoolean("followPc", true)).apply(); showPc()
-        }
-        root.addView(followBtn)
-        root.addView(kb)
-        notes = button("", "#6F94C2") { EkoNotes.setEnabled(this, !EkoNotes.enabled(this)); showNotes() }
-        root.addView(notes)
-        walkBtn = button("", "#5FA88E") {
-            if (!Walks.allowed(this) && Build.VERSION.SDK_INT >= 29) requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), 41)
-            else showWalks()
-        }
-        if (Walks.has(this)) {
-            root.addView(walkBtn)
-            week = WeekView(this).also { root.addView(it) }
-            walkInfo = TextView(this).apply { textSize = 14f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER; setPadding(0, (4 * d).toInt(), 0, (4 * d).toInt()) }.also { root.addView(it) }
-            findsBtn = button("", "#C9A27A") { showFinds() }.also { root.addView(it) }
-        }
-        golden = button("", "#E9A93B") { pickCity() }
-        root.addView(golden)
-        // Mantener pulsado: manda una de prueba ahora (sin esperar ni mirar las reglas)
-        notes.setOnLongClickListener { EkoNotes.fire(this, test = true); Toast.makeText(this, "Eko te ha escrito", Toast.LENGTH_SHORT).show(); true }
-        upd = TextView(this).apply {
-            textSize = 14f
-            setTextColor(Color.parseColor("#9A8478"))
-            gravity = Gravity.CENTER
-            setPadding(0, (22 * d).toInt(), 0, 0)
-        }
-        root.addView(upd)
-        setContentView(android.widget.ScrollView(this).apply { isFillViewport = true; setBackgroundColor(Color.parseColor("#FFF4E8")); addView(root) })
+        @JavascriptInterface fun toggleFollow() { prefs().edit().putBoolean("followPc", !prefs().getBoolean("followPc", true)).apply(); refresh() }
+        @JavascriptInterface fun accessSettings() { runOnUiThread { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } }
+        @JavascriptInterface fun appInfo() { runOnUiThread { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) } }
+        @JavascriptInterface fun toggleNotes() { EkoNotes.setEnabled(this@MainActivity, !EkoNotes.enabled(this@MainActivity)); refresh() }
+        @JavascriptInterface fun testNote() { runOnUiThread { EkoNotes.fire(this@MainActivity, test = true); js("toast('Eko te ha escrito')") } }
+        @JavascriptInterface fun notifPerm() { runOnUiThread { if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1) } }
+        @JavascriptInterface fun checkUpdate() { runOnUiThread { checkUpd() } }
+        @JavascriptInterface fun unknownSources() { runOnUiThread { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) } }
+        @JavascriptInterface fun album() { runOnUiThread { startActivity(Intent(this@MainActivity, AlbumActivity::class.java)) } }
+        @JavascriptInterface fun diary() { runOnUiThread { startActivity(Intent(this@MainActivity, DiaryActivity::class.java)) } }
+        @JavascriptInterface fun close() { runOnUiThread { finish() } }
     }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(b: Bundle?) {
+        super.onCreate(b)
+        web = WebView(this).apply {
+            setBackgroundColor(Color.parseColor("#D99A63"))
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            addJavascriptInterface(Bridge(), "App")
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(v: WebView, url: String) { loaded = true; sendInsets(); refresh() }
+            }
+            loadUrl("file:///android_asset/eko/settings.html")
+        }
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+            window.isNavigationBarContrastEnforced = false
+        }
+        web.setOnApplyWindowInsetsListener { v, ins ->
+            val d = resources.displayMetrics.density
+            if (Build.VERSION.SDK_INT >= 30) { val i = ins.getInsets(WindowInsets.Type.systemBars()); insetTop = i.top / d; insetBottom = i.bottom / d }
+            else @Suppress("DEPRECATION") run { insetTop = ins.systemWindowInsetTop / d; insetBottom = ins.systemWindowInsetBottom / d }
+            sendInsets(); v.onApplyWindowInsets(ins)
+        }
+        setContentView(web)
+    }
+    private fun sendInsets() { js("window.setInsets && setInsets($insetTop, $insetBottom)") }
 
     override fun onResume() {
         super.onResume()
-        status.text = when {
-            !Settings.canDrawOverlays(this) -> "Para que Eko pueda pasear por tu móvil, activa «Mostrar sobre otras apps»."
-            EkoService.running -> "Eko está paseando por tu pantalla. Tócalo, arrástralo… y mantén pulsado para volver aquí."
-            else -> "Eko está aquí dentro, esperando a salir."
-        }
-        upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
-        kb.text = if (EkoAccess.enabled(this)) "Teclado y toques ✓" else "Teclado y toques"
-        showNotes()
-        showPc()
-        showWalks()
         EkoNotes.seen(this); EkoNotes.schedule(this); GoldenHour.schedule(this)
-        Updater.check(this) { msg ->
-            runOnUiThread {
-                when (msg) {
-                    "" -> upd.text = "Versión ${Updater.versionName(this)} · está al día"
-                    "NEEDS_PERMISSION" -> {
-                        upd.text = "Hay una versión nueva. Toca aquí y activa «Permitir de esta fuente» para que Eko pueda actualizarse solo."
-                        upd.setOnClickListener { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) }
-                    }
-                    else -> upd.text = msg
-                }
-            }
-        }
+        refresh()
+        checkUpd()
+    }
+    override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, res: IntArray) {
+        super.onRequestPermissionsResult(code, perms, res); refresh()
+    }
+
+    private fun checkUpd() {
+        updMsg = "Buscando novedades…"; refresh()
+        Updater.check(this) { msg -> updMsg = msg; refresh() }
     }
 
     private fun bringOut() {
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
         if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Activa «Mostrar sobre otras apps» para Eko y vuelve", Toast.LENGTH_LONG).show()
+            js("toast('Activa «Mostrar sobre otras apps» para Eko y vuelve', 5000)")
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             return
         }
+        prefs().edit().putBoolean("out", true).apply()
         startForegroundService(Intent(this, EkoService::class.java))
         moveTaskToBack(true)
     }
-
-    // ---------- Conectar con el Eko del PC ----------
-    private fun showPc() {
-        pcBtn.text = if (PcLink.paired(this)) "Conectado con tu PC ✓" else "Conectar con mi PC"
-        followBtn.visibility = if (PcLink.paired(this)) android.view.View.VISIBLE else android.view.View.GONE
-        followBtn.text = if (getSharedPreferences("eko", MODE_PRIVATE).getBoolean("followPc", true)) "Me sigue entre PC y móvil ✓" else "Me sigue entre PC y móvil: no"
-    }
-    private fun connectPc() {
-        AlertDialog.Builder(this)
-            .setTitle("Conectar con mi PC")
-            .setMessage("Así el Eko de tu PC y el de tu móvil son el mismo. Solo por tu Wi-Fi, cifrado y sin internet.\n\n1. En el PC abre los Ajustes de Eko → «Eko y tú» → «Eko en tu móvil» → Conectar.\n\n2. Pulsa «Escanear» y apunta al código que aparece.\n\nEl móvil y el PC tienen que estar en la misma Wi-Fi.")
-            .setPositiveButton("Escanear") { _, _ ->
-                PcLink.pair(this) { ok, msg ->
-                    showPc()
-                    when {
-                        ok && msg.isEmpty() -> Toast.makeText(this, "¡${PcLink.petName(this)} ya está aquí!", Toast.LENGTH_LONG).show()
-                        msg.isNotEmpty() -> AlertDialog.Builder(this).setMessage(msg).setPositiveButton("Vale", null).show()
-                    }
-                }
-            }
-            .setNegativeButton("Ahora no", null)
-            .show()
-    }
-
-    private fun fmt(n: Int) = String.format(java.util.Locale("es", "ES"), "%,d", n)
-    override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, res: IntArray) {
-        super.onRequestPermissionsResult(code, perms, res)
-        if (code == 41 && Walks.allowed(this)) { EkoService.instance?.walksOn(); showWalks() }
-    }
-
-    // ---------- Paseos: hoy, semana, racha, colección y hora dorada ----------
-    private fun showWalks() {
-        val ok = Walks.allowed(this)
-        walkBtn.text = if (ok) "Hoy: ${fmt(Walks.todaySteps(this))} de ${fmt(Walks.todayGoal(this))} pasos" else "Contar nuestros paseos"
-        week?.visibility = if (ok) android.view.View.VISIBLE else android.view.View.GONE
-        walkInfo?.visibility = week?.visibility ?: android.view.View.GONE
-        findsBtn?.visibility = week?.visibility ?: android.view.View.GONE
-        if (ok) {
-            week?.set(Walks.week(this), Walks.todayGoal(this))
-            val s = Walks.streak(this)
-            walkInfo?.text = (if (s > 0) "Racha: $s ${if (s == 1) "día" else "días"} · " else "") + "Esta semana: ${fmt(Walks.week(this).sumOf { it.second })} · Mejor día: ${fmt(Walks.best(this))}"
-            val f = Walks.finds(this)
-            findsBtn?.text = "Colección: ${f.values.sum()} cosas (${f.size} de ${Walks.ITEMS.size})"
-        }
-        golden.text = GoldenHour.city(this)?.let { "Hora dorada: $it ✓" } ?: "Avisarme de la hora dorada"
-    }
-
-    private fun showFinds() {
-        val f = Walks.finds(this)
-        val txt = Walks.ITEMS.joinToString("\n") { i ->
-            val n = f[i.id] ?: 0
-            if (n > 0) "${i.emoji}  ${i.name.trim('¡', '!')}  ×$n" else "❔  ${if (i.rare) "(rara) " else ""}${seasonName(i.season)}???"
-        }
-        AlertDialog.Builder(this).setTitle("Lo que Eko ha encontrado paseando").setMessage(txt).setPositiveButton("Vale", null).show()
-    }
-    private fun seasonName(s: String) = when (s) { "autumn" -> "(otoño) "; "winter" -> "(invierno) "; "spring" -> "(primavera) "; "summer" -> "(verano) "; else -> "" }
-
-    private fun pickCity() {
-        val names = GoldenHour.CITIES.keys.toList()
-        AlertDialog.Builder(this).setTitle("¿Dónde haces fotos?")
-            .setItems((names + "No avisarme").toTypedArray()) { _, i ->
-                GoldenHour.setCity(this, names.getOrNull(i)); showWalks()
-                GoldenHour.sunset(this)?.let { s -> Toast.makeText(this, "Hoy el sol se pone a las ${s.format(java.time.format.DateTimeFormatter.ofPattern("H:mm"))}. Te aviso antes.", Toast.LENGTH_LONG).show() }
-            }.show()
-    }
-    private fun showNotes() { notes.text = if (EkoNotes.enabled(this)) "Eko te escribe ✓" else "Eko te escribe: no" }
-
-    // Permiso de accesibilidad (opcional): solo para saber dónde está el teclado
-    private fun askAccess() {
-        if (EkoAccess.enabled(this)) { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); return }
-        AlertDialog.Builder(this)
-            .setTitle("Teclado y toques")
-            .setMessage("Con el permiso de Accesibilidad, Eko se sube encima del teclado cuando lo abres, y los toques alrededor de él llegan a la app de debajo (sin él, Android los bloquea). También sabe qué app tienes abierta (solo su nombre) para comentarla. Nunca lee lo que escribes ni lo que hay en la pantalla.\n\n1. En Accesibilidad, entra en «Eko · teclado y toques» y actívalo.\n\n2. Si Android dice que es un «ajuste restringido»: vuelve aquí, toca «Información de la app», pulsa ⋮ arriba a la derecha → «Permitir ajustes restringidos» y repite el paso 1.")
-            .setPositiveButton("Ir a Accesibilidad") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-            .setNeutralButton("Información de la app") { _, _ -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
-            .setNegativeButton("Ahora no", null)
-            .show()
-    }
-
     private fun putAway() {
-        getSharedPreferences("eko", MODE_PRIVATE).edit().putBoolean("out", false).apply()
+        prefs().edit().putBoolean("out", false).apply()
         stopService(Intent(this, EkoService::class.java))
-        status.text = "Eko está aquí dentro, esperando a salir."
+        web.postDelayed({ refresh() }, 300)
     }
 }

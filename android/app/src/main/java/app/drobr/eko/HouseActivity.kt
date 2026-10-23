@@ -73,6 +73,28 @@ class HouseActivity : Activity() {
             return a.toString()
         }
         @JavascriptInterface fun sunsetMin(): Int = GoldenHour.sunset(this@HouseActivity)?.let { it.hour * 60 + it.minute } ?: -1
+        // ---------- Paseos y colección (las hojas de la casa) ----------
+        @JavascriptInterface fun walks(): String {
+            val c = this@HouseActivity
+            val o = JSONObject().put("has", Walks.has(c)).put("allowed", Walks.allowed(c))
+            if (Walks.has(c) && Walks.allowed(c)) {
+                val wk = JSONArray(); val days = arrayOf("L", "M", "X", "J", "V", "S", "D")
+                Walks.week(c).forEach { (d, n) -> wk.put(JSONObject().put("d", days[d.dayOfWeek.value - 1]).put("n", n)) }
+                o.put("steps", Walks.todaySteps(c)).put("goal", Walks.todayGoal(c)).put("week", wk).put("streak", Walks.streak(c))
+                    .put("best", Walks.best(c)).put("weekTotal", Walks.week(c).sumOf { it.second })
+            }
+            GoldenHour.city(c)?.let { city -> o.put("city", city); GoldenHour.sunset(c)?.let { s -> o.put("gold", s.minusMinutes(60).format(DateTimeFormatter.ofPattern("H:mm"))).put("sunset", s.format(DateTimeFormatter.ofPattern("H:mm"))) } }
+            o.put("cities", JSONArray(GoldenHour.CITIES.keys.toList()))
+            return o.toString()
+        }
+        @JavascriptInterface fun askSteps() { runOnUiThread { if (Build.VERSION.SDK_INT >= 29) requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), 41) } }
+        @JavascriptInterface fun setCity(name: String) { GoldenHour.setCity(this@HouseActivity, name.ifBlank { null }) }
+        @JavascriptInterface fun findsAll(): String {
+            val f = Walks.finds(this@HouseActivity)
+            val a = JSONArray()
+            Walks.ITEMS.forEach { i -> a.put(JSONObject().put("emoji", i.emoji).put("name", i.name.trim('¡', '!')).put("n", f[i.id] ?: 0).put("rare", i.rare).put("season", i.season)) }
+            return a.toString()
+        }
         @JavascriptInterface fun needs(): String = EkoService.instance?.needsJson() ?: prefs().let { p ->
             JSONObject().put("hunger", p.getFloat("hunger", 75f)).put("fun", p.getFloat("fun", 70f))
                 .put("love", p.getFloat("love", 70f)).put("energy", p.getFloat("energy", 85f)).toString()
@@ -235,7 +257,7 @@ class HouseActivity : Activity() {
     }
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, res: IntArray) {
         super.onRequestPermissionsResult(code, perms, res)
-        if (code == 41 && Walks.allowed(this)) { EkoService.instance?.walksOn(); walksDialog() }
+        if (code == 41 && Walks.allowed(this)) { EkoService.instance?.walksOn(); js("window.house && house.openSheet && house.openSheet('walks')") }
     }
     private fun pickCity() {
         val names = GoldenHour.CITIES.keys.toList()

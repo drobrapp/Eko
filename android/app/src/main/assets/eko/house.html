@@ -227,17 +227,20 @@
   $("comeBtn").onclick = () => { $("comeBtn").disabled = true; $("comeBtn").textContent = "Llamando…"; H && H.come(); };
   window.house.setWhere = (w) => {
     if (w === "pc" && !AWAY) {
-      // lo han llamado desde el PC: se despide y sale por la puerta
+      // lo han llamado desde el PC: saca la varita y desaparece entre nubecitas
       if (E.mode === "sleep") wake();
       say(pick(["¡Me voy al PC contigo!", "¡Me llaman del PC! Ahora vuelvo", "¡Voy al ordenador!"]), 2000);
-      walkTo(XMIN, () => setTimeout(() => showAway(true), 300));
+      E.hold = performance.now() + 3000; E.target = null; E.mode = "idle";
+      send("act", "teleOut");
+      setTimeout(() => showAway(true), 2500);
     } else if (w === "phone" && AWAY) window.house.arrive();
   };
-  // Llega del PC: entra por la puerta
+  // Llega del PC: aparece entre nubecitas con la varita en la mano y se la guarda
   window.house.arrive = () => {
-    showAway(false);
-    E.x = XMIN; E.y = FLOOR; E.z = 0; E.mode = "idle"; jump = null;
-    walkTo(XMIN + 260, () => { send("act", "tada"); say(pick(["¡Ya estoy aquí!", "¡Hola! He venido corriendo desde el PC", "¡Mudanza completada!"]), 2600); setTimeout(needs, 300); });
+    E.x = 520; E.y = FLOOR; E.z = 0; E.mode = "idle"; jump = null; E.hold = performance.now() + 3200;
+    send("act", "teleIn");
+    setTimeout(() => showAway(false), 60);
+    setTimeout(() => { say(pick(["¡Ya estoy aquí!", "¡Hola! He venido del PC por arte de magia", "¡Tachán! Mudanza completada"]), 2600); setTimeout(needs, 300); }, 1300);
   };
   window.house.comeFailed = () => { $("comeBtn").disabled = false; $("comeBtn").textContent = "Probar otra vez"; $("awayS").textContent = "No encuentro el PC. ¿Estáis los dos en la misma Wi-Fi y el PC encendido?"; };
   let bubT = 0;

@@ -494,6 +494,7 @@
     if (name === "yawn") Voice.yawn();
     if (name === "scratch") setTimeout(() => fx("ask"), 500);
     if (name === "think") {
+      if (A.hidden) return;
       stage.classList.add("thinking");
       clearTimeout(act.thinkTimer);
       act.thinkTimer = setTimeout(() => stage.classList.remove("thinking"), (opts.dur || a.dur) * 1000 - 300);
@@ -508,6 +509,7 @@
   function say(text, ms = 2800, force = false, gesture = null) {
     // mientras habla contigo con la IA, sus comentarios espontáneos no pisan la conversación
     if (A.chatLock && A.t < A.chatLock && !A.chatBypass) return false;
+    if (A.hidden && !force) return false;              // escondido o en el móvil: no habla
     const now = performance.now();
     if (!force && (now - lastSay < 6000 || window.Eko.quiet)) return false;
     lastSay = now;

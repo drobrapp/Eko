@@ -601,19 +601,19 @@ class EkoService : Service() {
                     PcLink.setWhere(this, "pc")
                     val needs = org.json.JSONObject(needsJson())
                     Thread { PcLink.giveBack(this, needs) }.start()
-                    if (visible) { talk("toPc"); js("act('wave')"); handler.postDelayed({ away = true; applyVisible() }, 2200) }
+                    if (visible) { talk("toPc"); js("act('teleOut')"); handler.postDelayed({ away = true; applyVisible() }, 2600) }
                     else { away = true; applyVisible() }
                 }
             }
             "phone" -> {
                 unreachable = 0
                 PcLink.setWhere(this, "phone")
-                if (away) { away = false; applyVisible(); handler.postDelayed({ talk("fromPc"); js("act('tada')") }, 600) }
+                if (away) { away = false; applyVisible(); js("act('teleIn')"); handler.postDelayed({ talk("fromPc") }, 1300) }
             }
             else -> {
                 // No encuentra el PC: si Eko «estaba en el PC», aquí lo tienes igualmente (nunca te quedas sin él)
                 unreachable++
-                if (away && unreachable >= 2) { away = false; applyVisible() }
+                if (away && unreachable >= 2) { away = false; applyVisible(); js("act('teleIn')") }
             }
         }
     }

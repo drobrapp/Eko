@@ -123,6 +123,7 @@ window.EkoNeeds = (() => {
   const artSrc = (id) => { const n = document.getElementById(id); return n ? (n.getAttribute("href") || n.getAttribute("xlink:href") || "") : ""; };
   let wishT = 0;
   function wish(kind, secs = 4) {
+    if (A.hidden) return;                                   // escondido (o en el móvil): no pide nada aquí
     const src = artSrc(WISH[kind]); if (!src) return;
     wishEl.querySelector("img").src = src;
     wishEl.dataset.k = kind;
@@ -198,6 +199,7 @@ window.EkoNeeds = (() => {
   }, 30000);
 
   function hint(k, sev) {
+    if (A.hidden) return;
     wish(k, 4.2);
     if (k === "hunger") { E.act("rubBelly"); later(600, () => say(L.hunger[sev], 2600)); }
     else if (k === "energy") { E.act(sev ? "nodOff" : "yawn"); later(sev ? 1900 : 900, () => say(L.energy[sev], 2400)); }

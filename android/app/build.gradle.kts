@@ -61,7 +61,7 @@ val pcAssets = tasks.register<Copy>("pcAssets") {
         into("eko")
     }
     from(rootProject.file("../src/art")) {
-        include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp")
+        include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp", "wand.webp", "fx-puff.webp")
         into("eko/art")
     }
     // Lo que se ve por la ventana de su casa (cielo del valle del PC)

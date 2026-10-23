@@ -76,20 +76,22 @@ window.EkoSync = (() => {
     const E = window.Eko; if (!E || where() === "phone") { setWhere("phone"); return; }
     setWhere("phone");
     E.express && E.express("emocionado", 2.5);
-    E.act && E.act("wave");
-    E.say && E.say(pickL(ES ? ["¡Me voy contigo al móvil!", "¡Hasta luego, PC! Me voy al bolsillo", "¡Allá voy! Nos vemos en el móvil"] : ["Off to your phone!", "See you on the phone!"]), 2600, true);
-    setTimeout(() => { E.setHidden && E.setHidden(true); snapshot().catch(() => {}); }, 2400);
+    E.say && E.say(pickL(ES ? ["¡Me voy contigo al móvil!", "¡Hasta luego, PC! Me voy al bolsillo", "¡Allá voy! Nos vemos en el móvil"] : ["Off to your phone!", "See you on the phone!"]), 2400, true);
+    // Magia: saca la varita, conjuro y ¡puf! entre nubecitas (en el móvil aparece con la varita en la mano)
+    if (window.EkoTricks && window.EkoTricks.tele) window.EkoTricks.tele("out");
+    setTimeout(() => { E.setHidden && E.setHidden(true); snapshot().catch(() => {}); }, 2600);
   }
   function arrive(line) {
     const E = window.Eko;
     setWhere("pc");
     if (!E) return;
-    E.setHidden && E.setHidden(false);
+    // Aparece entre nubecitas con la varita aún en alto y se la guarda
+    if (window.EkoTricks && window.EkoTricks.tele) window.EkoTricks.tele("in");
+    else E.setHidden && E.setHidden(false);
     setTimeout(() => {
-      E.act && E.act("tada");
       E.express && E.express("emocionado", 2.5);
       E.say && E.say(line || pickL(ES ? ["¡Ya he vuelto!", "¡Hola otra vez! Ya estoy en el PC", "¡Mudanza al PC completada!"] : ["I'm back!", "Hello again!"]), 2800, true);
-    }, 500);
+    }, 1300);
     snapshot().catch(() => {});
   }
   T.event.listen("sync-paired", () => {

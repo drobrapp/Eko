@@ -69,6 +69,29 @@
   }
 
   // Saltar de verdad: lo hace Android con la ventana (v en px/s del PC ≈ dp/s del móvil)
+  // Nube que tapa a Eko (mudanza con magia): crece, lo cubre un instante y se disipa hacia fuera
+  function puff(n = 10) {
+    if (!fxLayer) return;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6, rr = i === 0 ? 0 : 0.45 + Math.random() * 0.55;
+      const w = i === 0 ? 70 : 40 + Math.random() * 24;
+      const im = document.createElement("img");
+      im.src = "art/fx-puff.webp"; im.alt = "";
+      im.style.cssText = `position:absolute;left:calc(50% + ${(Math.cos(a) * 26 * rr).toFixed(1)}px);top:calc(64% + ${(Math.sin(a) * 36 * rr).toFixed(1)}px);width:${w.toFixed(0)}px;pointer-events:none;z-index:5`;
+      fxLayer.appendChild(im);
+      const dx = Math.cos(a) * (16 + Math.random() * 14), dy = Math.sin(a) * (12 + Math.random() * 10) - 8, r = Math.random() * 40 - 20;
+      im.animate([
+        { transform: `translate(-50%,-50%) scale(.3) rotate(${r}deg)`, opacity: 0 },
+        { transform: `translate(-50%,-50%) scale(1.05) rotate(${r}deg)`, opacity: 1, offset: 0.25 },
+        { transform: `translate(-50%,-50%) scale(1.05) rotate(${r}deg)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${dy.toFixed(0)}px)) scale(1.35) rotate(${r * 2}deg)`, opacity: 0 },
+      ], { duration: 1150, delay: Math.random() * 60, easing: "ease-out", fill: "forwards" });
+      setTimeout(() => im.remove(), 1300);
+    }
+  }
+  // Esconderlo debajo de la nube (sin esconder la nube, que va en la capa de efectos)
+  function vanish(on) { vanished = on; vanishAt = performance.now(); const m = $("#mochi"); if (m) { m.style.transition = "opacity .15s"; m.style.opacity = on ? "0" : "1"; } }
+  let vanished = false, vanishAt = 0;
   function hop(v) { if (AND && AND.hop) AND.hop(Math.abs(v)); else { A.squashV -= 6; } }
   // Que Android no lo ponga a andar en mitad de un gesto
   function hold(secs) { if (AND && AND.hold) AND.hold(Math.round(secs * 1000)); }
@@ -126,6 +149,27 @@
       if (k > 0.82 && !o.done) { o.done = true; blush(2); fx("heart", 2); }
     } },
     fists: { dur: 1.8, f(P, k, e) { P.aL = lerp(P.aL, -14, e); P.aR = lerp(P.aR, 14, e); P.eyes = "wink"; P.tilt += 6 * e; } },
+    // Mudarse con magia (al PC o desde el PC), con continuidad entre los dos:
+    //  teleOut: saca la varita, hace círculos con chispas, ¡puf! y desaparece entre nubecitas
+    //  teleIn: aparece entre nubecitas con la varita aún en alto, la agita y se la guarda
+    teleOut: { dur: 2.8, f(P, k, e, o) {
+      P.front = true;
+      P.wand = Math.min(1, k / 0.1);
+      if (k < 0.15) { P.aR = lerp(P.aR, -70, k / 0.15); P.eyes = "happy"; }
+      else if (k < 0.62) { P.aR = -105 + Math.sin(A.t * 9) * 26; P.brows = "up"; P.eyeY = -3; P.mouth = Math.max(P.mouth, Math.abs(Math.sin(A.t * 11)) * 0.3); if (Math.random() < 0.06) fx("spark"); }
+      else { P.aR = lerp(P.aR, -160, Math.min(1, (k - 0.62) / 0.08)); P.eyes = "happy"; P.brows = "up"; }
+      if (k > 0.66 && !o.puf) { o.puf = true; puff(); }
+      if (k > 0.74 && !o.gone) { o.gone = true; vanish(true); }
+    } },
+    teleIn: { dur: 2.8, f(P, k, e, o) {
+      P.front = true;
+      if (!o.started) { o.started = true; vanish(true); puff(); setTimeout(() => vanish(false), 230); }
+      if (k < 0.45) { P.aR = -150 + Math.sin(A.t * 6) * 10; P.eyes = "happy"; P.brows = "up"; if (Math.random() < 0.05) fx("spark"); }
+      else if (k < 0.75) { const m = (k - 0.45) / 0.3; P.aR = lerp(-150, 25, m); P.nod += 2 * Math.sin(Math.PI * m); }
+      else { P.eyes = "happy"; P.mouth = Math.max(P.mouth, 0.3); }
+      P.wand = k < 0.55 ? 1 : Math.max(0, 1 - (k - 0.55) / 0.15);   // se la guarda: encoge en la mano
+      if (k > 0.7 && !o.stored) { o.stored = true; fx("spark", 2); }
+    } },
     tada: { dur: 1.9, f(P, k, e, o) {
       if (k < 0.18) { const m = k / 0.18; P.sy *= 1 - 0.1 * m; P.sx *= 1 + 0.06 * m; P.nod += 4 * m; P.aR = lerp(P.aR, -18, m); P.aL = lerp(P.aL, 18, m); return; }
       if (!o.up) { o.up = true; hop(-620); fx("spark", 3); }
@@ -298,7 +342,7 @@
     const walking = S.walking;
     const P = {
       aL: 0, aR: 0, front: false, nod: 0, tilt: 0, turn: 0, hturn: 0, sway: 0, shift: 0, sx: 1, sy: 1, lift: 0,
-      legL: 0, legR: 0, bob: 0, spin: 0, snack: 0, mouth: 0, mouthShape: null, eyeX: null, eyeY: null,
+      legL: 0, legR: 0, bob: 0, spin: 0, snack: 0, wand: 0, mouth: 0, mouthShape: null, eyeX: null, eyeY: null,
       eyeScale: S.dragging ? 1.25 : 1, eyes: null, brows: "none",
     };
     if (walking) {
@@ -445,6 +489,12 @@
     el.mouth.setAttribute("rx", (5.5 + P.mouth * 3).toFixed(2));
     if (P.snack > 0) { el.snack.style.display = "inline"; el.snack.setAttribute("transform", `translate(${(th * 30).toFixed(2)} 54) scale(${(P.snack * 1.7).toFixed(2)})`); }
     else el.snack.style.display = "none";
+    // Varita (mudanza con magia): en la mano derecha, apuntando hacia fuera del brazo; encoge al guardársela
+    const wand = $("#wandR");
+    if (wand) {
+      if (P.wand > 0.01) { wand.style.display = "inline"; wand.setAttribute("transform", `translate(67 125) scale(${P.wand.toFixed(3)}) translate(-67 -125) rotate(168 71.6 146.5)`); }
+      else wand.style.display = "none";
+    }
   }
 
   // ---------- Vida propia estando quieto: de vez en cuando hace un gesto suyo (como en el PC) ----------
@@ -469,6 +519,8 @@
     // Sin límite de fotogramas: se dibuja a la velocidad de la pantalla
     const dt = Math.min(0.07, (now - last) / 1000); last = now;
     update(dt); render();
+    // Seguridad: si se quedó escondido tras la magia (y ya no hay magia en marcha), vuelve a verse
+    if (vanished && now - vanishAt > 3500 && !(A.action && A.action.name.startsWith("tele"))) vanish(false);
     // Zona tocable = solo su cuerpo (Android deja pasar los toques del resto de la ventana)
     if (AND && AND.hit && A.t > hitT) {
       hitT = A.t + 0.12;

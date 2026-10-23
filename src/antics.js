@@ -259,5 +259,7 @@
 
   // Clic sobre Eko mientras se esconde: lo encuentras (devuelve true si la travesura lo ha usado)
   function tap() { return !!(cur && cur.tap && cur.tap(A.t - cur.t0, cur)); }
-  window.EkoAntics = { run, random, stop, tap, list: Object.keys(DEF), get current() { return cur && cur.name; } };
+  window.EkoAntics = { run, random, stop, tap, list: Object.keys(DEF), get current() { return cur && cur.name; },
+    // Nube que tapa a Eko (la usa la mudanza con magia: aparece o desaparece debajo)
+    puff: (n = 11) => { const p = pod(0, -14); puff(p.x, p.y, n); } };
 })();

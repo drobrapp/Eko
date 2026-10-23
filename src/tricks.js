@@ -316,6 +316,55 @@ window.EkoTricks = (() => {
     });
   }
 
+  // 7) Mudarse con magia (al irse al móvil o volver de él), con continuidad entre los dos:
+  //    «teleOut»: saca la varita, hace círculos con chispas, ¡puf! y desaparece entre nubecitas.
+  //    «teleIn»: aparece entre nubecitas con la varita aún en alto, la agita y se la guarda.
+  const puffEko = (n) => { if (window.EkoAntics && window.EkoAntics.puff) window.EkoAntics.puff(n); else smoke(0, -60, 10, layer, 70); };
+  function wandAt(M, ang, sc, op) {
+    const H = hands();
+    M.wAng = M.wAng == null ? ang : M.wAng + (ang - M.wAng) * 0.25;
+    const rad = (M.wAng - 90) * Math.PI / 180;
+    place(M.wand, H.R.x + Math.cos(rad) * 22 * sc, H.R.y + Math.sin(rad) * 22 * sc, M.wAng, sc, op);
+    return { x: H.R.x + Math.cos(rad) * 52 * sc, y: H.R.y + Math.sin(rad) * 52 * sc };
+  }
+  E.ACTIONS.teleOut = { dur: 2.8, f(P, k) {
+    P.front = true;
+    if (k < 0.15) { const m = ease(sm(0, 0.15, k)); P.aR = lerp(P.aR, -70, m); P.eyes = "happy"; }
+    else if (k < 0.62) { P.aR = -100 + Math.sin(A.t * 9) * 24; P.brows = "up"; P.eyeY = -3; P.mouth = Math.max(P.mouth, Math.abs(Math.sin(A.t * 11)) * 0.3); }
+    else { P.aR = lerp(P.aR, -150, ease(sm(0.62, 0.7, k))); P.eyes = "happy"; P.brows = "up"; }
+  }, start(o) {
+    clear();
+    const M = o.M = { wand: img("artWand", layer, 18, 66) };
+    cur = { draw() {
+      if (!A.action || A.action.name !== "teleOut") { cur = null; clear(); return; }
+      const k = (A.t - A.action.t0) / A.action.dur;
+      const ang = k < 0.15 ? 35 : k < 0.62 ? 20 + Math.sin(A.t * 9) * 25 : 0;
+      const tip = wandAt(M, ang, Math.max(0.01, back(sm(0, 0.1, k))), 1);
+      if (k > 0.15 && k < 0.62 && Math.random() < 0.2) sparkle(tip.x, tip.y, 1);
+      if (k > 0.66) once(M, "puf", () => { puffEko(11); tone("sawtooth", 900, 200, 0.22, 0.02, 1200); });
+      if (k > 0.74) once(M, "gone", () => E.setHidden(true));
+    } };
+  } };
+  E.ACTIONS.teleIn = { dur: 2.8, f(P, k) {
+    P.front = true;
+    if (k < 0.45) { P.aR = -150 + Math.sin(A.t * 6) * 10; P.eyes = "happy"; P.brows = "up"; }
+    else if (k < 0.75) { const m = ease(sm(0.45, 0.75, k)); P.aR = lerp(-150, 20, m); P.nod += 2 * Math.sin(Math.PI * m); }
+    else { P.eyes = "happy"; P.mouth = Math.max(P.mouth, 0.3); }
+  }, start(o) {
+    clear();
+    const M = o.M = { wand: img("artWand", layer, 18, 66) };
+    puffEko(11); tone("sine", 300, 700, 0.18, 0.03);
+    setTimeout(() => E.setHidden(false), 230);                       // aparece debajo de la nube
+    cur = { draw() {
+      if (!A.action || A.action.name !== "teleIn") { cur = null; clear(); return; }
+      const k = (A.t - A.action.t0) / A.action.dur;
+      const sc = 1 - ease(sm(0.55, 0.72, k));                         // se la guarda: la varita encoge en la mano
+      const tip = wandAt(M, k < 0.45 ? 0 : lerp(0, 160, sm(0.45, 0.7, k)), Math.max(0.01, sc), sc > 0.02 ? 1 : 0);
+      if (k < 0.45 && Math.random() < 0.15) sparkle(tip.x, tip.y, 1);
+      if (k > 0.7) once(M, "stored", () => { sparkle(0, -40, 3); V.chirp && V.chirp(); });
+    } };
+  } };
+
   // 6) Barriga llena: palmaditas, eructito, vergüenza y risa
   // ================================================================
   // Caídas (sirven para el equilibrio, tropiezos y cualquier traspié):
@@ -491,5 +540,5 @@ window.EkoTricks = (() => {
 
   // Herramientas para otros módulos (juegos): mismas capas, partículas y manos
   const kit = { img, place, hands, particle, sparkle, smoke, layer, ground, clear, sm, ease, easeOut, back, lerp, clamp, once, tone, art };
-  return { kit, run, LIST, has, unlocked, tumble: (kind = "sit", dir) => play("tumble", { kind, dir }) };
+  return { kit, run, LIST, has, unlocked, tumble: (kind = "sit", dir) => play("tumble", { kind, dir }), tele: (dir) => play(dir === "in" ? "teleIn" : "teleOut") };
 })();

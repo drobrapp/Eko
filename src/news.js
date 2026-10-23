@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.32.0": { important: true, lines: ["¡Ahora puedo vivir también en tu móvil Android!", "En mis ajustes, «Eko y tú» → «Eko en tu móvil»: escanea el código con mi app del móvil y seré el mismo en los dos"] },
     "0.31.0": { important: true, lines: ["¡Novedad! Cada domingo por la tarde te preparo un resumen de nuestra semana", "Y si no puedes esperar, míralo en mi libreta: «Nuestra semana»"] },
     "0.30.6": { important: true, lines: ["¡Mi casa del valle es nueva! Ahora tengo un saloncito con sillón, lamparita y ventana al valle", "Toca las cosas de casa: puedo encender las luces, sentarme en el sillón o enseñarte mis recuerdos"] },
     "0.30.3": { important: true, lines: ["Toca los arbustos del valle… y el árbol grande, tres veces seguidas", "¡Ojo con los pájaros y las malas hierbas del huerto!", "Y los premios de los encargos ya se ven en el valle"] },

@@ -9,6 +9,7 @@ mod clicks;
 mod desktop;
 mod voice;
 mod senses;
+mod sync;
 mod winwatch;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -556,7 +557,7 @@ pub fn run() {
                 .build(),
         )
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, world_show, world_hide, wrapped_show, wrapped_hide, set_main_visible, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::latest_download, actions::open_download_named, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::find_apps, actions::open_app, actions::find_running_apps, actions::close_app, actions::lock_pc, actions::backup_save, actions::app_restart])
+        .invoke_handler(tauri::generate_handler![set_hitbox, set_dragging, set_sound_menu, set_discretion, open_settings, ball_show, catch_show, catch_hide, corner_show, corner_hide, corner_interact, world_show, world_hide, wrapped_show, wrapped_hide, set_main_visible, ball_pos, ball_hide, chatbar_show, chatbar_hide, desktop::desktop_scan, ai::ai_status, ai::ai_chat, voice::voice_start, voice::voice_stop, get_autostart, set_autostart, app_version, check_update_now, install_update, actions::open_downloads, actions::open_last_download, actions::latest_download, actions::open_download_named, actions::screenshot, actions::media_play_pause, actions::media_next, actions::media_prev, actions::volume, actions::open_folder, actions::web_search, actions::open_site, actions::find_apps, actions::open_app, actions::find_running_apps, actions::close_app, actions::lock_pc, actions::backup_save, actions::app_restart, sync::sync_start, sync::sync_set_token, sync::sync_snapshot])
         .setup(move |app| {
             first_run_autostart(app);
             build_tray(app)?;
@@ -566,6 +567,7 @@ pub fn run() {
             start_update_loop(app.handle().clone());
             clicks::start(app.handle().clone());
             senses::start(app.handle().clone());
+            sync::init(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

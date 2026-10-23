@@ -276,9 +276,12 @@
   function needs() {
     const n = JSON.parse(H && H.needs ? H.needs() : '{"hunger":80,"fun":70,"love":70,"energy":85}');
     for (const k of ["hunger", "fun", "love", "energy"]) { const el = $("n-" + k); el.style.setProperty("--v", Math.round(n[k])); el.classList.toggle("low", n[k] < 25); }
-    const born = new Date(ls.get("eko-born", new Date().toISOString()));
+    // días juntos (si vino del PC, desde que nació allí) y su nombre
+    const b = H && H.born ? H.born() : "";
+    const born = new Date(b || ls.get("eko-born", new Date().toISOString()));
     const days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 864e5)) + 1;
     $("day").textContent = `Día ${days}`;
+    if (H && H.name) $("name").textContent = H.name();
   }
 
   // ---------- Las cosas de la casa ----------

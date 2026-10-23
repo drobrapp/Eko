@@ -10,6 +10,8 @@
     get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
   };
+  // Si este Eko vino del PC, su fecha de nacimiento es la del PC (la guarda Android al conectarse)
+  try { const b = AND && AND.born ? AND.born() : ""; if (b) store.set("eko-born", b); } catch (_) {}
   if (!store.get("eko-born")) store.set("eko-born", new Date().toISOString());
   const born = () => new Date(store.get("eko-born") || Date.now());
   const days = () => Math.max(0, Math.floor((Date.now() - born().getTime()) / 864e5));

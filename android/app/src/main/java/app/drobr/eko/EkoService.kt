@@ -550,6 +550,14 @@ class EkoService : Service() {
     // ---------- Su casa (HouseActivity): mientras estás dentro, Eko está allí y no en tu pantalla ----------
     fun needsJson(): String = org.json.JSONObject().put("hunger", hunger.toDouble()).put("fun", fun_.toDouble())
         .put("love", love.toDouble()).put("energy", energy.toDouble()).toString()
+    // Ha llegado el Eko del PC (PcLink): sus necesidades y su fecha de nacimiento pasan a ser las de aquí
+    fun adopted(h: Float?, f: Float?, l: Float?, e: Float?) {
+        handler.post {
+            if (h != null && f != null && l != null && e != null) { hunger = h; fun_ = f; love = l; energy = e; saveNeeds() }
+            web?.reload()   // para que coja la fecha de nacimiento y la ropa
+            handler.postDelayed({ talkArg("pcArrived", PcLink.petName(this)); js("act('tada')") }, 2500)
+        }
+    }
     fun homeVisit(home: Boolean) {
         handler.post {
             val v = if (home) View.GONE else View.VISIBLE
@@ -707,6 +715,8 @@ class EkoService : Service() {
         @JavascriptInterface fun hit(l: Int, t: Int, r: Int, b: Int) { handler.post { setHit(l, t, r, b) } }
         @JavascriptInterface fun tall(on: Boolean) { handler.post { if (tallHat != on) { tallHat = on; resize(false) } } }
         @JavascriptInterface fun accMode(): String = this@EkoService.accMode()
+        @JavascriptInterface fun born(): String = PcLink.born(this@EkoService)
+        @JavascriptInterface fun petName(): String = PcLink.petName(this@EkoService)
         // Que no se ponga a andar en mitad de un gesto
         @JavascriptInterface fun hold(ms: Int) { handler.post { if (st == St.IDLE || st == St.WALK) idle(ms.toLong()) } }
     }

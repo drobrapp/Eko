@@ -43,10 +43,14 @@ class HouseActivity : Activity() {
         @JavascriptInterface fun hit(l: Int, t: Int, r: Int, b: Int) {}
         @JavascriptInterface fun tall(on: Boolean) {}
         @JavascriptInterface fun accMode(): String = prefs().getString("acc", "auto") ?: "auto"
+        @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
+        @JavascriptInterface fun petName(): String = PcLink.petName(this@HouseActivity)
     }
 
     // Lo que pide la casa
     inner class HouseBridge {
+        @JavascriptInterface fun name(): String = PcLink.petName(this@HouseActivity)
+        @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
         @JavascriptInterface fun open(what: String) { runOnUiThread { openThing(what) } }
         @JavascriptInterface fun give(kind: String) { runOnUiThread { giveNeed(kind) } }
         @JavascriptInterface fun accMode(): String = prefs().getString("acc", "auto") ?: "auto"

@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var upd: TextView
     private lateinit var kb: Button
+    private lateinit var pcBtn: Button
     private lateinit var notes: Button
     private lateinit var walkBtn: Button
     private lateinit var golden: Button
@@ -68,6 +69,8 @@ class MainActivity : Activity() {
         root.addView(button("Su álbum de fotos", "#E9A93B") { startActivity(Intent(this, AlbumActivity::class.java)) })
         root.addView(button("Diario con Eko", "#9B85CC") { startActivity(Intent(this, DiaryActivity::class.java)) })
         kb = button("", "#9B85CC") { askAccess() }
+        pcBtn = button("", "#6F94C2") { connectPc() }
+        root.addView(pcBtn)
         root.addView(kb)
         notes = button("", "#6F94C2") { EkoNotes.setEnabled(this, !EkoNotes.enabled(this)); showNotes() }
         root.addView(notes)
@@ -105,6 +108,7 @@ class MainActivity : Activity() {
         upd.text = "Versión ${Updater.versionName(this)} · buscando novedades…"
         kb.text = if (EkoAccess.enabled(this)) "Teclado y toques ✓" else "Teclado y toques"
         showNotes()
+        showPc()
         showWalks()
         EkoNotes.seen(this); EkoNotes.schedule(this); GoldenHour.schedule(this)
         Updater.check(this) { msg ->
@@ -132,6 +136,25 @@ class MainActivity : Activity() {
         }
         startForegroundService(Intent(this, EkoService::class.java))
         moveTaskToBack(true)
+    }
+
+    // ---------- Conectar con el Eko del PC ----------
+    private fun showPc() { pcBtn.text = if (PcLink.paired(this)) "Conectado con tu PC ✓" else "Conectar con mi PC" }
+    private fun connectPc() {
+        AlertDialog.Builder(this)
+            .setTitle("Conectar con mi PC")
+            .setMessage("Así el Eko de tu PC y el de tu móvil son el mismo. Solo por tu Wi-Fi, cifrado y sin internet.\n\n1. En el PC abre los Ajustes de Eko → «Eko y tú» → «Eko en tu móvil» → Conectar.\n\n2. Pulsa «Escanear» y apunta al código que aparece.\n\nEl móvil y el PC tienen que estar en la misma Wi-Fi.")
+            .setPositiveButton("Escanear") { _, _ ->
+                PcLink.pair(this) { ok, msg ->
+                    showPc()
+                    when {
+                        ok && msg.isEmpty() -> Toast.makeText(this, "¡${PcLink.petName(this)} ya está aquí!", Toast.LENGTH_LONG).show()
+                        msg.isNotEmpty() -> AlertDialog.Builder(this).setMessage(msg).setPositiveButton("Vale", null).show()
+                    }
+                }
+            }
+            .setNegativeButton("Ahora no", null)
+            .show()
     }
 
     private fun fmt(n: Int) = String.format(java.util.Locale("es", "ES"), "%,d", n)

@@ -132,6 +132,10 @@
   .cities { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .cities button { border: 0; border-radius: 14px; background: rgba(255,255,255,.7); padding: 11px; font: 500 14px/1.1 inherit; color: var(--ink); text-align: left; }
   .cities button.cur { box-shadow: inset 0 0 0 2px #E9A93B; background: #fff; }
+  .more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .more button { border: 0; border-radius: 20px; background: rgba(255,255,255,.66); padding: 16px 4px 12px; font: 600 13px/1.1 inherit; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .more button:active { transform: scale(.95); background: #fff; }
+  .more img { width: 44px; height: 44px; object-fit: contain; } .more span { font-size: 34px; line-height: 44px; }
   .finds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .fd { background: rgba(255,255,255,.66); border-radius: 18px; padding: 10px 4px 8px; text-align: center; font-size: 11px; line-height: 1.2; color: var(--ink); position: relative; }
   .fd span { display: block; font-size: 32px; line-height: 40px; }
@@ -228,7 +232,7 @@
   let ekoReady = false;
   const send = (fn, ...args) => ekoReady && frame.contentWindow && frame.contentWindow.postMessage({ eko: fn, args }, "*");
   const look = (mode) => frame.contentWindow && frame.contentWindow.postMessage({ look: mode }, "*");
-  const scale = () => S * (1 - 0.24 * E.z);              // más lejos = más pequeño
+  const scale = () => S * (1 - 0.48 * E.z);              // más lejos = más pequeño (en el sillón cabe entre los brazos)
   function place() {
     const y = E.y - E.hop, sc = scale(), f = sc / S;
     frame.style.left = E.x - 80 + "px"; frame.style.top = y - 250 + 4 + "px"; frame.style.transform = `scale(${sc})`;
@@ -293,7 +297,7 @@
   function say(t, ms = 2800) { if (AWAY) return; bub.textContent = t; bub.classList.add("on"); clearTimeout(bubT); bubT = setTimeout(() => bub.classList.remove("on"), ms); }
 
   // Asiento del sillón: más al fondo (Eko se hace más pequeño) y metido entre los brazos
-  const SEAT = { x: 717, y: 990 };
+  const SEAT = { x: 726, y: 968 };
   function nap() { walkTo(SEAT.x - 90, () => hopTo(SEAT.x, SEAT.y, () => { E.mode = "sleep"; send("set", "sleep", -1); }, 1)); }
   function wake() { if (E.mode !== "sleep") return; send("wake"); E.mode = "busy"; setTimeout(() => hopTo(SEAT.x - 170, FLOOR, () => idle(2500), 0), 900); }
 
@@ -372,43 +376,56 @@
   }
 
   // ---------- Las cosas de la casa ----------
+  // Los muebles NO abren nada (para eso est\u00e1 el men\u00fa de abajo): Eko va hasta ellos y comenta algo de cada uno.
+  // Las frases pueden depender de lo que pasa (hora, fotos, colecci\u00f3n\u2026). Las l\u00e1mparas s\u00ed encienden y apagan la luz.
+  const nightNow = () => document.body.classList.contains("night"), goldNow = () => document.body.classList.contains("gold");
   const SPOTS = [
-    { id: "door", r: [31, 427, 140, 1015], at: 150, say: ["¡Me voy contigo a la pantalla!", "¡A la calle! Bueno, a tu pantalla"] },
-    { id: "wardrobe", r: [128, 401, 307, 631], at: 220, say: ["¿Qué me pongo hoy?", "Vamos a ver mi ropa"] },
-    { id: "settings", r: [133, 734, 333, 956], at: 240, say: ["En estos cajones guardo mis cosas", "Aquí están mis ajustes"] },
-    { id: "walks", r: [358, 367, 674, 725], at: 512, say: ["Mira nuestros paseos", "¿Cuánto hemos andado?"] },
-    { id: "album", r: [490, 840, 620, 980], at: 560, say: ["¡Mi álbum! ¿Lo vemos?", "Vamos a ver las fotos"] },
-    { id: "diary", r: [750, 440, 860, 512], at: 800, say: ["Mi diario… ¿me cuentas algo?", "Vamos a escribir"] },
-    { id: "finds", r: [737, 290, 956, 440], at: 820, say: ["Mira mi colección", "Todo lo que hemos encontrado"] },
-    { id: "photo", r: [802, 546, 899, 700], at: 850, say: ["Mi foto favorita", "Esa la colgué yo"] },
-    { id: "nap", r: [611, 734, 918, 1041], at: 700 },
+    { id: "door", r: [31, 427, 140, 1015], at: 150, say: () => ["Por esta puerta salgo a pasear por tu pantalla", "\u00bfOyes eso? Creo que alguien llama\u2026 No, era el viento", "Fuera hay un mundo enorme. Bueno, tu pantalla", "Si alg\u00fan d\u00eda me pierdo, vuelvo por aqu\u00ed"] },
+    { id: "hat", r: [128, 401, 307, 631], at: 220, say: () => ["Mi sombrero de verano. Me queda enorme", "La toalla es para cuando me ducho. O sea, nunca", "Este sombrero tiene una flor de verdad. Bueno, de arcilla", "Un d\u00eda me pongo el sombrero y nos vamos a la playa"] },
+    { id: "chest", r: [133, 734, 333, 956], at: 240, say: () => ["En estos cajones guardo mis tesoros. No mires", "Aqu\u00ed dentro hay calcetines. Yo no tengo pies para calcetines", "La planta la riego yo. A veces", "Este caj\u00f3n se atasca. Como yo los lunes"] },
+    { id: "window", r: [358, 367, 674, 725], at: 512, say: () => nightNow() ? ["Mira cu\u00e1ntas estrellas", "La luna est\u00e1 preciosa esta noche", "De noche las colinas parecen dormidas"] : goldNow() ? ["\u00a1Mira qu\u00e9 luz! Hora dorada", "Ahora mismo saldr\u00edan unas fotos preciosas", "El cielo se est\u00e1 poniendo naranja"] : ["\u00a1Qu\u00e9 d\u00eda hace!", "Mira, \u00a1las colinas!", "Alg\u00fan d\u00eda subir\u00e9 a esa colina", "\u00bfSalimos luego a dar una vuelta?"] },
+    { id: "book", r: [490, 840, 620, 980], at: 560, say: () => { const n = H && H.photoCount ? H.photoCount() : 0; return n ? [`Ya tengo ${n} ${n === 1 ? "foto" : "fotos"} en mi libreta`, "Mi libreta de recuerdos. La miro cada noche", "Esta libreta es lo que m\u00e1s quiero de la casa"] : ["Mi libreta est\u00e1 vac\u00eda\u2026 \u00bfme das alguna foto?", "Aqu\u00ed ir\u00e1n nuestras fotos. Cuando quieras"]; } },
+    { id: "shelfbook", r: [750, 440, 860, 512], at: 800, say: () => ["En ese libro apunto lo que me cuentas", "Es mi diario. Prometo no ense\u00f1\u00e1rselo a nadie", "Tiene las p\u00e1ginas un poco dobladas. Lo leo mucho"] },
+    { id: "shelves", r: [737, 290, 956, 440], at: 820, say: () => { const n = JSON.parse(H && H.finds ? H.finds() : "[]").length; return n ? [`Aqu\u00ed pongo lo que encuentro paseando. Ya van ${n} cosas distintas`, "Cada cosa de la balda tiene su historia", "Mi favorita es\u2026 todas"] : ["Las baldas est\u00e1n vac\u00edas. \u00a1Hay que salir a pasear!", "Aqu\u00ed pondr\u00e9 lo que encuentre por el camino"]; } },
+    { id: "frame", r: [802, 546, 899, 700], at: 850, say: () => (H && H.lastPhoto && H.lastPhoto()) ? ["La \u00faltima foto que me diste. La colgu\u00e9 yo", "\u00bfA que queda bonita ah\u00ed?", "Cada vez que me das una foto, cambio el cuadro"] : ["Este cuadro espera una foto tuya", "Un marco sin foto es un poco triste, \u00bfno?"] },
+    { id: "chair", r: [611, 734, 918, 1041], at: 700, say: () => ["Mi sill\u00f3n favorito. Es blandito", "La manta me la hizo alguien con mucho cari\u00f1o", "Aqu\u00ed me echo la siesta. Si quieres, p\u00eddemela en el men\u00fa", "El cojín de cuadros es mi almohada"] },
     { id: "lamp", r: [918, 760, 1020, 896], at: 900 },
     { id: "lamp", r: [427, 26, 597, 230], at: 512 },
   ];
   $("spots").innerHTML = SPOTS.map((s, i) => `<div class="spot" data-i="${i}" style="left:${s.r[0]}px;top:${s.r[1]}px;width:${s.r[2]-s.r[0]}px;height:${s.r[3]-s.r[1]}px"></div>`).join("");
-  $("spots").addEventListener("click", (e) => { const el = e.target.closest(".spot"); if (el) use(SPOTS[+el.dataset.i]); });
-  function use(s) {
+  $("spots").addEventListener("click", (e) => { const el = e.target.closest(".spot"); if (el) touchSpot(SPOTS[+el.dataset.i]); });
+  const lastSaid = {};
+  function touchSpot(s) {
     closeWard();
-    if (AWAY) { $("away").classList.remove("on"); void $("away").offsetWidth; $("away").classList.add("on"); return; }   // sin Eko en casa, la notita se mueve
-    if (s.id === "lamp") { say(toggleLights() ? "¡Luz!" : "Así, más tranquilito", 1600); return; }
-    if (s.id === "nap") { if (E.mode === "sleep") wake(); else { say("Una siestecita…", 1800); nap(); } return; }
-    if (s.id === "wardrobe") { walkTo(s.at, () => { say(pick(s.say), 1800); setTimeout(openWard, 450); }); return; }
-    walkTo(s.at, () => { say(pick(s.say), 1800); send("act", "tada"); setTimeout(() => { if (s.id === "walks" || s.id === "finds") openSheet(s.id); else H && H.open(s.id); }, 700); });
+    if (AWAY) { nudgeAway(); return; }
+    if (s.id === "lamp") { say(toggleLights() ? "\u00a1Luz!" : "As\u00ed, m\u00e1s tranquilito", 1600); return; }
+    const lines = s.say().filter((x) => x !== lastSaid[s.id]);
+    const line = pick(lines.length ? lines : s.say());
+    lastSaid[s.id] = line;
+    walkTo(s.at, () => { send("express", pick(["curioso", "contento", "timido"]), 2.4); say(line, 2800); });
   }
-  const spot = (id) => SPOTS.find((s) => s.id === id);
-  $("gear").onclick = () => use(spot("settings"));
+  function nudgeAway() { $("away").classList.remove("on"); void $("away").offsetWidth; $("away").classList.add("on"); }
+  // Opciones del menú: se abren al momento (los muebles solo los comenta Eko)
+  function openOpt(id) {
+    closeWard();
+    if (AWAY) { nudgeAway(); return; }
+    if (id === "wardrobe") { openWard(); return; }
+    if (id === "walks" || id === "finds") { openSheet(id); return; }
+    H && H.open(id);   // álbum, diario, ajustes y «a tu pantalla»
+  }
+  $("gear").onclick = () => openOpt("settings");
 
   // ---------- Barra de abajo ----------
   const DOCK = [
     ["art/cookie.webp", "Comer", () => { if (E.mode === "sleep") wake(); send("eat"); H && H.give("feed"); setTimeout(needs, 300); }],
     ["art/ui/cat-play.webp", "Jugar", () => { if (E.mode === "sleep") wake(); send("spin"); H && H.give("play"); setTimeout(needs, 300); }],
-    ["art/ui/cat-wardrobe.webp", "Ropa", () => use(spot("wardrobe"))],
-    ["art/valley/sun.webp", "Paseos", () => use(spot("walks"))],
-    ["art/movil-portada.webp", "Álbum", () => use(spot("album"))],
-    ["art/ui/ic-note.webp", "Diario", () => use(spot("diary"))],
+    ["art/ui/cat-wardrobe.webp", "Ropa", () => openOpt("wardrobe")],
+    ["art/valley/sun.webp", "Paseos", () => openOpt("walks")],
+    ["art/movil-portada.webp", "\u00c1lbum", () => openOpt("album")],
+    ["art/ui/ic-settings.webp", "M\u00e1s", () => openSheet("more")],
   ];
   $("dock").innerHTML = DOCK.map((d, i) => `<button data-i="${i}"><img src="${d[0]}" alt="">${d[1]}</button>`).join("");
-  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); if (AWAY) { use({}); return; } DOCK[+b.dataset.i][2](); });
+  $("dock").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; closeWard(); if (AWAY && +b.dataset.i < 5) { nudgeAway(); return; } DOCK[+b.dataset.i][2](); });
 
   // ---------- Tocarlo como fuera: toque, doble toque, caricia, cogerlo y soltarlo, mantener pulsado ----------
   //  toque: reacciona · doble toque: un truco · acariciar la cabeza (deslizar despacio por arriba): mimos
@@ -503,6 +520,7 @@
     const b = $("sheetBody");
     if (kind === "walks") b.innerHTML = walksHtml();
     else if (kind === "cities") b.innerHTML = citiesHtml();
+    else if (kind === "more") b.innerHTML = moreHtml();
     else b.innerHTML = findsHtml();
     $("ward").classList.remove("on");
     $("sheet").classList.add("on"); $("scrim").classList.add("on");
@@ -527,6 +545,19 @@
       <button class="pill ${w.city ? "soft" : ""}" data-act="cities">${w.city ? "Cambiar" : "Activar"}</button></div>`;
     return h;
   }
+  // Hoja «Más»: el resto de opciones, en una cuadrícula
+  const MORE = [
+    ["art/ui/ic-note.webp", "Diario", () => openOpt("diary"), true],
+    ["\ud83e\udea8", "Colecci\u00f3n", () => openOpt("finds"), true],
+    ["\ud83d\udca4", "Siesta", () => { closeWard(); if (E.mode === "sleep") wake(); else { say("Una siestecita\u2026", 1800); nap(); } }, true],
+    ["\ud83d\udca1", "Luz", () => { closeWard(); say(toggleLights() ? "\u00a1Luz!" : "As\u00ed, m\u00e1s tranquilito", 1600); }, false],
+    ["\ud83d\udeaa", "A tu pantalla", () => openOpt("door"), true],
+    ["art/ui/ic-settings.webp", "Ajustes", () => openOpt("settings"), false],
+  ];
+  function moreHtml() {
+    return `<h3>M\u00e1s</h3><p class="sub">Todo lo dem\u00e1s que podemos hacer</p><div class="more">${MORE.map((m, i) =>
+      `<button data-more="${i}">${m[0].startsWith("art/") ? `<img src="${m[0]}" alt="">` : `<span>${m[0]}</span>`}${m[1]}</button>`).join("")}</div>`;
+  }
   function citiesHtml() {
     const w = JSON.parse(H && H.walks ? H.walks() : '{"cities":[]}');
     return `<h3>¿Dónde haces fotos?</h3><p class="sub">Para saber a qué hora se pone el sol. Se calcula en el móvil, sin internet.</p>
@@ -541,6 +572,8 @@
       : `<div class="fd no"><span>${x.emoji}</span>${x.rare ? "Rara" : x.season ? "De " + SEASON[x.season] : "???"}</div>`).join("")}</div>`;
   }
   $("sheet").addEventListener("click", (e) => {
+    const m = e.target.closest("[data-more]");
+    if (m) { const it = MORE[+m.dataset.more]; if (AWAY && it[3]) { closeWard(); nudgeAway(); return; } it[2](); return; }
     const a = e.target.closest("[data-act]"), c = e.target.closest("[data-city]");
     if (a && a.dataset.act === "steps") { H && H.askSteps(); return; }
     if (a && a.dataset.act === "cities") { openSheet("cities"); return; }

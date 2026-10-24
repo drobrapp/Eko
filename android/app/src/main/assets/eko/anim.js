@@ -92,6 +92,17 @@
   // Esconderlo debajo de la nube (sin esconder la nube, que va en la capa de efectos)
   function vanish(on) { vanished = on; vanishAt = performance.now(); const m = $("#mochi"); if (m) { m.style.transition = "opacity .15s"; m.style.opacity = on ? "0" : "1"; } }
   let vanished = false, vanishAt = 0;
+  // Tamaño (Ajustes → Comportamiento): solo en tu pantalla; dentro de su casa el tamaño lo pone la casa
+  let sizeAt = 0, sizeCur = 1;
+  function applySize() {
+    if (window.self !== window.top) return;
+    let s = 1;
+    try { const m = JSON.parse(localStorage.getItem("eko-m-settings") || "{}"); s = { small: 0.85, normal: 1, big: 1.15 }[m.size] || 1; } catch (_) {}
+    if (s === sizeCur) return;
+    sizeCur = s;
+    const mo = $("#mochi");
+    if (mo) { mo.style.transformOrigin = "50% 100%"; mo.style.transform = s === 1 ? "" : `scale(${s})`; }
+  }
   function hop(v) { if (AND && AND.hop) AND.hop(Math.abs(v)); else { A.squashV -= 6; } }
   // Que Android no lo ponga a andar en mitad de un gesto
   function hold(secs) { if (AND && AND.hold) AND.hold(Math.round(secs * 1000)); }
@@ -519,6 +530,7 @@
     // Sin límite de fotogramas: se dibuja a la velocidad de la pantalla
     const dt = Math.min(0.07, (now - last) / 1000); last = now;
     update(dt); render();
+    if (now > sizeAt) { sizeAt = now + 2000; applySize(); }
     // Seguridad: si se quedó escondido tras la magia (y ya no hay magia en marcha), vuelve a verse
     if (vanished && now - vanishAt > 3500 && !(A.action && A.action.name.startsWith("tele"))) vanish(false);
     // Zona tocable = solo su cuerpo (Android deja pasar los toques del resto de la ventana)

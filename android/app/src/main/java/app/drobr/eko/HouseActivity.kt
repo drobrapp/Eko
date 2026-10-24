@@ -51,6 +51,7 @@ class HouseActivity : Activity() {
     inner class HouseBridge {
         @JavascriptInterface fun name(): String = PcLink.petName(this@HouseActivity)
         @JavascriptInterface fun level(): Int = PcLink.level(this@HouseActivity)
+        @JavascriptInterface fun photoCount(): Int = Album.list(this@HouseActivity).size
         @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
         // Dónde está Eko: "pc" o "phone" (lo último que se sabe; se comprueba cada 10 s)
         @JavascriptInterface fun where(): String = if (PcLink.paired(this@HouseActivity)) PcLink.where(this@HouseActivity) else "phone"

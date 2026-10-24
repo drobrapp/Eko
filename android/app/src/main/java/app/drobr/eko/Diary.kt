@@ -1,28 +1,22 @@
 package app.drobr.eko
 
+import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognizerIntent
-import android.text.InputType
-import android.view.Gravity
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.view.WindowInsets
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.util.Date
 import java.util.Locale
 import kotlin.random.Random
 
@@ -64,96 +58,78 @@ object Diary {
     }
 }
 
+// Pantalla del diario: la página es assets/eko/diary.html (mismo estilo que su casa); aquí solo el dictado y los datos
 class DiaryActivity : Activity() {
-    private lateinit var input: EditText
-    private lateinit var past: LinearLayout
-    private val d by lazy { resources.displayMetrics.density }
+    private lateinit var web: WebView
+    private var loaded = false
+    private var insetTop = 24f
+    private var insetBottom = 16f
+    private fun js(code: String) = runOnUiThread { if (loaded) web.evaluateJavascript(code, null) }
 
-    private fun btn(label: String, color: String, on: () -> Unit) = Button(this).apply {
-        text = label; isAllCaps = false; textSize = 16f; setTextColor(Color.WHITE)
-        background = GradientDrawable().apply { cornerRadius = 22 * d; setColor(Color.parseColor(color)) }
-        layoutParams = LinearLayout.LayoutParams(0, (52 * d).toInt(), 1f).apply { marginStart = (4 * d).toInt(); marginEnd = (4 * d).toInt() }
-        setOnClickListener { on() }
+    inner class Bridge {
+        @JavascriptInterface fun list(): String {
+            val a = JSONArray(); Diary.list(this@DiaryActivity).forEach { a.put(JSONObject().put("t", it.time).put("x", it.text)) }
+            return a.toString()
+        }
+        @JavascriptInterface fun save(text: String): String {
+            Diary.add(this@DiaryActivity, text)
+            val r = Diary.reply(text)
+            EkoService.instance?.diaryDone(r)
+            return r
+        }
+        @JavascriptInterface fun remove(time: Long) { Diary.delete(this@DiaryActivity, time) }
+        @JavascriptInterface fun listen() { runOnUiThread { startListening() } }
+        @JavascriptInterface fun close() { runOnUiThread { finish() } }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding((20 * d).toInt(), (24 * d).toInt(), (20 * d).toInt(), (24 * d).toInt()) }
-        root.addView(TextView(this).apply { text = "Diario con Eko"; textSize = 30f; setTextColor(Color.parseColor("#5A463D")); gravity = Gravity.CENTER })
-        root.addView(TextView(this).apply {
-            text = SimpleDateFormat("EEEE d 'de' MMMM", Locale("es", "ES")).format(Date()).replaceFirstChar { it.uppercase() } + "\n¿Qué tal ha ido el día?"
-            textSize = 15f; setTextColor(Color.parseColor("#7A6458")); gravity = Gravity.CENTER; setPadding(0, (6 * d).toInt(), 0, (12 * d).toInt())
-        })
-        input = EditText(this).apply {
-            hint = "Cuéntaselo hablando (🎤) o escribiendo…"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            minLines = 4; gravity = Gravity.TOP; textSize = 16f
-            background = GradientDrawable().apply { cornerRadius = 16 * d; setColor(Color.WHITE) }
-            setPadding((14 * d).toInt(), (12 * d).toInt(), (14 * d).toInt(), (12 * d).toInt())
+        web = WebView(this).apply {
+            setBackgroundColor(Color.parseColor("#D99A63"))
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            addJavascriptInterface(Bridge(), "App")
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(v: WebView, url: String) { loaded = true; sendInsets() }
+            }
+            loadUrl("file:///android_asset/eko/diary.html")
         }
-        root.addView(input)
-        root.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; setPadding(0, (12 * d).toInt(), 0, (16 * d).toInt())
-            addView(btn("🎤 Hablar", "#6F94C2") { listen() })
-            addView(btn("Guardar", "#5FA88E") { saveEntry() })
-        })
-        past = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(past)
-        setContentView(ScrollView(this).apply { isFillViewport = true; setBackgroundColor(Color.parseColor("#FFF4E8")); addView(root) })
-        refresh()
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.setSystemBarsAppearance(0, android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
+            window.isNavigationBarContrastEnforced = false
+        }
+        web.setOnApplyWindowInsetsListener { v, ins ->
+            val d = resources.displayMetrics.density
+            if (Build.VERSION.SDK_INT >= 30) {
+                // incluye el teclado: así la casilla de texto nunca queda debajo
+                val i = ins.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
+                insetTop = i.top / d; insetBottom = i.bottom / d
+            } else @Suppress("DEPRECATION") run { insetTop = ins.systemWindowInsetTop / d; insetBottom = ins.systemWindowInsetBottom / d }
+            sendInsets(); v.onApplyWindowInsets(ins)
+        }
+        setContentView(web)
     }
+    private fun sendInsets() { js("window.setInsets && setInsets($insetTop, $insetBottom)") }
 
     // Dictado del sistema (Google): no hace falta permiso de micrófono en Eko. Se puede pulsar varias veces y se va añadiendo.
     @Suppress("DEPRECATION")
-    private fun listen() {
+    private fun startListening() {
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES")
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             .putExtra(RecognizerIntent.EXTRA_PROMPT, "Cuéntaselo a Eko")
-        try { startActivityForResult(i, 7) } catch (_: ActivityNotFoundException) { Toast.makeText(this, "Este móvil no tiene dictado por voz", Toast.LENGTH_SHORT).show() }
+        try { startActivityForResult(i, 7) } catch (_: ActivityNotFoundException) { js("window.toast && toast('Este móvil no tiene dictado por voz')") }
     }
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(req: Int, res: Int, data: Intent?) {
         super.onActivityResult(req, res, data)
         if (req != 7 || res != RESULT_OK) return
         val said = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull() ?: return
-        val cur = input.text.toString().trim()
-        val add = said.replaceFirstChar { it.uppercase() }
-        input.setText(if (cur.isEmpty()) "$add." else "$cur $add.")
-        input.setSelection(input.text.length)
-    }
-
-    private fun saveEntry() {
-        val t = input.text.toString().trim()
-        if (t.isEmpty()) { Toast.makeText(this, "Cuéntale algo primero", Toast.LENGTH_SHORT).show(); return }
-        Diary.add(this, t)
-        input.setText("")
-        val r = Diary.reply(t)
-        EkoService.instance?.diaryDone(r)
-        AlertDialog.Builder(this).setTitle("Eko dice…").setMessage(r).setPositiveButton("Gracias, Eko", null).show()
-        refresh()
-    }
-
-    private fun refresh() {
-        past.removeAllViews()
-        val all = Diary.list(this).reversed()
-        if (all.isEmpty()) return
-        past.addView(TextView(this).apply { text = "Días anteriores"; textSize = 18f; setTextColor(Color.parseColor("#5A463D")); setPadding(0, 0, 0, (8 * d).toInt()) })
-        val f = SimpleDateFormat("EEEE d 'de' MMMM · H:mm", Locale("es", "ES"))
-        all.forEach { e ->
-            past.addView(TextView(this).apply {
-                text = f.format(Date(e.time)).replaceFirstChar { it.uppercase() } + "\n" + e.text
-                textSize = 15f; setTextColor(Color.parseColor("#5A463D"))
-                background = GradientDrawable().apply { cornerRadius = 14 * d; setColor(Color.parseColor("#F3DCC6")) }
-                setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (10 * d).toInt())
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = (8 * d).toInt() }
-                setOnLongClickListener {
-                    AlertDialog.Builder(this@DiaryActivity).setMessage("¿Borrar esta página del diario?")
-                        .setPositiveButton("Borrar") { _, _ -> Diary.delete(this@DiaryActivity, e.time); refresh() }
-                        .setNegativeButton("No", null).show(); true
-                }
-            })
-        }
+        js("window.addText && addText(${JSONObject.quote(said)})")
     }
 }

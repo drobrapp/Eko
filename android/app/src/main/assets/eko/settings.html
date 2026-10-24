@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+  /* Ajustes de Eko en el móvil, con la misma estructura que los del PC (portada + secciones) y el estilo de su casa.
+     Las acciones de Android las hace MainActivity (puente «App»). Los ajustes propios del móvil (tamaño, cuánto habla,
+     horas de silencio) se guardan en localStorage «eko-m-settings», que leen anim.js y talk.js. */
+  :root { --ink: #4E3B33; --ink2: #8A7266; --glass: rgba(255, 248, 240, .84); --line: rgba(255, 255, 255, .75);
+          --top: 24px; --bottom: 16px; --shadow: 0 10px 30px rgba(74, 44, 24, .16), 0 2px 6px rgba(74, 44, 24, .1); --accent: #D0795A; --ok: #5FA88E; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d99a63; color: var(--ink); font-family: "Google Sans", Roboto, system-ui, sans-serif; }
+  #backdrop { position: fixed; inset: -40px; background: url(art/casa-vertical.webp) center / cover no-repeat; filter: blur(28px) brightness(.88) saturate(1.05); transform: scale(1.08); }
+  .page { position: absolute; inset: 0; overflow-y: auto; padding: calc(var(--top) + 10px) 14px calc(var(--bottom) + 28px); transition: transform .32s cubic-bezier(.2,.9,.3,1), opacity .25s; }
+  .page.off { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  .page.under { transform: translateX(-22%); opacity: 0; pointer-events: none; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin: 4px 2px 16px; }
+  header button { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; background: var(--glass); box-shadow: var(--shadow); font-size: 20px; color: var(--ink); }
+  header h1 { margin: 0; font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 2px 10px rgba(60,30,10,.4); letter-spacing: -.01em; }
+  .glass { background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .lead { color: #fff; font-size: 14px; margin: -8px 4px 14px; text-shadow: 0 1px 6px rgba(60,30,10,.4); }
+  .hero { border-radius: 28px; padding: 18px; margin-bottom: 14px; display: flex; gap: 14px; align-items: center; }
+  .av { width: 70px; height: 70px; border-radius: 50%; flex: none; background: radial-gradient(circle at 40% 35%, #fff, #f3e4d6); display: grid; place-items: center; box-shadow: inset 0 0 0 3px #fff, 0 4px 10px rgba(74,44,24,.15); }
+  .av img { width: 46px; height: 46px; }
+  .hero .n { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .hero .m { font-size: 13px; color: var(--ink2); margin-top: 2px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgba(95,168,142,.15); color: #3f7f68; }
+  .chip.pc { background: rgba(111,148,194,.16); color: #4b6f9b; } .chip.in { background: rgba(78,59,51,.08); color: var(--ink2); }
+  .big { width: 100%; border: 0; border-radius: 22px; padding: 16px; font: 700 16px/1 inherit; color: #fff; background: var(--accent); box-shadow: 0 8px 18px rgba(208,121,90,.35); margin-bottom: 14px; }
+  .big.soft { background: var(--glass); color: var(--ink); box-shadow: var(--shadow); }
+  .big:active { transform: scale(.98); }
+  .grp { border-radius: 24px; padding: 4px 14px; margin-bottom: 12px; }
+  .grp h2 { margin: 12px 2px 0; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink2); font-weight: 700; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-top: 1px solid rgba(78,59,51,.08); min-height: 58px; }
+  .grp > .row:first-child, .grp h2 + .row { border-top: 0; }
+  .row.nav:active { opacity: .6; }
+  .ico { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 21px; background: rgba(255,255,255,.75); box-shadow: 0 1px 3px rgba(74,44,24,.08); }
+  .ico img { width: 30px; height: 30px; object-fit: contain; }
+  .t { flex: 1; min-width: 0; }
+  .t b { display: block; font-size: 15px; font-weight: 600; }
+  .t small { display: block; font-size: 12.5px; color: var(--ink2); margin-top: 2px; line-height: 1.35; }
+  .chev { color: var(--ink2); font-size: 22px; opacity: .55; }
+  .val { font-size: 14px; color: var(--ink2); white-space: nowrap; }
+  .ok { color: #3f8a6f; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .btn { border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 700 13.5px/1 inherit; padding: 10px 14px; white-space: nowrap; }
+  .btn.soft { background: rgba(78,59,51,.08); color: var(--ink); }
+  .btn:active { transform: scale(.95); }
+  .sw { width: 50px; height: 30px; border-radius: 999px; background: rgba(78,59,51,.18); position: relative; flex: none; border: 0; transition: background .2s; }
+  .sw::after { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s; }
+  .sw.on { background: var(--ok); } .sw.on::after { transform: translateX(20px); }
+  .seg { display: flex; background: rgba(78,59,51,.08); border-radius: 14px; padding: 3px; gap: 3px; margin: 2px 0 6px; }
+  .seg button { flex: 1; border: 0; border-radius: 11px; background: transparent; padding: 9px 4px; font: 600 13.5px/1 inherit; color: var(--ink2); }
+  .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(74,44,24,.12); }
+  .block { padding: 12px 2px; border-top: 1px solid rgba(78,59,51,.08); }
+  .grp h2 + .block { border-top: 0; }
+  .block .t { margin-bottom: 8px; }
+  .times { display: flex; gap: 10px; }
+  .times label { flex: 1; font-size: 12px; color: var(--ink2); }
+  .times input { width: 100%; margin-top: 4px; border: 0; border-radius: 12px; background: rgba(255,255,255,.8); padding: 10px; font: 600 16px/1 inherit; color: var(--ink); }
+  .note { font-size: 12.5px; color: var(--ink2); line-height: 1.45; padding: 0 2px 12px; }
+  .note a { color: #b5603f; font-weight: 600; }
+  .know .row { min-height: 0; padding: 11px 2px; }
+  .know .ico { width: 32px; height: 32px; font-size: 17px; border-radius: 10px; }
+  .foot { text-align: center; color: #fff; font-size: 12.5px; margin-top: 18px; text-shadow: 0 1px 6px rgba(60,30,10,.4); }
+  #toast { position: fixed; left: 50%; bottom: calc(var(--bottom) + 22px); transform: translate(-50%, 20px); opacity: 0; transition: .25s; background: #4E3B33; color: #fff; border-radius: 16px; padding: 12px 16px; font-size: 14px; max-width: 88vw; text-align: center; pointer-events: none; z-index: 9; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head><body>
+<div id="backdrop"></div>
+<div id="pages"></div>
+<div id="toast"></div>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let tt = 0;
+  window.toast = (t, ms = 2600) => { const e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => e.classList.remove("on"), ms); };
+  window.setInsets = (t, b) => { document.documentElement.style.setProperty("--top", t + "px"); document.documentElement.style.setProperty("--bottom", b + "px"); };
+
+  // Ajustes propios del móvil (los leen anim.js y talk.js)
+  const MKEY = "eko-m-settings";
+  const DEF = { size: "normal", talk: "normal", quiet: false, qFrom: "23:00", qTo: "08:00" };
+  const M = () => { try { return { ...DEF, ...JSON.parse(localStorage.getItem(MKEY) || "{}") }; } catch (_) { return { ...DEF }; } };
+  const setM = (k, v) => { const m = M(); m[k] = v; localStorage.setItem(MKEY, JSON.stringify(m)); };
+
+  const ico = (i) => `<span class="ico">${i.startsWith("art/") ? `<img src="${i}" alt="">` : i}</span>`;
+  const row = (i, title, sub, right, attrs = "") => `<div class="row" ${attrs}>${ico(i)}<div class="t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</div>${right || ""}</div>`;
+  const nav = (i, title, sub, page) => `<div class="row nav" data-go="${page}">${ico(i)}<div class="t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</div><span class="chev">›</span></div>`;
+  const sw = (on, act) => `<button class="sw ${on ? "on" : ""}" data-act="${act}" aria-pressed="${on}"></button>`;
+  const btn = (t, act, soft) => `<button class="btn ${soft ? "soft" : ""}" data-act="${act}">${t}</button>`;
+  const seg = (key, opts, cur) => `<div class="seg">${opts.map(([v, l]) => `<button data-seg="${key}" data-v="${v}" class="${v === cur ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const head = (title, back) => `<header><button data-act="${back ? "back" : "close"}" aria-label="Volver">←</button><h1>${title}</h1></header>`;
+
+  let S = {};
+  const days = () => { const b = S.born || localStorage.getItem("eko-born"); return b ? Math.max(0, Math.floor((Date.now() - new Date(b).getTime()) / 864e5)) + 1 : 1; };
+
+  const PAGES = {
+    home() {
+      const status = S.paired && S.where === "pc" ? `<span class="chip pc">💻 Ahora está en tu PC</span>` : S.out ? `<span class="chip">● Paseando por tu pantalla</span>` : `<span class="chip in">⌂ En su casa</span>`;
+      let h = head("Ajustes de Eko", false);
+      h += `<div class="hero glass"><div class="av"><img src="art/ui/ic-hand.webp" alt=""></div><div><div class="n">${S.name}</div><div class="m">Día ${days()}${S.level > 0 ? ` · Nivel ${S.level}` : ""}</div>${status}</div></div>`;
+      h += !S.overlay ? `<button class="big" data-act="overlay">Dejar que pasee por tu móvil</button>`
+        : `<button class="big ${S.out ? "soft" : ""}" data-act="out">${S.out ? "⌂ Guardarlo en su casa" : "✦ Sacarlo a tu pantalla"}</button>`;
+      h += `<div class="grp glass">`
+        + nav("art/ui/cat-care.webp", "Eko y tú", "Su nombre, vuestros días y tu PC", "you")
+        + nav("art/ui/cat-play.webp", "Comportamiento", "Tamaño, cuánto habla, silencio y teclado", "move")
+        + nav("art/ui/ic-note.webp", "Avisos y mensajes", "Eko te escribe, recordatorios y notificaciones", "alerts")
+        + `</div><div class="grp glass">`
+        + nav("🔒", "Privacidad", "Qué sabe Eko de tu móvil (y qué no)", "privacy")
+        + nav("art/ui/ic-settings.webp", "Acerca de Eko", `Versión ${S.version}${S.upd === "NEEDS_PERMISSION" ? " · hay una nueva" : ""}`, "about")
+        + `</div><div class="foot">Todo se queda en tu móvil y en tu PC. Nada va a internet.</div>`;
+      return h;
+    },
+    you() {
+      let h = head("Eko y tú", true) + `<p class="lead">Lo básico para conoceros.</p>`;
+      h += `<div class="grp glass"><h2>Eko</h2>`
+        + row("art/ui/ic-hand.webp", "Su nombre", S.paired ? "Se cambia en los ajustes del PC" : "", `<span class="val">${S.name}</span>`)
+        + row("📅", "Días juntos", S.paired ? "Desde que nació en tu PC" : "Desde que llegó a tu móvil", `<span class="val">${days()}</span>`)
+        + (S.level > 0 ? row("⭐", "Nivel de amistad", "Sube cuidándolo, jugando y haciendo cosas juntos", `<span class="val">${S.level}</span>`) : "")
+        + `</div><div class="grp glass"><h2>Tu PC</h2>`;
+      h += S.paired
+        ? row("💻", "Conectado con tu PC", "El mismo Eko en los dos. Solo por tu Wi-Fi, cifrado", `<span class="ok">✓</span>`)
+          + row("✨", "Que me siga solo", "Se viene contigo cuando dejas el PC y lo usas, y vuelve cuando regresas", sw(S.follow, "follow"))
+          + row("🔁", "Volver a conectar", "Si cambias de PC o de móvil", btn("Escanear", "pc", true))
+        : row("💻", "Conectar con mi PC", "En el PC: Ajustes de Eko → Eko y tú → Eko en tu móvil → Conectar. Luego escanea el código", btn("Escanear", "pc"));
+      return h + `</div>`;
+    },
+    move() {
+      const m = M();
+      let h = head("Comportamiento", true) + `<p class="lead">Cómo es Eko cuando pasea por tu móvil.</p>`;
+      h += `<div class="grp glass"><h2>En tu pantalla</h2>`
+        + `<div class="block"><div class="t"><b>Tamaño</b><small>Cuánto ocupa cuando pasea por encima de tus apps</small></div>${seg("size", [["small", "Pequeño"], ["normal", "Normal"], ["big", "Grande"]], m.size)}</div>`
+        + `<div class="block"><div class="t"><b>Cuánto habla</b><small>Comentarios, charla y bocadillos (los recordatorios los dice siempre)</small></div>${seg("talk", [["little", "Poco"], ["normal", "Normal"], ["lots", "Mucho"]], m.talk)}</div>`
+        + `</div><div class="grp glass"><h2>Horas de silencio</h2>`
+        + row("🌙", "Silencio a ciertas horas", "No habla ni comenta (sigue paseando y te da los recordatorios)", sw(m.quiet, "quiet"))
+        + (m.quiet ? `<div class="block"><div class="times"><label>Desde<input type="time" data-time="qFrom" value="${m.qFrom}"></label><label>Hasta<input type="time" data-time="qTo" value="${m.qTo}"></label></div></div>` : "")
+        + `</div><div class="grp glass"><h2>Al escribir</h2>`
+        + row("⌨️", "Teclado y toques", "Desaparece con magia mientras escribes, deja pasar los toques a su alrededor y comenta qué app abres (solo su nombre)", S.access ? `<span class="ok">✓</span>` : btn("Activar", "access"))
+        + (S.access ? "" : `<div class="note">En Accesibilidad, entra en «Eko · teclado y toques» y actívalo. Si Android dice que es un «ajuste restringido», ve a <a href="#" data-act="appinfo">Información de la app</a> → ⋮ → «Permitir ajustes restringidos» y repite.</div>`);
+      return h + `</div>`;
+    },
+    alerts() {
+      let h = head("Avisos y mensajes", true) + `<p class="lead">Cuándo y cómo te escribe Eko.</p>`;
+      h += `<div class="grp glass"><h2>Mensajes de Eko</h2>`
+        + row("💌", "Eko te escribe", "Como mucho 2 al día, entre las 10:00 y las 21:30, y nunca en «No molestar»", sw(S.notes, "notes"))
+        + row("✉️", "Mandarme uno de prueba", "", btn("Probar", "test", true))
+        + `</div><div class="grp glass"><h2>Avisos</h2>`
+        + row("⏰", "Recordatorios del PC", S.paired ? "Si Eko está en el móvil cuando toca uno, te lo da aquí" : "Conecta con tu PC para recibirlos aquí", S.paired ? `<span class="ok">✓</span>` : "")
+        + row("art/valley/sun.webp", "Hora dorada", "Te avisa antes del atardecer. La ciudad se elige en Paseos, desde su casa", "")
+        + row("🔔", "Notificaciones", "Para sus mensajes, recordatorios y la hora dorada", S.notif ? `<span class="ok">✓</span>` : btn("Permitir", "notif"));
+      return h + `</div>`;
+    },
+    privacy() {
+      const k = (i, t, s) => row(i, t, s, "");
+      let h = head("Privacidad", true) + `<p class="lead">Todo se queda en tu móvil (y en tu PC, si los conectas). Nada va a internet.</p>`;
+      h += `<div class="grp glass know"><h2>Lo que sabe Eko</h2>`
+        + k("🕐", "La hora, la batería y el cargador", "Para saludarte o avisarte con poca batería")
+        + k("🎧", "Auriculares, modo silencio y Wi-Fi", "Solo para comentarlo")
+        + k("👣", "Tus pasos del día", "Solo el número, con el podómetro. Sin GPS: no sabe por dónde vas")
+        + k("📱", "Qué app abres", "Solo su nombre, y solo con «Teclado y toques» activado")
+        + k("🖼️", "Las fotos que tú le das", "Solo esas. No puede ver tu galería")
+        + k("✏️", "Lo que le cuentas en el diario", "Se guarda solo en el móvil")
+        + `</div><div class="grp glass know"><h2>Lo que nunca hace</h2>`
+        + k("🚫", "Ver tu pantalla o leer tus mensajes", "Ni lo que escribes en el teclado")
+        + k("🚫", "Subir nada a internet", "Con tu PC habla solo por tu Wi-Fi, cifrado")
+        + `</div>`;
+      return h;
+    },
+    about() {
+      const u = S.upd === "" ? "Está al día" : S.upd === "NEEDS_PERMISSION" ? "Hay una versión nueva: permite instalar desde esta fuente para que se actualice solo" : S.upd;
+      let h = head("Acerca de Eko", true);
+      h += `<div class="hero glass" style="justify-content:center;flex-direction:column;text-align:center"><div class="av" style="width:84px;height:84px"><img src="art/ui/ic-hand.webp" alt="" style="width:56px;height:56px"></div><div class="n">Eko</div><div class="m">Tu inquilino de bolsillo · versión ${S.version}</div></div>`;
+      h += `<div class="grp glass">`
+        + row("art/ui/ic-settings.webp", "Actualizaciones", u, S.upd === "NEEDS_PERMISSION" ? btn("Permitir", "unknown") : btn("Buscar", "upd", true))
+        + row("art/movil-portada.webp", "Su álbum de fotos", "", btn("Abrir", "album", true))
+        + row("art/ui/ic-note.webp", "Diario con Eko", "", btn("Abrir", "diary", true))
+        + `</div><div class="foot">Hecho con cariño en Granada</div>`;
+      return h;
+    },
+  };
+
+  // Navegación entre secciones (se deslizan, como en una app)
+  const stack = ["home"];
+  function draw() {
+    S = JSON.parse(App.state());
+    const box = $("pages");
+    const keep = {}; box.querySelectorAll(".page").forEach((p) => { keep[p.dataset.p] = p.scrollTop; });
+    box.innerHTML = Object.keys(PAGES).map((k) => {
+      const i = stack.indexOf(k), top = stack[stack.length - 1] === k;
+      return `<div class="page ${top ? "" : i >= 0 ? "under" : "off"}" data-p="${k}"><div class="wrap">${i >= 0 ? PAGES[k]() : ""}</div></div>`;
+    }).join("");
+    box.querySelectorAll(".page").forEach((p) => { if (keep[p.dataset.p]) p.scrollTop = keep[p.dataset.p]; });
+  }
+  window.render = draw;
+  function go(p) { stack.push(p); draw(); }
+  window.back = () => { if (stack.length > 1) { stack.pop(); draw(); return true; } return false; };
+
+  const ACT = {
+    close: () => App.close(), back: () => window.back(),
+    out: () => App.toggleOut(), overlay: () => App.overlayPerm(), album: () => App.album(), diary: () => App.diary(),
+    pc: () => App.connectPc(), follow: () => App.toggleFollow(), access: () => App.accessSettings(), appinfo: () => App.appInfo(),
+    notif: () => App.notifPerm(), notes: () => App.toggleNotes(), test: () => App.testNote(), upd: () => App.checkUpdate(), unknown: () => App.unknownSources(),
+    quiet: () => { setM("quiet", !M().quiet); draw(); toast(M().quiet ? "Horas de silencio activadas" : "Horas de silencio desactivadas"); },
+  };
+  document.addEventListener("click", (e) => {
+    const g = e.target.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
+    const s = e.target.closest("[data-seg]");
+    if (s) { setM(s.dataset.seg, s.dataset.v); draw(); if (s.dataset.seg === "size") toast("Eko cambiará de tamaño en un momento"); return; }
+    const el = e.target.closest("button[data-act], a[data-act]"); if (!el) return;
+    e.preventDefault(); const f = ACT[el.dataset.act]; f && f();
+  });
+  document.addEventListener("change", (e) => { const t = e.target.closest("[data-time]"); if (t) setM(t.dataset.time, t.value); });
+})();
+</script>
+</body></html>

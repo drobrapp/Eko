@@ -32,7 +32,7 @@ class MainActivity : Activity() {
         @JavascriptInterface fun state(): String {
             val c = this@MainActivity
             return JSONObject()
-                .put("name", PcLink.petName(c)).put("level", PcLink.level(c))
+                .put("name", PcLink.petName(c)).put("level", PcLink.level(c)).put("born", PcLink.born(c))
                 .put("overlay", Settings.canDrawOverlays(c)).put("out", EkoService.running)
                 .put("where", if (PcLink.paired(c)) PcLink.where(c) else "phone")
                 .put("paired", PcLink.paired(c)).put("follow", prefs().getBoolean("followPc", true))
@@ -97,6 +97,13 @@ class MainActivity : Activity() {
         setContentView(web)
     }
     private fun sendInsets() { js("window.setInsets && setInsets($insetTop, $insetBottom)") }
+
+    // Atrás: primero vuelve a la portada de los ajustes; desde la portada, cierra
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (!loaded) { finish(); return }
+        web.evaluateJavascript("window.back && back()") { r -> if (r != "true") runOnUiThread { finish() } }
+    }
 
     override fun onResume() {
         super.onResume()

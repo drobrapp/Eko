@@ -163,7 +163,19 @@
     if (h >= 14 && h < 16) return ["{app} para la sobremesa, buena idea"];
     return [];
   }
+  // Ajustes del móvil (Ajustes → Comportamiento): cuánto habla y horas de silencio
+  function prefsM() { try { return JSON.parse(localStorage.getItem("eko-m-settings") || "{}"); } catch (_) { return {}; } }
+  function quietNow(m) {
+    if (!m.quiet) return false;
+    const mins = (s) => { const [h, mi] = String(s || "0:0").split(":").map(Number); return h * 60 + (mi || 0); };
+    const d = new Date(), now = d.getHours() * 60 + d.getMinutes(), a = mins(m.qFrom || "23:00"), b = mins(m.qTo || "08:00");
+    return a <= b ? now >= a && now < b : now >= a || now < b;   // la franja puede cruzar la medianoche
+  }
+  const TALK_FACTOR = { little: 0.35, normal: 1, lots: 1.4 };
   function talk(ev, chance = 1, arg = "", pkg = "") {
+    const m = prefsM();
+    if (quietNow(m)) return;
+    chance = Math.min(1, chance * (TALK_FACTOR[m.talk] || 1));
     if (Math.random() > chance) return;
     if (ev === "poke") {
       const now = Date.now(); pokes = pokes.filter((t) => now - t < 10000); pokes.push(now);
@@ -189,6 +201,8 @@
   }
   // Charla espontánea: Kotlin la pide cuando Eko está tranquilo y despierto
   function chatter() {
+    const m = prefsM();
+    if (quietNow(m) || (m.talk === "little" && Math.random() < 0.75)) return;
     const d = new Date(), h = d.getHours(), wd = d.getDay();
     const sp = special(d); if (sp && Math.random() < 0.3) { say(sp); return; }
     const r = Math.random();

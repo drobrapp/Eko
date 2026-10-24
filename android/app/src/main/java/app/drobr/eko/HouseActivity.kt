@@ -52,6 +52,8 @@ class HouseActivity : Activity() {
         @JavascriptInterface fun name(): String = PcLink.petName(this@HouseActivity)
         @JavascriptInterface fun level(): Int = PcLink.level(this@HouseActivity)
         @JavascriptInterface fun photoCount(): Int = Album.list(this@HouseActivity).size
+        // ¿Suena música en el móvil? (para ponerse los auriculares y bailar en casa)
+        @JavascriptInterface fun music(): Boolean = try { getSystemService(android.media.AudioManager::class.java).isMusicActive } catch (_: Exception) { false }
         @JavascriptInterface fun born(): String = PcLink.born(this@HouseActivity)
         // Dónde está Eko: "pc" o "phone" (lo último que se sabe; se comprueba cada 10 s)
         @JavascriptInterface fun where(): String = if (PcLink.paired(this@HouseActivity)) PcLink.where(this@HouseActivity) else "phone"

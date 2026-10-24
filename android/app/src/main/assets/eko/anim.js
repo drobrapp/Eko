@@ -10,6 +10,8 @@
     legL: $("#legL"), legR: $("#legR"), armL: $("#armL"), armR: $("#armR"), shadow: $("#shadow"), hl: $("#hl"),
     mouth: $("#mouth"), bridge: $("#bridge"), hat: $("#hat"), bodyHl: $("#bodyHl"), accBack: $("#accBack"), accBody: $("#accBody"),
     accFace: $("#accFace"), snack: $("#snack"), mouthShapes: $("#mouthShapes"), propFront: $("#propFront"), propHand: $("#propHand"), antic: $("#antic"),
+    props: [...document.querySelectorAll("[data-prop]")].reduce((o, e) => ((o[e.dataset.prop] = o[e.dataset.prop] || []).push(e), o), {}), flash: document.querySelector("[data-prop=camera] .flash"),
+    cape: $("#cape"), capeShape: $("#capeShape"), capeStrips: [...document.querySelectorAll("#capeStrips path")], capeFold: $("#capeFold"), capeEdge: $("#capeEdge"),
     tipHats: [...document.querySelectorAll(".tipflip")], opens: [...document.querySelectorAll(".eye .open")], eyeEls: [...document.querySelectorAll(".eye")],
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -21,6 +23,214 @@
   const back = (k) => { const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const once = (o, key, f) => { if (!o["_" + key]) { o["_" + key] = 1; f(); } };
   const AND = window.Android || null;
+
+  // ---------- Objetos de un rato (como en el PC): taza, auriculares, gorro de dormir, palomitas, cámara, libro, pincel, pajarita ----------
+  // wear: se lleva puesto (cabeza, cara, cuello) · hand: en la mano derecha · two: con las dos manos delante
+  const PROP_DEF = {
+    headphones: { wear: "head" }, nightcap: { wear: "head" }, readglasses: { wear: "face" },
+    mug: { hand: true }, camera: { two: true }, brush: { hand: true }, umbrella: { hand: true, walk: true },
+    popcorn: { two: true }, book: { two: true, glasses: true }, bowtie: { wear: "neck" },
+  };
+  const PROP = { cur: null, until: 0, t0: 0, cd: {}, shown: null, extra: null, extraUntil: 0, camUp: 0 };
+  const tallHat = () => stage.classList.contains("has-hat");
+  const ghost = () => stage.classList.contains("acc-ghost");
+  function useProp(name, secs = 120, cooldownMin = 20) {
+    const d = PROP_DEF[name];
+    if (!d || (S.sleeping && name !== "nightcap") || ghost()) return false;
+    if (PROP.cur === name && A.t < PROP.until) { PROP.until = Math.max(PROP.until, A.t + secs); return true; }
+    if (PROP.extra === name && A.t < PROP.extraUntil) { PROP.extraUntil = Math.max(PROP.extraUntil, A.t + secs); return true; }
+    if ((PROP.cd[name] || 0) > A.t && PROP.cur !== name) return false;
+    if (d.wear === "head" && tallHat()) return false;
+    if (PROP.cur && PROP.cur !== name && PROP.until - A.t > 10) {
+      // ya lleva algo: una cosa de vestir puede ir a la vez que otra de mano
+      if (PROP_DEF[PROP.cur].wear || d.wear) { PROP.extra = name; PROP.extraUntil = A.t + secs; PROP.cd[name] = A.t + secs + cooldownMin * 60; return true; }
+      return false;
+    }
+    PROP.cur = name; PROP.t0 = A.t; PROP.until = A.t + secs; PROP.cd[name] = A.t + secs + cooldownMin * 60;
+    return true;
+  }
+  function dropProp(name) { if (!name || PROP.cur === name) PROP.until = 0; if (!name || PROP.extra === name) PROP.extraUntil = 0; }
+  // Lo que se ve ahora (las cosas de la mano se guardan al andar, volar, si lo coges o durante un gesto)
+  function propsVisible() {
+    const out = new Set();
+    for (const [n, until] of [[PROP.cur, PROP.until], [PROP.extra, PROP.extraUntil]]) {
+      if (!n || A.t > until) continue;
+      const d = PROP_DEF[n];
+      const handsBusy = S.dragging || FLY || S.airborne || (A.action && !["nod", "lookAround", "think", "wink", "yawn"].includes(A.action.name));
+      if ((d.hand || d.two) && (handsBusy || (S.walking && !d.walk) || S.sleeping)) continue;
+      if (d.wear === "head" && tallHat()) continue;
+      out.add(n);
+      if (d.glasses) out.add("readglasses");
+    }
+    if (PROP.cur && A.t > PROP.until) PROP.cur = null;
+    if (PROP.extra && A.t > PROP.extraUntil) PROP.extra = null;
+    return out;
+  }
+  function propPose(P, vis) {
+    const t = A.t;
+    const toHand = (e) => { P.hturn += (-0.37 - A.turn - P.turn) * e; P.eyeX = -3 * e; };
+    if (vis.has("popcorn")) {
+      P.aL = -26; P.aR = 34; P.front = true;
+      const k = (t % 4.6) / 4.6;
+      if (k > 0.5 && k <= 0.66) P.aR = lerp(34, 56, Math.sin((k - 0.5) / 0.16 * Math.PI / 2));
+      else if (k > 0.66 && k <= 0.86) { const e = Math.sin((k - 0.66) / 0.2 * Math.PI / 2); P.aR = lerp(56, 118, e); P.mouth = Math.max(P.mouth, 0.45 * e); toHand(e); }
+      else if (k > 0.86) { const e = 1 - (k - 0.86) / 0.14; P.aR = lerp(34, 118, e); toHand(e); if (!P.eyes) P.eyes = "happy"; }
+    }
+    if (vis.has("book")) { P.aL = -24; P.aR = 24; P.front = true; P.nod += 4; P.eyeY = 3; P.eyeX = Math.sin(t * 0.9) * 3; }
+    if (vis.has("mug")) {
+      const k = (t % 6) / 6; P.aR = 62; P.front = true;
+      if (k > 0.72) { const e = Math.sin((k - 0.72) / 0.28 * Math.PI); P.aR = lerp(62, 114, e); toHand(e); if (e > 0.5 && !P.eyes) P.eyes = "closed"; }
+    }
+    if (vis.has("camera")) {
+      const u = PROP.camUp || 0;
+      P.aR = lerp(36, 162, u); P.aL = lerp(-36, -150, u); P.front = true;
+      if (u > 0.6) { P.eyeX = -2; if (!P.eyes) P.eyes = "wink"; }
+    }
+    if (vis.has("brush")) { const k = (t % 7) / 7; P.aR = -38; P.front = true; if (k > 0.86) P.aR += Math.sin((k - 0.86) / 0.14 * Math.PI) * -18; }
+    if (vis.has("umbrella")) { P.aR = -132; P.front = true; }
+    if (vis.has("headphones")) { P.nod += Math.sin(t * 7.5) * 2.2; P.tilt += Math.sin(t * 3.75) * 3; }
+    if (vis.has("nightcap") && !S.sleeping && Math.sin(t * 0.4) > 0.97) P.mouth = Math.max(P.mouth, 0.5);
+  }
+  function renderProps(vis) {
+    const key = [...vis].sort().join(",");
+    if (key === PROP.shown) return;
+    PROP.shown = key;
+    for (const [n, list] of Object.entries(el.props || {})) for (const e of list) {
+      const on = vis.has(n);
+      if (on && e.style.display !== "inline") { e.style.display = "inline"; e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); fx("spark", 1); }
+      if (!on) e.style.display = "none";
+    }
+    stage.classList.toggle("has-readglasses", vis.has("readglasses"));
+  }
+  // De vez en cuando se pone pajarita porque sí (≈ una vez cada pocas horas)
+  setInterval(() => {
+    if (Math.random() > 1 / 150 || S.sleeping || PROP.cur || ghost()) return;
+    if (useProp("bowtie", rnd(900, 1800), 240)) { express("orgulloso", 2.5); setTimeout(() => say(["¿A que voy elegante?", "Hoy me he arreglado", "Pajarita: modo seductor"][Math.floor(Math.random() * 3)], 3000), 500); }
+  }, 60000);
+
+  // ---------- Capa de vuelo (la misma tela que en el PC: puntos con muelles, viento y pliegues) ----------
+  let FLY = null;
+  const CAPE = { cols: [-40, -20, 0, 20, 40], seg: 6, len: 21, flare: 0.2, pts: null, grow: 0, target: 0 };
+  const capeAnchor = (c) => ({ x: CAPE.cols[c], y: 52 - Math.pow(CAPE.cols[c] / 40, 2) * 5 });
+  function capeReset() {
+    CAPE.pts = CAPE.cols.map((x0, c) => Array.from({ length: CAPE.seg + 1 }, (_, i) => {
+      const a = capeAnchor(c), x = x0 * (1 + i * CAPE.flare), y = a.y + i * CAPE.len * 0.97;
+      return { x, y, px: x, py: y };
+    }));
+  }
+  function setCape(on) {
+    if (!el.cape) return;
+    CAPE.target = on ? 1 : 0;
+    if (on) { el.cape.style.display = "inline"; if (!CAPE.pts) { capeReset(); CAPE.grow = 0; } }
+  }
+  function stepCape(dt) {
+    if (!el.cape || el.cape.style.display !== "inline") { CAPE.pts = null; CAPE.grow = 0; return; }
+    if (!CAPE.pts) capeReset();
+    CAPE.grow += (CAPE.target - CAPE.grow) * Math.min(1, dt * (CAPE.target ? 5 : 4));
+    if (!CAPE.target && CAPE.grow < 0.04) { el.cape.style.display = "none"; CAPE.pts = null; CAPE.grow = 0; return; }
+    const segLen = CAPE.len, n = CAPE.cols.length, h = Math.min(dt, 1 / 30), k = 2.18;
+    const lean = ((FLY ? FLY.dir * 22 : 0) + (A.pose.P ? A.pose.P.sway : 0)) * Math.PI / 180;
+    const gx = Math.sin(-lean) * 900, gy = Math.cos(lean) * 900;
+    const wx = -A.vx * k * 3.2, wy = -A.vy * k * 1.4;
+    const sp = Math.min(1, Math.hypot(A.vx, A.vy) / 300);
+    const breeze = Math.sin(A.t * 1.7) * 60 + Math.sin(A.t * 3.1) * 30;
+    for (let c = 0; c < n; c++) {
+      const col = CAPE.pts[c], side = (c - (n - 1) / 2) / ((n - 1) / 2);
+      for (let i = 1; i < col.length; i++) {
+        const p = col[i], u = i / CAPE.seg;
+        const flutter = Math.sin(A.t * 14 - i * 1.15 + c * 1.3) * sp * 1000 * u;
+        const spread = side * sp * 1900 * u;
+        const fxx = gx + wx * u + flutter * 0.25 + breeze * u, fyy = gy + wy * u + flutter + spread;
+        const vx = (p.x - p.px) * 0.982, vy = (p.y - p.py) * 0.982;
+        p.px = p.x; p.py = p.y; p.x += vx + fxx * h * h; p.y += vy + fyy * h * h;
+      }
+      const a = capeAnchor(c); col[0].x = col[0].px = a.x; col[0].y = col[0].py = a.y;
+    }
+    for (let it = 0; it < 5; it++) {
+      for (let c = 0; c < n; c++) {
+        const col = CAPE.pts[c];
+        for (let i = 1; i < col.length; i++) {
+          const a = col[i - 1], b = col[i];
+          const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, diff = (d - segLen) / d;
+          if (i === 1) { b.x -= dx * diff; b.y -= dy * diff; }
+          else { a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5; }
+        }
+      }
+      for (let i = 1; i <= CAPE.seg; i++) {
+        const want = 20 * (1 + i * CAPE.flare);
+        for (let c = 0; c < n - 1; c++) {
+          const a = CAPE.pts[c][i], b = CAPE.pts[c + 1][i];
+          let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+          if (d < 0.01) { dx = 0.01; dy = 0; d = 0.01; }
+          const lo = want * 0.3, hi = want * 1.05;
+          if (d > hi || d < lo) { const diff = (d - (d > hi ? hi : lo)) / d; a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5; }
+        }
+      }
+    }
+  }
+  const CAPE_RGB = [[200, 48, 60], [122, 20, 32]];
+  function capeColor(dark) {
+    const m = clamp(dark, 0, 1), [a, b] = CAPE_RGB;
+    return `rgb(${Math.round(a[0] + (b[0] - a[0]) * m)},${Math.round(a[1] + (b[1] - a[1]) * m)},${Math.round(a[2] + (b[2] - a[2]) * m)})`;
+  }
+  function drawCape() {
+    if (!CAPE.pts || !el.capeShape) return;
+    const P = CAPE.pts, n = P.length, last = CAPE.seg;
+    const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    const side = (pts) => {
+      let d = ` L${f(pts[0])}`;
+      for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2; d += ` Q${f(pts[i])} ${mx.toFixed(1)},${my.toFixed(1)}`; }
+      return d + ` L${f(pts[pts.length - 1])}`;
+    };
+    const hemSeg = (a, b, k) => { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y; return ` Q${(mx - dy * 0.18 * k).toFixed(1)},${(my + dx * 0.18 * k).toFixed(1)} ${f(b)}`; };
+    let out = `M${f(P[0][0])}` + side(P[0]).slice(2 + f(P[0][0]).length);
+    for (let c = 0; c < n - 1; c++) out += hemSeg(P[c][last], P[c + 1][last], 1);
+    out += side([...P[n - 1]].reverse()) + "Z";
+    el.capeShape.setAttribute("d", out);
+    for (let c = 0; c < n - 1; c++) {
+      const L = P[c], R = P[c + 1];
+      let w = 0, want = 0;
+      for (let i = 1; i <= last; i++) { w += Math.hypot(R[i].x - L[i].x, R[i].y - L[i].y); want += 20 * (1 + i * CAPE.flare); }
+      const dark = (1 - clamp(w / want, 0, 1)) * 0.9 + (c % 2 ? 0.12 : 0) + (c === 0 || c === n - 2 ? 0.06 : 0);
+      const d = `M${f(L[0])}` + side(L).slice(2 + f(L[0]).length) + hemSeg(L[last], R[last], 1) + side([...R].reverse()) + "Z";
+      const s = el.capeStrips[c]; if (!s) continue;
+      s.setAttribute("d", d); s.setAttribute("fill", capeColor(dark)); s.setAttribute("stroke", capeColor(dark)); s.setAttribute("stroke-width", "0.8");
+    }
+    let folds = "";
+    for (let c = 1; c < n - 1; c += 2) folds += `M${f(P[c][1])}` + side(P[c].slice(1)).slice(2 + f(P[c][1]).length);
+    if (el.capeFold) el.capeFold.setAttribute("d", folds);
+    let hem = `M${f(P[0][last])}`;
+    for (let c = 0; c < n - 1; c++) hem += hemSeg(P[c][last], P[c + 1][last], 1);
+    if (el.capeEdge) el.capeEdge.setAttribute("d", hem);
+    const gr = CAPE.grow, e = 1 - Math.pow(1 - gr, 3);
+    el.cape.setAttribute("transform", gr > 0.995 ? "" : `translate(0 50) scale(${(0.35 + 0.65 * e).toFixed(3)} ${Math.max(0.02, e).toFixed(3)}) translate(0 -50)`);
+  }
+
+  // ---------- Pequeños efectos de las travesuras ----------
+  function say(text, ms) { try { if (AND && AND.say) AND.say(text, ms || 2800); } catch (_) {} }
+  // aro que se expande donde llama con los nudillos (toc, toc)
+  function ring() {
+    if (!fxLayer) return;
+    const r = document.createElement("div");
+    r.style.cssText = "position:absolute;left:calc(50% + " + (S.facing * 30) + "px);top:62%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:2.5px solid rgba(255,255,255,.95);box-shadow:0 0 6px rgba(255,255,255,.6);pointer-events:none";
+    fxLayer.appendChild(r);
+    r.animate([{ transform: "scale(.3)", opacity: 1 }, { transform: "scale(1.8)", opacity: 0 }], { duration: 550, easing: "ease-out", fill: "forwards" });
+    setTimeout(() => r.remove(), 650);
+  }
+  // corazón o estrella dibujados en el aire, que luego suben flotando
+  function airDraw() {
+    if (!fxLayer) return null;
+    const shape = Math.random() < 0.6 ? "M0,10 C-30,-14 -22,-38 0,-24 C22,-38 30,-14 0,10Z" : "M0,-30 L8,-9 L30,-9 L12,4 L19,26 L0,13 L-19,26 L-12,4 L-30,-9 L-8,-9Z";
+    const box = document.createElement("div");
+    box.style.cssText = "position:absolute;left:calc(50% + " + (S.facing * 42) + "px);top:22%;width:64px;height:64px;margin-left:-32px;pointer-events:none;transition:transform 1.6s ease-out,opacity 1.6s";
+    box.innerHTML = `<svg width="64" height="64" viewBox="-40 -40 80 80"><path d="${shape}" fill="none" stroke="#ffd36e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>`;
+    fxLayer.appendChild(box);
+    const o = { box, path: box.querySelector("path") };
+    const mo = new MutationObserver(() => { if (box.classList.contains("airfloat")) { box.style.transform = "translateY(-30px)"; box.style.opacity = "0"; setTimeout(() => box.remove(), 1700); mo.disconnect(); } });
+    mo.observe(box, { attributes: true, attributeFilter: ["class"] });
+    setTimeout(() => box.remove(), 6000);
+    return o;
+  }
 
   // ---------- Estado (lo manda Android) ----------
   const S = { st: "idle", facing: 1, vx: 0, vy: 0, sleeping: false, dragging: false, airborne: false, walking: false };
@@ -163,6 +373,43 @@
     // Mudarse con magia (al PC o desde el PC), con continuidad entre los dos:
     //  teleOut: saca la varita, hace círculos con chispas, ¡puf! y desaparece entre nubecitas
     //  teleIn: aparece entre nubecitas con la varita aún en alto, la agita y se la guarda
+    // ---------- Travesuras del Eko de escritorio (las que no mueven la ventana) ----------
+    // Llama a la pantalla desde dentro: toc, toc… «¿Hay alguien?»
+    knock: { dur: 5, f(P, k, e, o) {
+      const t = k * 5;
+      if (t < 2.3) { const q = (t - 0.4) % 0.35 / 0.35; P.aR = 70 + Math.sin(Math.max(0, q) * Math.PI) * 18; P.front = true; P.lift += 2; P.eyeScale *= 1.1; }
+      const n = Math.floor((t - 0.4) / 0.35);
+      if (t > 0.4 && t < 2.2 && n !== o.n) { o.n = n; ring(); }
+      if (t > 2.4 && !o.w) { o.w = 1; say("¡Eh! ¿Hay alguien?", 2400); express("feliz", 2.5); }
+      if (t > 2.4 && t < 4.2) { P.aR = -120 + Math.sin(A.t * 12) * 22; P.front = true; }
+    } },
+    // Dibuja un corazón o una estrella en el aire con el dedo
+    drawAir: { dur: 4.6, f(P, k, e, o) {
+      const t = k * 4.6;
+      if (!o.el) o.el = airDraw();
+      if (o.el) o.el.path.setAttribute("stroke-dashoffset", String(100 - 100 * sm(0.3, 2.2, t)));
+      if (t > 2.2 && !o.done) { o.done = 1; o.el && o.el.box.classList.add("airfloat"); express("enamorado", 2); }
+      if (t < 2.3) { P.aR = -110 + Math.sin(t * 5) * 30; P.front = true; P.eyeX = 4 * S.facing; P.eyeY = -4; }
+    } },
+    // Habla solo, muy concentrado, y se ríe
+    mumble: { dur: 4.5, f(P, k, e, o) {
+      const t = k * 4.5;
+      if (!o.s) { o.s = 1; say(["Mmm… sí, sí… jeje", "Y entonces le dije… jajaja", "Hmm… ¿dónde lo dejé?"][Math.floor(Math.random() * 3)], 3000); }
+      P.eyeX = -4; P.tilt += Math.sin(t * 2) * 5;
+      if (t > 3) { P.eyes = "happy"; P.lift += Math.abs(Math.sin(t * 14)) * 2; }
+    } },
+    // Se aburre: se apoya en las manos, suspira y tamborilea
+    bored: { dur: 8, f(P, k, e, o) {
+      const t = k * 8;
+      if (!o.s) { o.s = 1; express("triste", 2.5); say("Me abuuurro…", 1800); }
+      if (t < 1.6) { const q = ease(clamp(t / 1.6, 0, 1)); P.nod += 6 * q; P.sy *= 1 - 0.05 * q; P.eyeY = 2 * q; return; }
+      const q = ease(clamp((t - 1.6) / 0.7, 0, 1)) * (1 - ease(clamp((t - 7.2) / 0.8, 0, 1)));
+      P.sy *= 1 - 0.1 * q; P.sx *= 1 + 0.05 * q; P.lift -= 6 * q;
+      P.aR = lerp(P.aR, 62, q); P.aL = lerp(P.aL, -62, q); P.front = true;
+      P.nod += 7 * q; P.eyes = "half"; P.brows = "sad";
+      P.sway += Math.sin(t * 1.6) * 4 * q; P.eyeX = Math.sin(t * 0.8) * 4 * q;
+      if (t > 4.5 && t < 6.5) P.lift += Math.abs(Math.sin(t * 9)) * 1.5 * q;
+    } },
     teleOut: { dur: 2.8, f(P, k, e, o) {
       P.front = true;
       P.wand = Math.min(1, k / 0.1);
@@ -321,6 +568,10 @@
     A.vy += (velY - A.vy) * Math.min(1, dt * 18);
     A.ax += (((A.vx - pvx) / Math.max(dt, 1e-3)) - A.ax) * Math.min(1, dt * 10);
     A.ay += (((A.vy - pvy) / Math.max(dt, 1e-3)) - A.ay) * Math.min(1, dt * 10);
+    stepCape(dt);
+    // gorro de dormir mientras duerme (y fuera al despertar)
+    if (S.sleeping && PROP.cur !== "nightcap") useProp("nightcap", 7200, 0);
+    else if (!S.sleeping && PROP.cur === "nightcap") dropProp("nightcap");
     A.lagV += ((clamp(-velX * 0.012, -8, 8) - A.lag) * 120 - A.lagV * 9) * dt;
     A.lag += A.lagV * dt;
     A.hyV += (-A.hy * 220 - A.hyV * 11 + clamp(-A.ay * 0.004, -60, 60)) * dt;
@@ -399,6 +650,10 @@
       if (x.nod) P.nod += x.nod * k;
       if (x.shiver) P.shift += Math.sin(A.t * 42) * 1.3 * k;
     } else if (A.expr) A.expr = null;
+    // Objetos de un rato (taza, auriculares, palomitas…) y vuelo con capa
+    const vis = propsVisible(); A.propVis = vis;
+    if (vis.size) propPose(P, vis);
+    if (FLY) { P.aR = -158; P.aL = 18; P.front = true; P.sway += FLY.dir * 12; P.tilt += FLY.dir * 8; if (!P.eyes) P.eyes = "happy"; }
     let eyes = P.eyes;
     if (!eyes) eyes = S.sleeping ? "closed" : A.t < (A.happyUntil || 0) ? "happy" : "open";
     setFace(eyes, P.brows, P.mouth > 0.12 ? "none" : (P.mouthShape || "none"));
@@ -463,6 +718,25 @@
     const dxL = t > 0 ? 16 * t : -22 * t, dxR = t > 0 ? -22 * t : 16 * t;
     el.armL.setAttribute("transform", `translate(${dxL.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aL.toFixed(2)} -50 58)`);
     el.armR.setAttribute("transform", `translate(${dxR.toFixed(2)} ${sitDrop.toFixed(2)}) rotate(${A.pose.aR.toFixed(2)} 50 58)`);
+    // Objetos: lo que va en la mano sigue la punta del brazo derecho; la cámara sube a la cara de vez en cuando
+    if (A.propVis) {
+      renderProps(A.propVis);
+      if (A.propVis.size && el.propHand) {
+        const r = A.pose.aR * Math.PI / 180, hx = dxR + 50 + 15 * Math.cos(r) - 60 * Math.sin(r), hy = sitDrop + 58 + 15 * Math.sin(r) + 60 * Math.cos(r);
+        el.propHand.setAttribute("transform", `translate(${hx.toFixed(1)} ${hy.toFixed(1)})`);
+        if (el.propFront) el.propFront.setAttribute("transform", `translate(0 ${sitDrop.toFixed(1)})`);
+        if (A.propVis.has("camera") && el.props.camera) {
+          const k = ((A.t - PROP.t0) % 10) / 10;
+          const up = k < 0.55 ? 0 : k < 0.65 ? (k - 0.55) / 0.1 : k < 0.88 ? 1 : 1 - (k - 0.88) / 0.12;
+          PROP.camUp = up * up * (3 - 2 * up);
+          const shot = k > 0.74 && k < 0.8 ? 1 - (k - 0.74) / 0.06 : 0;
+          if (el.flash) { el.flash.setAttribute("opacity", shot.toFixed(2)); el.flash.setAttribute("transform", `translate(38 -4) scale(${(0.6 + (1 - shot) * 0.6).toFixed(2)}) translate(-38 4)`); }
+          const cu = PROP.camUp, cx = lerp(-14, 0, cu), cy = lerp(82, 0, cu), sc = lerp(0.72, 1, cu);
+          el.props.camera[0].setAttribute("transform", `translate(${cx.toFixed(1)} ${(cy - (shot > 0.8 ? 2 : 0)).toFixed(1)}) scale(${sc.toFixed(3)})`);
+        }
+      }
+    }
+    drawCape();
     const bodyT = `translate(${(3 * t).toFixed(2)} 0) scale(${(1 - 0.12 * at).toFixed(4)} 1)`;
     el.body.setAttribute("transform", bodyT);
     if (el.bodyHl) el.bodyHl.setAttribute("transform", `translate(${(4 * t).toFixed(2)} 0)`);
@@ -571,6 +845,19 @@
     dizzy() { act("dizzy", { dur: 2.8 }); A.woozyUntil = A.t + 4.5; },
     eat() { act("eat"); },
     spin() { act(TRICKS[Math.floor(Math.random() * TRICKS.length)]); },
+    // Objetos de un rato (los pide Android según lo que pasa: app abierta, mañana, música…)
+    prop(name, secs) { useProp(name, secs || 120, 0); },
+    dropProp(name) { dropProp(name); },
+    // Suena música: auriculares y a bailar (Android lo repite cada pocos segundos mientras suena)
+    music(on) {
+      if (on) { useProp("headphones", 600, 0); A.danceUntil = A.t + 7; }
+      else { dropProp("headphones"); A.danceUntil = 0; }
+    },
+    // Vuelo con capa (Android mueve la ventana; aquí la capa, la pose y el aire en la tela)
+    fly(dir) { FLY = { dir: dir >= 0 ? 1 : -1 }; S.vx = FLY.dir * 320; setCape(true); fx("spark", 3); },
+    flyEnd() { FLY = null; S.vx = 0; act("land" in ACTIONS ? "land" : "tada"); setTimeout(() => { if (!FLY) setCape(false); }, 2600); },
+    // Una travesura del Eko de escritorio (knock, drawAir, mumble, bored)
+    antic(name) { if (ACTIONS[name]) act(name); },
     // Esconder la parte de abajo (cuando se asoma por detrás del teclado): px desde abajo de la ventana
     clip(px) { clipPx = Math.max(0, px || 0); stage.style.clipPath = clipPx ? `inset(0 0 ${clipPx}px 0)` : "none"; hitKey = ""; },
     lowPower(v) { lowPower = !!v; },

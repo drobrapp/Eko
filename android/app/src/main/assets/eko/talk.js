@@ -3,6 +3,11 @@
 (() => {
   "use strict";
   const T = {
+    fly: ["¡Capa, despliegue!", "¡Allá voy volando!", "¡Al infinito y más allá! Bueno, a la otra punta", "¡Mirad, vuelo!"],
+    flyDown: ["¡Aterrizaje heroico!", "¡Abajo voy!", "¡Capa, al suelo!", "Uf, qué vistas desde ahí arriba"],
+    teleport: ["¡Tachán! ¿Me echabas de menos?", "Truco de magia: ¡aquí estoy!", "¿A que no me has visto venir?"],
+    coffee: ["Buenos días… primero el café", "Sin café no soy persona. Bueno, no soy persona igual", "Un cafecito para empezar el día", "Mmm, ¡qué bien huele!"],
+    app_read: ["¿Leemos {app}? Me pongo las gafas", "Un libro, qué bien. Paso yo las páginas", "Me encanta leer contigo"],
     followed: ["¡Te he seguido! El PC se había quedado solo", "Te vi irte del PC… ¡y aquí estoy!", "¿Me dejabas solo en el PC? Ni hablar", "¡Contigo a todas partes!"],
     // Teclado: antes de desaparecer con magia, y al volver
     kb_magic: ["¡Vas a escribir! Me esfumo para no molestar", "Tú escribe tranquilo, yo desaparezco un ratito", "Abracadabra… ¡te dejo sitio!", "Me voy de paseo mientras escribes", "¡Modo invisible! Vuelvo cuando termines", "Hago magia y te dejo la pantalla para ti"],
@@ -131,7 +136,7 @@
   let pokes = [];
   // Cara que pone con cada cosa (catálogo expr.js del PC)
   const EXPR = {
-    hello: "emocionado", noteHi: "enamorado", followed: "emocionado", kb_magic: "picaro", kbBack: "contento", kbBackLong: "sorprendido", kbSouvenir: "divertido", kbFlower: "enamorado", pcArrived: "emocionado", toPc: "contento", fromPc: "emocionado", kb_side: "timido", kb_behind: "picaro", kb_corner: "contento", kbLong: "curioso", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
+    hello: "emocionado", noteHi: "enamorado", fly: "emocionado", flyDown: "orgulloso", teleport: "picaro", coffee: "contento", app_read: "curioso", followed: "emocionado", kb_magic: "picaro", kbBack: "contento", kbBackLong: "sorprendido", kbSouvenir: "divertido", kbFlower: "enamorado", pcArrived: "emocionado", toPc: "contento", fromPc: "emocionado", kb_side: "timido", kb_behind: "picaro", kb_corner: "contento", kbLong: "curioso", poke: "contento", pokeAnnoyed: "molesto", grab: "sorprendido", held: "irritado",
     drop: "orgulloso", shake: "asustado", dizzy: "confundido", wake: "cansado", hunger: "cansado",
     keyboard: "curioso", kbGone: "sorprendido", costume: "canalla", music: "emocionado", musicOff: "triste",
     lowBattery: "ansioso", charge: "contento", missed: "esperanzado", eat: "enamorado", play: "divertido",

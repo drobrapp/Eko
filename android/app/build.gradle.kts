@@ -61,7 +61,10 @@ val pcAssets = tasks.register<Copy>("pcAssets") {
         into("eko")
     }
     from(rootProject.file("../src/art")) {
-        include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp", "wand.webp", "fx-puff.webp")
+        include("hat-*.webp", "cape-vampire.webp", "scarf.webp", "nose.webp", "sprout*.webp", "wand.webp", "fx-puff.webp",
+            // objetos de un rato (los mismos dibujos que en el PC)
+            "mug.webp", "book.webp", "glasses.webp", "hp-band.webp", "hp-cupL.webp", "hp-cupR.webp", "nightcap.webp", "popcorn.webp",
+            "camera.webp", "brush.webp", "bowtie.webp", "umbrella.webp", "box.webp")
         into("eko/art")
     }
     // Lo que se ve por la ventana de su casa (cielo del valle del PC)

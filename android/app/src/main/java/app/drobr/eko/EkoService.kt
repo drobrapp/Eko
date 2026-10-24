@@ -52,7 +52,7 @@ class EkoService : Service() {
 
     companion object { var running = false; var instance: EkoService? = null }
 
-    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK, KB }
+    private enum class St { IDLE, WALK, SLEEP, DRAG, FALL, PEEK, KB, FLY }
 
     private lateinit var wm: WindowManager
     private lateinit var lp: WindowManager.LayoutParams
@@ -456,6 +456,14 @@ class EkoService : Service() {
                 Intent.ACTION_USER_PRESENT -> {
                     EkoNotes.seen(this@EkoService)
                     run {
+                        // Por la mañana (6:00–11:59), la primera vez que desbloqueas: su taza de café
+                        val cal = Calendar.getInstance(); val h = cal.get(Calendar.HOUR_OF_DAY); val day = cal.get(Calendar.DAY_OF_YEAR)
+                        if (h in 6..11 && prefs().getInt("coffeeDay", -1) != day) {
+                            prefs().edit().putInt("coffeeDay", day).apply()
+                            handler.postDelayed({ js("prop('mug', 150)"); talk("coffee", 0.8) }, 3500)
+                        }
+                    }
+                    run {
                         // De madrugada (0:30–5:00), una vez por noche
                         val cal = Calendar.getInstance(); val hm = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
                         val day = cal.get(Calendar.DAY_OF_YEAR)
@@ -769,7 +777,7 @@ class EkoService : Service() {
     // ---------- Travesuras: de vez en cuando hace algo por su cuenta ----------
     private var nextAntic = 0L
     private fun antic() {
-        when (Random.nextInt(4)) {
+        when (Random.nextInt(10)) {
             0 -> { // se asoma por un borde de la pantalla
                 val left = x < maxX() / 2
                 dir = if (left) -1 else 1
@@ -781,8 +789,61 @@ class EkoService : Service() {
                 talk("jump")
             }
             2 -> { js("dance(6)"); idle(6000); talk("dance") }
-            else -> { js("spin()"); talk("play") }
+            3 -> { js("spin()"); talk("play") }
+            4 -> startFly()                                            // cruza la pantalla volando con su capa
+            5 -> { // se teletransporta: ¡puf!, desaparece y aparece en otro sitio
+                js("act('teleOut')"); idle(6000)
+                handler.postDelayed({
+                    if (st == St.IDLE && web?.visibility == View.VISIBLE) { x = Random.nextFloat() * maxX(); y = ground(); js("act('teleIn')"); handler.postDelayed({ talk("teleport", 0.7) }, 1300) }
+                }, 2300)
+            }
+            6 -> { js("antic('knock')"); idle(5200) }                  // llama a la pantalla desde dentro
+            7 -> { js("antic('drawAir')"); idle(4800) }                // dibuja en el aire
+            8 -> { js("antic('mumble')"); idle(4700) }                 // habla solo
+            else -> { js("antic('bored')"); idle(8200) }              // se aburre
         }
+    }
+
+    // ---------- Vuelo con capa: cruza la pantalla volando (como en el PC) ----------
+    private var flyX0 = 0f
+    private var flyX1 = 0f
+    private var flyT0 = 0L
+    private var flyDur = 4000L
+    private var flyH = 0f
+    private fun startFly() {
+        val left = x < maxX() / 2
+        flyX0 = x
+        flyX1 = maxX() * (if (left) Random.nextDouble(0.7, 0.95) else Random.nextDouble(0.05, 0.3)).toFloat()
+        dir = if (flyX1 > x) 1 else -1
+        flyDur = (abs(flyX1 - flyX0) / (260 * dens) * 1000).toLong().coerceIn(3500L, 6000L)
+        flyH = Random.nextInt(140, 260) * dens
+        flyT0 = SystemClock.uptimeMillis()
+        st = St.FLY; js("set('idle', $dir)"); js("fly($dir)"); talk("fly", 0.9)
+    }
+    private fun flyTick(now: Long) {
+        val tt = now - flyT0 - 1000                                   // 1 s preparándose (la capa se despliega)
+        if (tt < 0) { y = ground(); return }
+        val u = (tt.toFloat() / flyDur).coerceIn(0f, 1f)
+        val e = if (u < 0.5f) 2 * u * u else 1 - (-2 * u + 2) * (-2 * u + 2) / 2
+        x = flyX0 + (flyX1 - flyX0) * e
+        y = ground() - flyH * Math.pow(kotlin.math.sin(Math.PI * u), 0.75).toFloat()
+        if (u >= 1f) { y = ground(); st = St.IDLE; until = now + 3000; js("set('idle', $dir)"); js("flyEnd()"); talk("flyDown", 0.7); buzz(true) }
+    }
+
+    // ---------- Objetos de un rato ----------
+    // Música sonando (cualquier app): auriculares y a bailar. Android lo dice sin pedir permisos.
+    private var nextMusic = 0L
+    private var musicOn = false
+    private fun checkMusic() {
+        val on = try { getSystemService(AudioManager::class.java).isMusicActive } catch (_: Exception) { false }
+        if (on) { js("music(true)"); if (!musicOn && quiet()) talk("music", 0.6) }
+        else if (musicOn) js("music(false)")
+        musicOn = on
+    }
+    // Según la app que abres: palomitas con vídeos, cámara con la cámara, libro con apps de lectura, pincel al editar fotos
+    private fun appProp(cat: String) {
+        val (p, secs) = when (cat) { "video" -> "popcorn" to 240; "camera" -> "camera" to 150; "read" -> "book" to 300; "edit" -> "brush" to 180; else -> return }
+        js("prop('$p', $secs)")
     }
 
     // Lo que dice lo elige talk.js (frases del Eko de escritorio + las del móvil, sin repetir); aquí solo se pinta el bocadillo
@@ -791,7 +852,7 @@ class EkoService : Service() {
 
     // ---------- Cosas del móvil que comenta ----------
     private fun quiet() = !away && (st == St.IDLE || st == St.WALK) && menu == null && bubble?.visibility != View.VISIBLE
-    private val apps by lazy { AppSense(this, { ev, arg, pkg -> talkArg(ev, arg, pkg) }, { quiet() }) }
+    private val apps by lazy { AppSense(this, { ev, arg, pkg -> talkArg(ev, arg, pkg) }, { quiet() }, { cat -> appProp(cat) }) }
     fun onApp(pkg: String) { apps.onApp(pkg) }
     private var nextSense = 0L
     private var fullSaid = false
@@ -919,6 +980,7 @@ class EkoService : Service() {
             }
             if (now > nextSense) { nextSense = now + 30_000; apps.tick(); checkSedentary(); checkDiary() }
             if (now > nextSync) { nextSync = now + 5_000; pollPc() }
+            if (now > nextMusic) { nextMusic = now + 4_000; checkMusic() }
             checkPhotoWalk()
             if (st == St.DRAG && !heldSaid && now - dragStart > 3500) { heldSaid = true; talk("held") }
             if (st == St.IDLE && menu == null && now > nextAntic && nextAntic > 0) { nextAntic = now + Random.nextLong(4 * 60_000, 10 * 60_000); antic() }
@@ -944,6 +1006,7 @@ class EkoService : Service() {
                 }
                 St.DRAG -> {}
                 St.KB -> kbTick(dt)
+                St.FLY -> flyTick(now)
                 St.PEEK -> {
                     settle()
                     if (until == 0L) {
@@ -989,6 +1052,7 @@ class EkoService : Service() {
                 val dy = e.rawY - downY
                 if (!dragging && hypot(dx, dy) > 12 * dens) {
                     dragging = true; handler.removeCallbacks(longPress)
+                    if (st == St.FLY) js("flyEnd()")   // lo coges en pleno vuelo: se guarda la capa
                     st = St.DRAG; js("set('drag', $dir)"); closeMenu(); hopping = false; pendingKb = false; setClip(0); kbSink = 0f
                     dragVx = 0f; dragVy = 0f; lastMoveAt = SystemClock.uptimeMillis()
                     dragStart = SystemClock.uptimeMillis(); heldSaid = false; talk("grab", 0.5); buzz()

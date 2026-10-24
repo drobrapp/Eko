@@ -8,7 +8,8 @@ import android.provider.Settings
 
 // Qué app tienes abierta (solo su nombre, gracias al permiso de «teclado y toques»). Nunca lo que hay dentro.
 // Eko comenta de vez en cuando según el tipo de app, y avisa si llevas mucho rato en redes o vídeos.
-class AppSense(private val c: Context, private val say: (String, String, String) -> Unit, private val canTalk: () -> Boolean) {
+class AppSense(private val c: Context, private val say: (String, String, String) -> Unit, private val canTalk: () -> Boolean,
+               private val onOpen: (String) -> Unit = {}) {
     private var curPkg = ""
     private var curCat = ""
     private var since = 0L
@@ -29,6 +30,7 @@ class AppSense(private val c: Context, private val say: (String, String, String)
         "com.adobe.lrmobile" to "edit", "com.niksoftware.snapseed" to "edit", "com.vsco.cam" to "edit", "com.canva.editor" to "edit",
         "com.spotify.music" to "music", "com.google.android.apps.youtube.music" to "music", "com.apple.android.music" to "music",
         "com.google.android.youtube" to "video", "com.netflix.mediaclient" to "video", "com.amazon.avod.thirdpartyclient" to "video",
+        "com.amazon.kindle" to "read", "com.google.android.apps.books" to "read", "com.kobobooks.android" to "read", "com.wattpad.android" to "read",
         "com.disney.disneyplus" to "video", "tv.twitch.android.app" to "video",
         "com.google.android.apps.maps" to "maps", "com.waze" to "maps",
         "com.google.android.gm" to "mail", "com.microsoft.office.outlook" to "mail",
@@ -70,6 +72,7 @@ class AppSense(private val c: Context, private val say: (String, String, String)
         curPkg = pkg; since = now; scrollSaid = 0
         if (pkg == home) { curCat = "home"; return }
         val cat = category(pkg).ifEmpty { "other" }; curCat = cat
+        onOpen(cat)   // cada vez que abres una app: Eko saca lo que pega (palomitas, cámara, libro…)
         val said = saidToday()
         if (pkg in said || !canTalk() || now - lastAny < 15_000L) return
         lastAny = now

@@ -487,7 +487,7 @@
   // Los peces se vuelven al agua (se apuntan en la colección); la bota, la botella y el cofre se guardan en el cubo.
   // La zona es UNA escena (p-escena, 1774×887) con la misma perspectiva que el valle; su camino coincide con el del valle.
   // 1 px de la escena = 1,114 unidades. La escena empieza en x 3780 y su borde de arriba queda 639 u por encima del suelo.
-  const PZ = { x0: 3780, su: 1.114, top: 639, s0: 3815, s1: 4090, sign: 4115, pond: 4870, spot: 4700, frogX: 4985, bucketX: 4722,
+  const PZ = { x0: 3780, su: 1.114, top: 639, s0: 3815, s1: 4090, sign: 4115, pond: 4870, spot: 4716, frogX: 4985, bucketX: 4800, tx: 4838, ty: 61, dockY: 26,
                wx0: 4480, wx1: 5250, wy0: 89, wy1: -28 };   // agua: de x wx0 a wx1, de 89 u por encima del suelo a 28 u por encima
   let PD = { c: {}, n: 0, seen: false };
   try { PD = Object.assign(PD, JSON.parse(localStorage.getItem("eko-pond") || "{}")); } catch (_) {}
@@ -510,6 +510,7 @@
   pst.textContent = `
   #pondScene{position:absolute;pointer-events:none;background:url(art/valley/p-escena.webp) 0 0/100% 100% no-repeat;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%);mask-image:linear-gradient(90deg,transparent,#000 5%)}
   #pondWater{position:absolute;cursor:pointer}
+  #eko.backview #eyes,#eko.backview #mouth,#eko.backview #accFace,#eko.backview #propFace,#eko.backview [class*=blush]{opacity:0;transition:opacity .2s}
   .prop.bob img{animation:pbob 3.4s ease-in-out infinite}@keyframes pbob{50%{transform:translateY(5%) rotate(-2deg)}}
   .prop.hop img{animation:phop .7s cubic-bezier(.3,1.5,.5,1)}@keyframes phop{40%{transform:translateY(-55%) scaleY(1.08)}70%{transform:translateY(0) scaleY(.9)}}
   #pondRod,#pondBob,.pcatch{position:absolute;pointer-events:none;z-index:33}
@@ -538,7 +539,7 @@
   water.addEventListener("click", (e) => { e.stopPropagation(); pondTap(); });
   const pSign = prop("p-cartel.webp", PZ.sign, 150, "front", "front", { ar: 551 / 804, click: () => goTo(PZ.sign - 40, () => say(PD.n ? `Ya hemos pescado ${PD.n} ${PD.n === 1 ? "cosa" : "cosas"}. ¿Vamos a por más?` : "¡El estanque! ¿Vamos a pescar? Toca el agua", 3000)) });
   const frog = prop("p-rana.webp", PZ.frogX, 40, "back", "back", { ar: 450 / 473, z: 6, lift: 88, click: () => frogTap() });
-  const bucket = prop("p-cubo.webp", PZ.bucketX, 38, "back", "back", { ar: 500 / 528, z: 6, lift: 72, click: () => goTo(PZ.spot, () => openPondCard()) });
+  const bucket = prop("p-cubo.webp", PZ.bucketX, 38, "back", "back", { ar: 500 / 528, z: 6, lift: 52, click: () => goTo(PZ.spot, () => openPondCard()) });
   const flies = [];
   for (let i = 0; i < 9; i++) { const f = document.createElement("i"); f.className = "pfly"; f.style.animationDelay = -i * 0.7 + "s"; f.style.animationDuration = 5 + Math.random() * 3 + "s"; back.appendChild(f); flies.push({ el: f, ux: PZ.wx0 + Math.random() * (PZ.wx1 - PZ.wx0), uy: 80 + Math.random() * 180 }); }
   // caña, corcho e hilo (el hilo se dibuja en SVG sobre todo el mundo)
@@ -579,13 +580,13 @@
     if (Math.abs(E.x - PZ.spot) < 6) E.x = PZ.spot + 6;                 // para que goTo siempre llegue y lance
     goTo(PZ.spot, () => {
       if (FI.st !== "walk") return;
-      E.face = 1; E.pose = "fish"; E.poseT = E.t; gBusy = true;
-      FI.st = "cast"; FI.t0 = E.t; FI.misses = 0;
-      say(pick(["¡A pescar!", "A ver qué pica…", "Allá va… ¡zas!", "Silencio, que se asustan"]), 1700);
+      // se da la vuelta y camina por el muelle hacia el fondo (se hace más pequeño); al llegar al final, lanza
+      E.face = 1; gBusy = true; FI.st = "board"; FI.misses = 0; pondDT = 1;
     });
   }
   function endFish() {
-    FI.st = null; E.pose = null; gBusy = false;
+    FI.st = null; E.pose = null; gBusy = false; pondDT = 0;          // vuelve por el muelle hacia ti
+
     rod.style.display = bob.style.display = "none"; linePath.setAttribute("d", "");
   }
   function reel() {
@@ -598,7 +599,7 @@
     ring(FI.bx, FI.by, U(70)); fx("drop", FI.bx, FI.by, 8, 300);
     const im = document.createElement("img"); im.className = "pcatch"; im.src = "art/valley/" + src; im.alt = "";
     const ih = U(id === "botella" || id === "bota" ? 70 : 54); Object.assign(im.style, { height: ih + "px", width: "auto" }); front.appendChild(im);
-    const x0 = FI.bx, y0 = FI.by, x1 = U(E.x) + U(10), y1 = PATH() - EH() - U(40);
+    const x0 = FI.bx, y0 = FI.by, x1 = FI.ekoX + U(10), y1 = FI.ekoY - U(30);
     const t0 = performance.now();
     rod.style.display = bob.style.display = "none"; linePath.setAttribute("d", "");
     const fly = (now) => {
@@ -615,7 +616,7 @@
     }, 650);
     // los peces vuelven al agua; las cosas, al cubo
     setTimeout(() => {
-      const t1 = performance.now(), bx2 = FISHY.has(id) ? waterPt(0.7, 0.5) : (() => { const b = bucket.el.getBoundingClientRect(), w = front.getBoundingClientRect(); return { x: b.left - w.left + b.width / 2, y: b.top - w.top + b.height * 0.3 }; })();
+      const t1 = performance.now(), bx2 = FISHY.has(id) ? { x: U(PZ.tx + 60), y: groundTop() - U(PZ.ty + 6) } : (() => { const b = bucket.el.getBoundingClientRect(), w = front.getBoundingClientRect(); return { x: b.left - w.left + b.width / 2, y: b.top - w.top + b.height * 0.3 }; })();
       const back2 = (now) => {
         const q = Math.min(1, (now - t1) / 700), e = q * q;
         im.style.left = lerp(x1, bx2.x, e) - ih * 0.6 + "px"; im.style.top = lerp(y1, bx2.y, e) - Math.sin(q * Math.PI) * U(90) - ih / 2 + "px";
@@ -659,8 +660,14 @@
     const p = waterPt(0.25 + Math.random() * 0.5, 0.3 + Math.random() * 0.3); ring(p.x, p.y, U(50)); fx("drop", p.x, p.y, 4, 250);
   }, 7000);
 
+  // Profundidad del muelle: 0 = en el camino, 1 = al final del muelle (de espaldas, más pequeño)
+  let pondD = 0, pondDT = 0, pondLastT = 0;
+  const pondFeet = () => lerp(PATH(), groundTop() - U(PZ.dockY), pondD);
   function pondFrame() {
     if (inHouse) return;
+    const dt = Math.min(0.05, Math.max(0, E.t - (pondLastT || E.t))); pondLastT = E.t;
+    if (pondD !== pondDT) pondD = pondDT > pondD ? Math.min(pondDT, pondD + dt / 1.3) : Math.max(pondDT, pondD - dt / 1.1);
+    eko.classList.toggle("backview", pondDT === 1 && pondD > 0.02);
     // la escena trae sus propias colinas: las del valle se apagan al entrar en esta zona
     const X = U(PZ.x0 + 60) - cam, mk = `linear-gradient(90deg,#000 ${X}px,transparent ${X + U(380)}px)`;
     for (const id of ["#far", "#mid"]) { const l = $(id); l.style.webkitMaskImage = l.style.maskImage = mk; }
@@ -668,12 +675,20 @@
     if (!PD.seen && E.x > PZ.x0 + 80) { PD.seen = true; pSave(); say("¡Un estanque! ¿Pescamos? Toca el agua y lanzo la caña", 3600); }
     if (!FI.st || FI.st === "walk") { if (FI.st === "walk" && E.tx == null && Math.abs(E.x - PZ.spot) > 10) FI.st = null; return; }
     if (E.tx != null) { say("Vale, lo dejamos para luego", 1600); endFish(); return; }        // te lo has llevado a otro sitio
+    if (FI.st === "board") {
+      if (pondD < 1) return;
+      FI.st = "cast"; FI.t0 = E.t; E.pose = "fish"; E.poseT = E.t;
+      say(pick(["¡A pescar!", "A ver qué pica…", "Allá va… ¡zas!", "Silencio, que se asustan"]), 1700);
+    }
     // caña en la mano y punta
-    const h = EH(), w = h * 240 / 310, ex = U(E.x), top = PATH() - h;
-    const rh = U(92), rw = rh * 500 / 632, rx = ex + w * 0.18, ry = top + h * 0.12;
+    // Eko de espaldas al final del muelle (más pequeño): la caña sobre su hombro, hacia el agua
+    const sc = 1 - 0.26 * pondD, h = EH() * sc, w = h * 240 / 310, ex = U(E.x), top = pondFeet() - h;
+    FI.ekoX = ex; FI.ekoY = top;
+    const rh = U(92) * sc, rw = rh * 500 / 632, rx = ex - w * 0.02, ry = top - h * 0.18;
+    rod.style.height = rh + "px"; rod.style.width = rw + "px";
     Object.assign(rod.style, { display: "block", left: rx + "px", top: ry + "px", transform: `rotate(${FI.st === "bite" ? 10 : 0}deg)`, transformOrigin: "10% 95%" });
     const tip = { x: rx + rw * 0.93, y: ry + rh * 0.04 };
-    const target = waterPt(0.62, 0.55), q = E.t - FI.t0;
+    const target = { x: U(PZ.tx), y: groundTop() - U(PZ.ty) }, q = E.t - FI.t0;   // agua abierta, entre el muelle y los nenúfares
     let bx = target.x, by = target.y;
     if (FI.st === "cast") {
       const k2 = Math.min(1, q / 0.7);
@@ -1049,6 +1064,7 @@
     const archDepth = !inHouse ? clamp((155 - Math.abs(E.x - Z.arch)) / 75, 0, 1) : 0;
     const archBlend = archDepth * archDepth * (3 - 2 * archDepth);
     let y = lerp(PATH(), FRONT() - U(360) * 0.03, archBlend) - streamHop(), sc = 1, op = 1; // bajo el arco pisa entre sus dos postes; saltito en el arroyo
+    if (pondD > 0) { y = pondFeet() - (pondD < 1 ? Math.abs(Math.sin(E.t * 9)) * U(4) : 0); sc = 1 - 0.26 * pondD; }   // por el muelle, alejándose
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);

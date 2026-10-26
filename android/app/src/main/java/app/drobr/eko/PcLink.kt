@@ -122,9 +122,11 @@ object PcLink {
         val key = prefs(c).getString("pcKey", null) ?: return false
         return try {
             Reminders.cancelAll(c)
+            val led = Progress.peekLedger(c)
             val plain = JSONObject().put("app", "eko").put("v", 1).put("from", "phone").put("at", System.currentTimeMillis()).put("needs", needs)
-                .put("done", Reminders.takeDone(c)).put("recap", recap(c))
+                .put("done", Reminders.takeDone(c)).put("recap", recap(c)).put("progress", led)
             val (code, _) = http("$b/give", token(c), "POST", encrypt(key, plain.toString()))
+            if (code == 200) Progress.commitLedger(c, led)   // el PC ya tiene los puntos: no se vuelven a mandar
             code == 200
         } catch (_: Exception) { false }
     }
@@ -140,7 +142,7 @@ object PcLink {
         return JSONObject().put("steps", if (Walks.allowed(c)) Walks.todaySteps(c) else 0).put("goal", if (Walks.allowed(c)) Walks.todayGoal(c) else 0)
             .put("streak", if (Walks.allowed(c)) Walks.streak(c) else 0).put("photos", photos).put("finds", newFinds).put("diary", Diary.writtenToday(c))
     }
-    fun level(c: Context): Int = prefs(c).getInt("level", 0)
+    fun level(c: Context): Int = Progress.level(c)
 
     private fun encrypt(keyHex: String, plain: String): String {
         val iv = ByteArray(12).also { java.security.SecureRandom().nextBytes(it) }
@@ -170,6 +172,7 @@ object PcLink {
         e.putString("pcProgress", d.optString("eko-progress", ""))
         e.putLong("adoptedAt", System.currentTimeMillis())
         snap.optJSONObject("extra")?.optInt("level", 0)?.takeIf { it > 0 }?.let { e.putInt("level", it) }
+        snap.optJSONObject("extra")?.let { x -> if (x.has("xp") && !x.isNull("xp")) Progress.adoptBase(c, x.optDouble("xp").toFloat()) }
         // punto de partida para contar lo que pasa en el móvil (fotos y hallazgos nuevos)
         e.putInt("adoptPhotos", Album.list(c).size)
         e.putString("adoptFinds", Walks.finds(c).filter { it.value > 0 }.keys.joinToString(","))

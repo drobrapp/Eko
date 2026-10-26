@@ -406,8 +406,8 @@ class EkoService : Service() {
         if (until == Long.MAX_VALUE) until = 0
     }
 
-    private fun feed() { give(h = 35f, l = 3f); js("eat()"); idle(3000); handler.postDelayed({ talk("eat") }, 900) }
-    private fun play() { give(f = 30f, l = 4f, e = -3f); js("spin()"); idle(2500); handler.postDelayed({ talk("play") }, 700) }
+    private fun feed() { give(h = 35f, l = 3f, src = "feed"); js("eat()"); idle(3000); handler.postDelayed({ talk("eat") }, 900) }
+    private fun play() { give(f = 30f, l = 4f, e = -3f, src = "play"); js("spin()"); idle(2500); handler.postDelayed({ talk("play") }, 700) }
 
     // ---------- Lo que Eko nota del móvil (sin permisos) ----------
     // Batería, pantalla apagada/desbloqueo, agitar el móvil, ponerlo boca abajo y auriculares.
@@ -518,12 +518,12 @@ class EkoService : Service() {
                 when (ev) {
                     "half" -> talkArg("stepsHalf", fmtN(n))
                     "goal" -> {
-                        give(f = 15f, l = 10f, e = 10f); js("act('tada')")
+                        give(f = 15f, l = 10f, e = 10f, src = "walkGoal"); js("act('tada')")
                         val k = Walks.streak(this)
                         if (k >= 2) talkArg("goalStreak", k.toString()) else talkArg("stepsGoal", fmtN(n))
                     }
-                    "beyond" -> { give(f = 10f, l = 5f); js("dance(5)"); idle(5000); talkArg("stepsBeyond", fmtN(n)) }
-                    "find" -> { js("act('tada')"); talkArg("find", s) }
+                    "beyond" -> { give(f = 10f, l = 5f, src = "beyond"); js("dance(5)"); idle(5000); talkArg("stepsBeyond", fmtN(n)) }
+                    "find" -> { js("act('tada')"); talkArg("find", s); earn("find") }
                     "findMany" -> { js("act('tada')"); talkArg("findMany", "$n: $s") }
                     "longWalk" -> { give(f = 10f, l = 10f); talk("longWalk"); handler.postDelayed({ if (quiet()) sleep() }, 4500) }
                     "streakLost" -> talkArg("streakLost", n.toString())
@@ -678,7 +678,7 @@ class EkoService : Service() {
     }
     fun houseGive(kind: String) {
         handler.post {
-            when (kind) { "feed" -> give(h = 35f, l = 3f); "play" -> give(f = 30f, l = 4f, e = -3f); "pet" -> give(l = 4f) }
+            when (kind) { "feed" -> give(h = 35f, l = 3f, src = "feed"); "play" -> give(f = 30f, l = 4f, e = -3f, src = "play"); "pet" -> give(l = 4f, src = "pet") }
         }
     }
 
@@ -690,8 +690,8 @@ class EkoService : Service() {
     private fun offerAlbum() {
         handler.postDelayed({ talk("albumAsk"); offerTap(Intent(this, AlbumActivity::class.java).putExtra("walk", true)) }, 3500)
     }
-    fun photosAdded(n: Int) { handler.post { if (!running) return@post; give(l = 8f, f = 5f); js("act('tada')"); talkArg("photoGift", n.toString()) } }
-    fun diaryDone(reply: String) { handler.post { if (!running) return@post; give(l = 10f); js("act('tada')"); say(reply, 4200) } }
+    fun photosAdded(n: Int) { handler.post { if (!running) return@post; give(l = 8f, f = 5f, src = "photo"); js("act('tada')"); talkArg("photoGift", n.toString()) } }
+    fun diaryDone(reply: String) { handler.post { if (!running) return@post; give(l = 10f, src = "diary"); js("act('tada')"); say(reply, 4200) } }
     private fun checkDiary() {
         val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); if (h < 20 || h >= 23 || !quiet()) return
         val day = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
@@ -768,10 +768,24 @@ class EkoService : Service() {
             "energy" -> { say("Estoy agotado… voy a dormir un poco", 2600); handler.postDelayed({ sleep() }, 1800) }
         }
     }
-    private fun give(h: Float = 0f, f: Float = 0f, l: Float = 0f, e: Float = 0f) {
+    private fun give(h: Float = 0f, f: Float = 0f, l: Float = 0f, e: Float = 0f, src: String? = null) {
         hunger = (hunger + h).coerceIn(0f, 100f); fun_ = (fun_ + f).coerceIn(0f, 100f)
         love = (love + l).coerceIn(0f, 100f); energy = (energy + e).coerceIn(0f, 100f)
         saveNeeds()
+        if (src != null) earn(src)
+    }
+    // ---------- Amistad (las mismas reglas que el PC; los puntos viajan al PC cuando Eko vuelve) ----------
+    private fun earn(src: String) {
+        val up = Progress.earn(this, src) ?: return
+        handler.postDelayed({ levelUp(up) }, 1800)
+    }
+    private fun levelUp(n: Int) {
+        val u = Progress.LEVELS[n]
+        val text = if (u != null) "¡Nivel $n! Has desbloqueado $u" else "¡Nivel $n! Cada día somos más amigos"
+        if (inHome) { HouseActivity.instance?.levelUp(text); return }   // estás en su casa: lo celebra allí
+        if (web?.visibility != View.VISIBLE) return
+        js("act('tada')"); js("fx('heart', 4)"); buzz(true)
+        say(text, 6500)
     }
 
     // ---------- Travesuras: de vez en cuando hace algo por su cuenta ----------
@@ -1081,7 +1095,7 @@ class EkoService : Service() {
                         js("tap()"); idle(2000); buzz()
                         startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
-                    else { give(l = 4f); js("tap()"); idle(2500); talk("poke", 0.7); buzz() }
+                    else { give(l = 4f, src = "pet"); js("tap()"); idle(2500); talk("poke", 0.7); buzz() }
                 }
             }
         }

@@ -69,6 +69,11 @@ window.EkoProgress = (() => {
     { id: "tidy", ic: "artDecoFrame", name: "Todo en su sitio", how: "Que enderece el cuadro 5 veces", n: 5, ev: "frameFix", xp: 20 },
     { id: "shiny", ic: "artDecoTrophy", name: "Reluciente", how: "Que saque brillo a su trofeo 3 veces", n: 3, ev: "polish", xp: 20 },
     { id: "halloween", ic: "artSpark", name: "Noche de miedo", how: "Ábrelo en la semana de Halloween", xp: 30, give: ["acc:witch", "acc:pumpkin", "acc:vampire", "acc:ghost"] },
+    // Del móvil (llegan cuando Eko vuelve al PC)
+    { id: "walker", ic: "artSpark", name: "Caminante", how: "Cumplid la meta de pasos 7 días (con el móvil)", n: 7, ev: "walkGoal", xp: 30 },
+    { id: "photographer", ic: "artDecoFrame", name: "Fotógrafo", how: "Dale 10 fotos para su álbum (con el móvil)", n: 10, ev: "photo", xp: 30 },
+    { id: "diarist", ic: "artNote", name: "Querido diario", how: "Cuéntale tu día 7 veces (con el móvil)", n: 7, ev: "diary", xp: 30 },
+    { id: "collector", ic: "artBang", name: "Coleccionista", how: "Encontrad 15 cosas paseando (con el móvil)", n: 15, ev: "find", xp: 30 },
   ];
 
   // ---------- Estado ----------
@@ -185,6 +190,18 @@ window.EkoProgress = (() => {
     count(ev);
   }
 
+  // Lo que ganó en el móvil (puntos ya calculados allí con estas mismas reglas, eventos para los logros)
+  function applyRemote(r) {
+    if (!r) return 0;
+    newDay();
+    for (const [k, n] of Object.entries(r.cnt || {})) if (n > 0) count(k, Math.min(n, 500));
+    if (r.early) unlockAch("early");
+    if (r.night) unlockAch("night");
+    const xp = Math.max(0, Math.min(600, +r.xp || 0));
+    if (xp > 0) addXp(xp);
+    return xp;
+  }
+
   // ---------- Al arrancar ----------
   function boot() {
     if (E.A.hidden) { later(5000, boot); return; }
@@ -288,6 +305,6 @@ window.EkoProgress = (() => {
     get: () => ({ ...P, level: level() }),
     nextUnlock: () => { for (let n = level() + 1; n <= MAX; n++) if (LEVELS[n]) return { lvl: n, ...LEVELS[n] }; return null; },
     missions: () => ({ list: active(), i: P.mis ? P.mis.i : 0, done: !!(P.mis && P.mis.done), skipped: !!(P.mis && P.mis.skipped), running: !!cur() }),
-    startMissions, skipMissions, onChange: null, bump: (n) => addXp(n),
+    startMissions, skipMissions, onChange: null, bump: (n) => addXp(n), applyRemote,
   };
 })();

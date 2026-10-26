@@ -32,7 +32,7 @@ window.EkoSync = (() => {
       if (k && k.startsWith("eko") && !k.startsWith("eko-sync")) data[k] = localStorage.getItem(k);
     }
     const plain = new TextEncoder().encode(JSON.stringify({ app: "eko", v: 1, at: new Date().toISOString(), from: "pc", data,
-      extra: { level: window.EkoProgress && EkoProgress.level ? EkoProgress.level() : null } }));
+      extra: { level: window.EkoProgress && EkoProgress.level ? EkoProgress.level() : null, xp: window.EkoProgress && EkoProgress.get ? EkoProgress.get().xp : null } }));
     const key = await crypto.subtle.importKey("raw", unhex(s.k), "AES-GCM", false, ["encrypt"]);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain);
@@ -94,6 +94,11 @@ window.EkoSync = (() => {
       } catch (_) {}
     }
     if (p && p.recap) recap = p.recap;
+    // la amistad ganada en el móvil (puntos y logros)
+    if (p && p.progress && window.EkoProgress && EkoProgress.applyRemote) {
+      const got = EkoProgress.applyRemote(p.progress);
+      if (got >= 1) { recap = recap || {}; recap.xp = Math.round(got); }
+    }
   }
   // Una frase sobre lo que ha pasado en el móvil (si hay algo que contar)
   function recapLine(r) {
@@ -105,6 +110,7 @@ window.EkoSync = (() => {
     if (r.finds && r.finds.length) opts.push(`Por el camino encontré ${r.finds.slice(0, 2).join(" y ")}`);
     if (r.streak >= 2) opts.push(`¡Llevamos ${r.streak} días seguidos cumpliendo la meta de pasos!`);
     if (r.diary) opts.push("Gracias por contarme tu día en el diario");
+    if (r.xp >= 1) opts.push(`¡En el móvil ganamos ${r.xp} ${r.xp === 1 ? "punto" : "puntos"} de amistad!`);
     return opts.length ? pickL(opts) : null;
   }
   // ¿Está Eko en el móvil? (entonces los recordatorios los da el móvil, no el PC)

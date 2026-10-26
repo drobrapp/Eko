@@ -5,6 +5,7 @@ window.EkoNews = (() => {
   const E = window.Eko;
   if (!E) return null;
   const NOTES = {
+    "0.36.0": { important: true, lines: ["¡Ahora lo que hacemos juntos en el móvil también cuenta para nuestra amistad!", "Y hay logros nuevos: Caminante, Fotógrafo, Querido diario y Coleccionista"] },
     "0.35.0": { important: true, lines: ["¡He descubierto un estanque en el valle! Está a la derecha del huerto, cruzando el puentecito", "Toca el agua y pescamos juntos. Dicen que hay un pez dorado…"] },
     "0.34.0": { important: true, lines: ["¡Ahora te sigo solo! Si dejas el PC y usas el móvil, me voy contigo, y al volver al PC vuelvo yo también", "Y si tienes un recordatorio mientras estoy en el móvil, te lo doy allí"] },
     "0.33.0": { important: true, lines: ["¡Ya puedo mudarme! Desde mi casa del móvil, pulsa «¡Ven aquí!» y me voy contigo al bolsillo", "Y para traerme de vuelta: clic derecho en mi icono de la bandeja → «¡Ven aquí!»"] },

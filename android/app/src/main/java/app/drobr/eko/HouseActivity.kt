@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter
 // Casa de Eko: su salón (assets/eko/house.html) es el menú. Eko vive dentro y cada cosa de la casa abre algo.
 // Mientras estás en casa, el Eko de la pantalla se esconde (ha vuelto a casa).
 class HouseActivity : Activity() {
+    companion object { @Volatile var instance: HouseActivity? = null }
     private lateinit var web: WebView
     private var loaded = false
     private var insetTop = 24f
@@ -186,6 +187,7 @@ class HouseActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        instance = this
         checkWhere()
         EkoService.instance?.homeVisit(true)          // Eko ha vuelto a casa
         EkoNotes.seen(this); EkoNotes.schedule(this); GoldenHour.schedule(this)
@@ -193,7 +195,12 @@ class HouseActivity : Activity() {
     }
     override fun onPause() {
         super.onPause()
+        if (instance === this) instance = null
         EkoService.instance?.homeVisit(false)         // y vuelve a tu pantalla
+    }
+    // Sube de nivel estando en su casa: lo celebra aquí (y se actualiza el «Nivel N» de arriba)
+    fun levelUp(text: String) {
+        js("window.house && (house.say(${org.json.JSONObject.quote(text)}, 6500), window.houseRefresh && houseRefresh())")
     }
 
     private fun giveNeed(kind: String) {
@@ -208,6 +215,10 @@ class HouseActivity : Activity() {
             "pet" -> add("love", 4f, 70f)
         }
         e.apply()
+        // amistad: los mismos puntos que si estuviera fuera
+        val src = when (kind) { "feed" -> "feed"; "play" -> "play"; "pet" -> "pet"; else -> null }
+        val up = src?.let { Progress.earn(this, it) }
+        if (up != null) web.postDelayed({ levelUp(Progress.LEVELS[up]?.let { "¡Nivel $up! Has desbloqueado $it" } ?: "¡Nivel $up! Cada día somos más amigos") }, 1800)
     }
 
     private fun openThing(what: String) {

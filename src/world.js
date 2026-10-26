@@ -535,6 +535,54 @@
   document.head.appendChild(pst);
 
   const scene = document.createElement("div"); scene.id = "pondScene"; back.appendChild(scene);
+  // ---------- Agua viva (sin imágenes nuevas): destellos, cascada, espuma, arroyo y una ondulación suave ----------
+  // Todo va dentro de la escena, en % de la imagen (1774×887), así se mueve y escala con ella.
+  const SP = (x, y, w, h) => `left:${(x / 17.74).toFixed(2)}%;top:${(y / 8.87).toFixed(2)}%;width:${(w / 17.74).toFixed(2)}%;height:${(h / 8.87).toFixed(2)}%`;
+  const WB = { x: 612, y: 488, w: 750, h: 134 };                                  // caja del agua del estanque
+  const pfx = document.createElement("div"); pfx.id = "pondFx"; scene.appendChild(pfx);
+  pfx.innerHTML = `
+    <div class="pwave" style="${SP(WB.x, WB.y, WB.w, WB.h)}"></div>
+    <div class="pshim" style="${SP(WB.x, WB.y, WB.w, WB.h)}"></div>
+    <div class="pfall" style="${SP(950, 356, 84, 118)}"></div>
+    <div class="pfoam" style="${SP(940, 462, 120, 34)}"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="pstream" style="${SP(0, 628, 310, 259)}"></div>`;
+  const pwave = pfx.querySelector(".pwave");
+  // filtro de ondulación (se anima solo; se apaga lejos del estanque)
+  const pws = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  pws.setAttribute("width", "0"); pws.setAttribute("height", "0"); pws.style.position = "absolute";
+  pws.innerHTML = `<filter id="pondWaveF" x="-5%" y="-20%" width="110%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.07" numOctaves="1" seed="3" result="n">
+    <animate attributeName="baseFrequency" dur="9s" values="0.010 0.07;0.013 0.09;0.010 0.07" repeatCount="indefinite"/></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/></filter>`;
+  document.body.appendChild(pws);
+  const pfxCss = document.createElement("style");
+  pfxCss.textContent = `
+  #pondFx{position:absolute;inset:0;pointer-events:none;display:none}#pondFx.live{display:block}
+  #pondFx>div{position:absolute}
+  #pondFx .pwave{clip-path:ellipse(49% 47% at 50% 52%);filter:url(#pondWaveF)}
+  #pondFx .pshim{clip-path:ellipse(49% 47% at 50% 52%);mix-blend-mode:screen;opacity:.5;
+    background:repeating-linear-gradient(172deg,transparent 0 18px,rgba(255,255,255,.32) 22px,transparent 27px),repeating-linear-gradient(6deg,transparent 0 30px,rgba(255,255,255,.2) 34px,transparent 41px);
+    background-size:320px 64px,280px 90px;animation:pshim 11s linear infinite;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 55%,#000 45%,transparent 72%);mask-image:radial-gradient(ellipse at 50% 55%,#000 45%,transparent 72%)}
+  @keyframes pshim{to{background-position:320px 0,-280px 0}}
+  body.lit #pondFx .pshim{opacity:.32;filter:saturate(0) brightness(1.15)}
+  #pondFx .pfall{mix-blend-mode:screen;opacity:.6;
+    background:repeating-linear-gradient(180deg,rgba(255,255,255,0) 0 9px,rgba(255,255,255,.55) 13px,rgba(255,255,255,0) 19px),repeating-linear-gradient(180deg,rgba(255,255,255,0) 0 15px,rgba(220,245,255,.4) 19px,rgba(255,255,255,0) 26px);
+    background-size:100% 38px,100% 52px;animation:pfall .7s linear infinite;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+  @keyframes pfall{to{background-position:0 38px,0 104px}}
+  #pondFx .pfoam i{position:absolute;bottom:20%;width:16%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0) 70%);opacity:0;animation:pfoam 1.6s ease-out infinite}
+  #pondFx .pfoam i:nth-child(1){left:18%;animation-delay:0s}#pondFx .pfoam i:nth-child(2){left:34%;animation-delay:.3s}#pondFx .pfoam i:nth-child(3){left:50%;animation-delay:.7s}
+  #pondFx .pfoam i:nth-child(4){left:62%;animation-delay:1s}#pondFx .pfoam i:nth-child(5){left:28%;animation-delay:1.25s}#pondFx .pfoam i:nth-child(6){left:72%;animation-delay:.5s}
+  @keyframes pfoam{0%{transform:translateY(0) scale(.4);opacity:0}25%{opacity:.9}100%{transform:translateY(-70%) scale(1.1);opacity:0}}
+  #pondFx .pstream{mix-blend-mode:screen;opacity:.5;clip-path:polygon(44% 1%,97% 1%,89% 24%,69% 51%,82% 100%,0 100%,0 39%,23% 28%);
+    background:repeating-linear-gradient(118deg,transparent 0 12px,rgba(255,255,255,.4) 15px,transparent 20px);background-size:110px 110px;animation:pstream 1.9s linear infinite}
+  @keyframes pstream{to{background-position:-110px 110px}}`;
+  document.head.appendChild(pfxCss);
+  // la ondulación usa la misma imagen, recortada al agua, deformada por el filtro
+  function pondFxLayout(sw, sh) {
+    const k = sw / 1774;
+    Object.assign(pwave.style, { backgroundImage: "url(art/valley/p-escena.webp)", backgroundSize: `${sw}px ${sh}px`, backgroundPosition: `${-WB.x * k}px ${-WB.y * k}px`, backgroundRepeat: "no-repeat" });
+  }
   const water = document.createElement("div"); water.id = "pondWater"; back.appendChild(water);
   water.addEventListener("click", (e) => { e.stopPropagation(); pondTap(); });
   const pSign = prop("p-cartel.webp", PZ.sign, 150, "front", "front", { ar: 551 / 804, click: () => goTo(PZ.sign - 40, () => say(PD.n ? `Ya hemos pescado ${PD.n} ${PD.n === 1 ? "cosa" : "cosas"}. ¿Vamos a por más?` : "¡El estanque! ¿Vamos a pescar? Toca el agua", 3000)) });
@@ -562,6 +610,7 @@
   function pondLayout() {
     const gt = groundTop(), sw = U(1774 * PZ.su), sh = U(887 * PZ.su);
     Object.assign(scene.style, { left: U(PZ.x0) + "px", top: gt - U(PZ.top) + "px", width: sw + "px", height: sh + "px", zIndex: 1 });
+    pondFxLayout(sw, sh);
     const b = pondBox(); Object.assign(water.style, { left: b.x + "px", top: b.y + "px", width: b.w + "px", height: b.h + "px", zIndex: 5 });
     const rh = U(92); Object.assign(rod.style, { height: rh + "px", width: rh * 500 / 632 + "px" });
     const bh = U(28); Object.assign(bob.style, { height: bh + "px", width: bh * 200 / 264 + "px" });
@@ -668,6 +717,7 @@
     const dt = Math.min(0.05, Math.max(0, E.t - (pondLastT || E.t))); pondLastT = E.t;
     if (pondD !== pondDT) pondD = pondDT > pondD ? Math.min(pondDT, pondD + dt / 1.3) : Math.max(pondDT, pondD - dt / 1.1);
     eko.classList.toggle("backview", pondDT === 1 && pondD > 0.02);
+    pfx.classList.toggle("live", Math.abs(E.x - PZ.pond) < 1500);   // solo se anima cerca del estanque
     // la escena trae sus propias colinas: las del valle se apagan al entrar en esta zona
     const X = U(PZ.x0 + 60) - cam, mk = `linear-gradient(90deg,#000 ${X}px,transparent ${X + U(380)}px)`;
     for (const id of ["#far", "#mid"]) { const l = $(id); l.style.webkitMaskImage = l.style.maskImage = mk; }

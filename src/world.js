@@ -19,8 +19,8 @@
   const PATH = () => groundTop() + G() * 0.29;              // donde pisa Eko (el camino de tierra)
   const BACK = () => groundTop() + G() * 0.215;             // base de lo que está detrás: pisa un poco el camino
   const FRONT = () => groundTop() + G() * 0.37;             // base de lo que está delante: pisa el borde del camino
-  const OPEN = { x0: 140, x1: 5300 };                       // zona abierta (en «unidades de 1080p»): el prado, el huerto y el estanque
-  const WORLD = 5700;
+  const OPEN = { x0: 140, x1: 5500 };                       // zona abierta (en «unidades de 1080p»): el prado, el huerto y el estanque
+  const WORLD = 5760;
   const U = (u) => u * k;                                   // unidades → px
 
   // ---------- Cielo real: hora y estación ----------
@@ -485,8 +485,10 @@
   // Paisaje propio (fondo con cascada y suelo de orilla), sauce, juncos, rana, nenúfares y luciérnagas de noche.
   // Pescar: tocas el agua, Eko lanza la caña y, cuando el corcho se hunde («¡Pica!»), tocas en cualquier sitio para sacarlo.
   // Los peces se vuelven al agua (se apuntan en la colección); la bota, la botella y el cofre se guardan en el cubo.
-  const PZ = { x0: 3820, bridge: 3905, sign: 4070, willow: 4280, rocks: 4410, pond: 4680, spot: 4545, dock: 5010, uh: 230 };
-  const POND_AR = 1226 / 465;
+  // La zona es UNA escena (p-escena, 1774×887) con la misma perspectiva que el valle; su camino coincide con el del valle.
+  // 1 px de la escena = 1,114 unidades. La escena empieza en x 3780 y su borde de arriba queda 639 u por encima del suelo.
+  const PZ = { x0: 3780, su: 1.114, top: 639, s0: 3815, s1: 4090, sign: 4115, pond: 4870, spot: 4700, frogX: 4985, bucketX: 4722,
+               wx0: 4480, wx1: 5250, wy0: 89, wy1: -28 };   // agua: de x wx0 a wx1, de 89 u por encima del suelo a 28 u por encima
   let PD = { c: {}, n: 0, seen: false };
   try { PD = Object.assign(PD, JSON.parse(localStorage.getItem("eko-pond") || "{}")); } catch (_) {}
   const pSave = () => { try { localStorage.setItem("eko-pond", JSON.stringify(PD)); } catch (_) {} };
@@ -506,9 +508,8 @@
   // Estilos propios del estanque (así world.html y su plantilla no cambian)
   const pst = document.createElement("style");
   pst.textContent = `
-  #pondFar,#pondGround{position:absolute;pointer-events:none}
-  #pondFar{background:url(art/valley/p-fondo.webp) center bottom/100% 100% no-repeat;-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
-  #pondGround{background:url(art/valley/p-suelo.webp) left top/auto 100% repeat-x;-webkit-mask-image:linear-gradient(90deg,transparent,#000 260px);mask-image:linear-gradient(90deg,transparent,#000 260px)}
+  #pondScene{position:absolute;pointer-events:none;background:url(art/valley/p-escena.webp) 0 0/100% 100% no-repeat;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%);mask-image:linear-gradient(90deg,transparent,#000 5%)}
+  #pondWater{position:absolute;cursor:pointer}
   .prop.bob img{animation:pbob 3.4s ease-in-out infinite}@keyframes pbob{50%{transform:translateY(5%) rotate(-2deg)}}
   .prop.hop img{animation:phop .7s cubic-bezier(.3,1.5,.5,1)}@keyframes phop{40%{transform:translateY(-55%) scaleY(1.08)}70%{transform:translateY(0) scaleY(.9)}}
   #pondRod,#pondBob,.pcatch{position:absolute;pointer-events:none;z-index:33}
@@ -532,22 +533,14 @@
   #pondCard .it.rare:not(.no){box-shadow:inset 0 0 0 2px #E9A93B}`;
   document.head.appendChild(pst);
 
-  const pondFar = document.createElement("div"); pondFar.id = "pondFar"; back.appendChild(pondFar);
-  const pondGround = document.createElement("div"); pondGround.id = "pondGround"; back.appendChild(pondGround);
-  const bridge = prop("p-arroyo.webp", PZ.bridge, 210, "back", "back", { ar: 900 / 521, lift: -78, z: 4, click: () => goTo(PZ.bridge, () => say(pick(["Este arroyo baja de la cascada", "¡Un puentecito de piedra!", "Al otro lado está el estanque"]), 2400)) });
-  const pSign = prop("p-cartel.webp", PZ.sign, 190, "front", "front", { ar: 551 / 804, click: () => goTo(PZ.sign - 40, () => say(PD.n ? `Ya hemos pescado ${PD.n} ${PD.n === 1 ? "cosa" : "cosas"}. ¿Vamos a por más?` : "¡El estanque! ¿Vamos a pescar? Toca el agua", 3000)) });
-  const willow = prop("p-sauce.webp", PZ.willow, 470, "back", "back", { ar: 800 / 1142, sway: true, z: 3, click: () => goTo(PZ.willow + 20, () => say(pick(["Un sauce llorón… pero se le ve contento", "Debajo hay una sombrita perfecta", "Sus ramas casi tocan el suelo"]), 2600)) });
-  const pond = prop("p-estanque.webp", PZ.pond, PZ.uh, "back", "back", { ar: POND_AR, z: 4, click: () => pondTap() });
-  const rocks = prop("p-rocas.webp", PZ.rocks, 92, "back", "back", { ar: 700 / 522, z: 6, lift: -8 });
-  const pad = prop("p-nenufar.webp", PZ.pond + 0.22 * PZ.uh * POND_AR, 36, "back", "back", { ar: 500 / 309, z: 5, lift: 98 });
-  pad.el.classList.add("bob");
-  const frog = prop("p-rana.webp", PZ.pond + 0.22 * PZ.uh * POND_AR, 58, "back", "back", { ar: 450 / 473, z: 6, lift: 112, click: () => frogTap() });
-  const dock = prop("p-embarcadero.webp", PZ.dock, 122, "back", "back", { ar: 900 / 535, z: 6, lift: -6 });
-  const bucket = prop("p-cubo.webp", PZ.dock + 12, 60, "back", "back", { ar: 500 / 528, z: 7, lift: 44, click: () => goTo(PZ.dock - 60, () => openPondCard()) });
-  prop("p-juncos.webp", PZ.sign + 95, 190, "front", "front", { ar: 652 / 1028, sway: true });
-  prop("p-juncos.webp", PZ.dock + 150, 175, "front", "front", { ar: 652 / 1028, sway: true });
+  const scene = document.createElement("div"); scene.id = "pondScene"; back.appendChild(scene);
+  const water = document.createElement("div"); water.id = "pondWater"; back.appendChild(water);
+  water.addEventListener("click", (e) => { e.stopPropagation(); pondTap(); });
+  const pSign = prop("p-cartel.webp", PZ.sign, 150, "front", "front", { ar: 551 / 804, click: () => goTo(PZ.sign - 40, () => say(PD.n ? `Ya hemos pescado ${PD.n} ${PD.n === 1 ? "cosa" : "cosas"}. ¿Vamos a por más?` : "¡El estanque! ¿Vamos a pescar? Toca el agua", 3000)) });
+  const frog = prop("p-rana.webp", PZ.frogX, 40, "back", "back", { ar: 450 / 473, z: 6, lift: 88, click: () => frogTap() });
+  const bucket = prop("p-cubo.webp", PZ.bucketX, 38, "back", "back", { ar: 500 / 528, z: 6, lift: 72, click: () => goTo(PZ.spot, () => openPondCard()) });
   const flies = [];
-  for (let i = 0; i < 9; i++) { const f = document.createElement("i"); f.className = "pfly"; f.style.animationDelay = -i * 0.7 + "s"; f.style.animationDuration = 5 + Math.random() * 3 + "s"; back.appendChild(f); flies.push({ el: f, ux: PZ.pond - 300 + Math.random() * 620, uy: 40 + Math.random() * 200 }); }
+  for (let i = 0; i < 9; i++) { const f = document.createElement("i"); f.className = "pfly"; f.style.animationDelay = -i * 0.7 + "s"; f.style.animationDuration = 5 + Math.random() * 3 + "s"; back.appendChild(f); flies.push({ el: f, ux: PZ.wx0 + Math.random() * (PZ.wx1 - PZ.wx0), uy: 80 + Math.random() * 180 }); }
   // caña, corcho e hilo (el hilo se dibuja en SVG sobre todo el mundo)
   const rod = document.createElement("img"); rod.id = "pondRod"; rod.src = "art/valley/p-cana.webp"; rod.alt = ""; rod.style.display = "none"; front.appendChild(rod);
   const bob = document.createElement("img"); bob.id = "pondBob"; bob.src = "art/valley/p-corcho.webp"; bob.alt = ""; bob.style.display = "none"; front.appendChild(bob);
@@ -558,15 +551,17 @@
   pCard.addEventListener("click", (e) => { e.stopPropagation(); if (e.target.closest(".x")) pCard.classList.remove("on"); });
 
   // agua del estanque en px (para el corcho, las ondas y los peces que saltan)
-  const pondBox = () => { const h = U(PZ.uh), w = h * POND_AR, top = BACK() - h; return { x: U(PZ.pond) - w / 2, y: top, w, h }; };
+  const pondBox = () => { const gt = groundTop(), y = gt - U(PZ.wy0); return { x: U(PZ.wx0), y, w: U(PZ.wx1 - PZ.wx0), h: gt - U(PZ.wy1) - y }; };
+  // Al cruzar el arroyo (corta el camino), Eko da un saltito
+  const streamHop = () => (!inHouse && E.x > PZ.s0 && E.x < PZ.s1) ? Math.sin(Math.PI * (E.x - PZ.s0) / (PZ.s1 - PZ.s0)) * U(70) : 0;
   const waterPt = (fx, fy) => { const b = pondBox(); return { x: b.x + b.w * fx, y: b.y + b.h * fy }; };
   function ring(x, y, size) { const r = document.createElement("i"); r.className = "pring"; Object.assign(r.style, { left: x + "px", top: y + "px", width: size + "px", height: size * 0.38 + "px" }); back.appendChild(r); setTimeout(() => r.remove(), 1300); }
   function bang(t, x, y) { const d = document.createElement("div"); d.className = "pbang"; d.textContent = t; Object.assign(d.style, { left: x + "px", top: y + "px", fontSize: U(30) + "px" }); front.appendChild(d); setTimeout(() => d.remove(), 900); }
 
   function pondLayout() {
-    const gt = groundTop(), fh = U(330), fw = fh * 2172 / 440;
-    Object.assign(pondFar.style, { left: U(PZ.pond) - fw / 2 + "px", width: fw + "px", height: fh + "px", top: gt + U(26) - fh + "px", zIndex: 1 });
-    Object.assign(pondGround.style, { left: U(PZ.x0) + "px", width: U(WORLD - PZ.x0 + 300) + "px", top: gt + "px", height: G() + "px", zIndex: 2 });
+    const gt = groundTop(), sw = U(1774 * PZ.su), sh = U(887 * PZ.su);
+    Object.assign(scene.style, { left: U(PZ.x0) + "px", top: gt - U(PZ.top) + "px", width: sw + "px", height: sh + "px", zIndex: 1 });
+    const b = pondBox(); Object.assign(water.style, { left: b.x + "px", top: b.y + "px", width: b.w + "px", height: b.h + "px", zIndex: 5 });
     const rh = U(92); Object.assign(rod.style, { height: rh + "px", width: rh * 500 / 632 + "px" });
     const bh = U(28); Object.assign(bob.style, { height: bh + "px", width: bh * 200 / 264 + "px" });
     for (const f of flies) Object.assign(f.el.style, { left: U(f.ux) + "px", top: BACK() - U(f.uy) + "px" });
@@ -620,7 +615,7 @@
     }, 650);
     // los peces vuelven al agua; las cosas, al cubo
     setTimeout(() => {
-      const t1 = performance.now(), bx2 = FISHY.has(id) ? waterPt(0.5, 0.45) : (() => { const b = bucket.el.getBoundingClientRect(), w = front.getBoundingClientRect(); return { x: b.left - w.left + b.width / 2, y: b.top - w.top + b.height * 0.3 }; })();
+      const t1 = performance.now(), bx2 = FISHY.has(id) ? waterPt(0.7, 0.5) : (() => { const b = bucket.el.getBoundingClientRect(), w = front.getBoundingClientRect(); return { x: b.left - w.left + b.width / 2, y: b.top - w.top + b.height * 0.3 }; })();
       const back2 = (now) => {
         const q = Math.min(1, (now - t1) / 700), e = q * q;
         im.style.left = lerp(x1, bx2.x, e) - ih * 0.6 + "px"; im.style.top = lerp(y1, bx2.y, e) - Math.sin(q * Math.PI) * U(90) - ih / 2 + "px";
@@ -666,10 +661,8 @@
 
   function pondFrame() {
     if (inHouse) return;
-    // el fondo del estanque va a media velocidad (como las colinas) y las colinas del valle se apagan en esta zona
-    const camRef = U(PZ.pond) - W / 2;
-    pondFar.style.transform = `translateX(${(cam - camRef) * 0.5}px)`;
-    const X = U(PZ.x0 + 120) - cam, mk = `linear-gradient(90deg,#000 ${X}px,transparent ${X + U(380)}px)`;
+    // la escena trae sus propias colinas: las del valle se apagan al entrar en esta zona
+    const X = U(PZ.x0 + 60) - cam, mk = `linear-gradient(90deg,#000 ${X}px,transparent ${X + U(380)}px)`;
     for (const id of ["#far", "#mid"]) { const l = $(id); l.style.webkitMaskImage = l.style.maskImage = mk; }
     // primera visita
     if (!PD.seen && E.x > PZ.x0 + 80) { PD.seen = true; pSave(); say("¡Un estanque! ¿Pescamos? Toca el agua y lanzo la caña", 3600); }
@@ -680,7 +673,7 @@
     const rh = U(92), rw = rh * 500 / 632, rx = ex + w * 0.18, ry = top + h * 0.12;
     Object.assign(rod.style, { display: "block", left: rx + "px", top: ry + "px", transform: `rotate(${FI.st === "bite" ? 10 : 0}deg)`, transformOrigin: "10% 95%" });
     const tip = { x: rx + rw * 0.93, y: ry + rh * 0.04 };
-    const target = waterPt(0.36, 0.42), q = E.t - FI.t0;
+    const target = waterPt(0.62, 0.55), q = E.t - FI.t0;
     let bx = target.x, by = target.y;
     if (FI.st === "cast") {
       const k2 = Math.min(1, q / 0.7);
@@ -1055,7 +1048,7 @@
     const h = inHouse ? hU(240) : EH(), w = h * 240 / 310;
     const archDepth = !inHouse ? clamp((155 - Math.abs(E.x - Z.arch)) / 75, 0, 1) : 0;
     const archBlend = archDepth * archDepth * (3 - 2 * archDepth);
-    let y = lerp(PATH(), FRONT() - U(360) * 0.03, archBlend), sc = 1, op = 1; // bajo el arco pisa entre sus dos postes
+    let y = lerp(PATH(), FRONT() - U(360) * 0.03, archBlend) - streamHop(), sc = 1, op = 1; // bajo el arco pisa entre sus dos postes; saltito en el arroyo
     if (E.entering) { const q = clamp((E.t - E.entering) / 1.1, 0, 1); y = lerp(BACK() - U(6), PATH(), q); sc = lerp(0.82, 1, q); op = Math.min(1, q * 3); if (q >= 1) E.entering = 0; }
     if (E.exiting) { const q = clamp((E.t - E.exiting) / 1.1, 0, 1); y = lerp(PATH(), BACK() - U(6), q); sc = lerp(1, 0.82, q); op = 1 - clamp((q - 0.6) / 0.4, 0, 1); }
     const bob = walking ? Math.abs(Math.sin(E.ph)) * U(6) : Math.sin(E.t * 2) * U(1.5);
